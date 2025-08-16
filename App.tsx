@@ -26,9 +26,6 @@ import { LiveStream } from './pages/LiveStream';
 import { StreamSetup } from './pages/StreamSetup';
 import { MediaManager } from './pages/MediaManager';
 import { Settings } from './pages/Settings';
-import { SignUp } from './pages/SignUp';
-import { VerifyEmail } from './pages/VerifyEmail';
-import { SelectRole } from './pages/SelectRole';
 
 
 interface AppContainerProps {
@@ -61,8 +58,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
-    const { user, isAuthenticated, isLoading, role } = useAuth();
-    const location = useLocation();
+    const { isAuthenticated, isLoading, role } = useAuth();
     
     if (isLoading) {
         return <PageSpinner />;
@@ -72,29 +68,17 @@ const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
         return <Navigate to="/login" replace />;
     }
     
-    if (user?.needsRoleSelection && location.pathname !== '/select-role') {
-        return <Navigate to="/select-role" replace />;
-    }
-
     if(!role || !roles.includes(role)) {
-        return <Navigate to="/feed" replace />; // Redirect to a safe default if role doesn't match
+        return <Navigate to="/login" replace />;
     }
 
     return <>{children}</>;
 };
 
 const AuthenticatedRoute = ({ children } : { children: React.ReactNode }) => {
-    const { user, isAuthenticated, isLoading } = useAuth();
-    const location = useLocation();
-
+    const { isAuthenticated, isLoading } = useAuth();
     if (isLoading) return <PageSpinner />;
-
     if (!isAuthenticated) return <Navigate to="/login" replace />;
-
-    if (user?.needsRoleSelection && location.pathname !== '/select-role') {
-        return <Navigate to="/select-role" replace />;
-    }
-
     return <>{children}</>;
 }
 
@@ -106,7 +90,7 @@ const DiscoverRouter = () => {
 
 
 const AppRoutes = () => {
-    const { user, isAuthenticated, isLoading, role } = useAuth();
+    const { isAuthenticated, isLoading, role } = useAuth();
 
     if (isLoading) {
         return <PageSpinner />;
@@ -114,8 +98,6 @@ const AppRoutes = () => {
     
     const getDefaultPath = () => {
         if (!isAuthenticated) return '/login';
-        if (user?.needsRoleSelection) return '/select-role';
-
         switch (role) {
             case Role.DJ: return '/feed';
             case Role.Business: return '/feed';
@@ -127,9 +109,6 @@ const AppRoutes = () => {
     return (
         <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/select-role" element={<AuthenticatedRoute><SelectRole /></AuthenticatedRoute>} />
             
             {/* Role Specific Routes */}
             <Route path="/feed" element={<ProtectedRoute roles={[Role.DJ, Role.Listener, Role.Business]}><Feed /></ProtectedRoute>} />
