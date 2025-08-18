@@ -27,34 +27,39 @@ const GigCard = ({ gig, venue, isHighlighted, highlightedRef }: { gig: Gig; venu
     }
 
     return (
-        <div ref={highlightedRef} className={`p-4 rounded-xl bg-zinc-900 transition-all duration-500 ${isHighlighted ? 'ring-2 ring-lime-400 shadow-lg shadow-lime-400/20' : ''}`}>
-            <div className="flex justify-between items-start mb-3">
-                {venue ? (
-                    <Link to={`/profile/${venue.id}`}>
-                        <h3 className="font-bold text-lg text-white hover:underline">{venue.venueName}</h3>
-                    </Link>
-                ) : (
-                    <h3 className="font-bold text-lg text-white">...</h3>
-                )}
-                <div className={`px-3 py-1 text-xs font-bold rounded-full border ${statusStyle}`}>
-                    {statusText}
-                </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-zinc-400 text-sm mb-4">
-                <IconClock size={16} />
-                <span>{gig.time}</span>
-            </div>
-
-            {gig.description && gig.description !== 'Past gig.' && (
-                <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-900/40 px-3 py-2 rounded-lg mb-4">
-                    <IconStickyNote size={16} className="mt-0.5 flex-shrink-0" />
-                    <span>{gig.description}</span>
-                </div>
+        <div ref={highlightedRef} className={`rounded-xl bg-[var(--surface-1)] transition-all duration-500 overflow-hidden ${isHighlighted ? 'ring-2 ring-[var(--accent)] shadow-lg shadow-[var(--accent)]/20' : 'border border-[var(--border)]'}`}>
+            {gig.flyerUrl && (
+                <img src={gig.flyerUrl} alt={gig.title} className="w-full h-32 object-cover" />
             )}
-            
-            <div className="flex justify-end items-center">
-                 <p className="font-orbitron text-xl font-bold text-lime-400">R{gig.budget.toLocaleString()}</p>
+            <div className="p-4">
+                <div className="flex justify-between items-start mb-3">
+                    {venue ? (
+                        <Link to={`/profile/${venue.id}`}>
+                            <h3 className="font-bold text-lg text-[var(--text-primary)] hover:underline">{venue.venueName}</h3>
+                        </Link>
+                    ) : (
+                        <h3 className="font-bold text-lg text-[var(--text-primary)]">...</h3>
+                    )}
+                    <div className={`px-3 py-1 text-xs font-bold rounded-full border ${statusStyle}`}>
+                        {statusText}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-[var(--text-secondary)] text-sm mb-4">
+                    <IconClock size={16} />
+                    <span>{gig.time}</span>
+                </div>
+
+                {gig.description && gig.description !== 'Past gig.' && (
+                    <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-900/40 px-3 py-2 rounded-lg mb-4">
+                        <IconStickyNote size={16} className="mt-0.5 flex-shrink-0" />
+                        <span>{gig.description}</span>
+                    </div>
+                )}
+                
+                <div className="flex justify-end items-center">
+                     <p className="font-orbitron text-xl font-bold text-[var(--accent)]">R{gig.budget.toLocaleString()}</p>
+                </div>
             </div>
         </div>
     );
@@ -154,7 +159,7 @@ export const MyGigs = () => {
         } else { // filter === 'all'
             earnings = confirmedEarnings + potentialEarnings;
             earningsLabel = 'Total Projected';
-            earningsColor = 'text-white';
+            earningsColor = 'text-[var(--text-primary)]';
         }
 
         return {
@@ -201,37 +206,37 @@ export const MyGigs = () => {
     if (loading) return <PageSpinner />;
     
     return (
-        <div className="text-white min-h-full bg-black">
+        <div className="text-[var(--text-primary)] min-h-full bg-[var(--background)]">
             <div className="p-4 space-y-6">
                 <div className="flex justify-between items-center">
-                    <button onClick={() => changeMonth(-1)} className="p-2 -ml-2 text-zinc-400 hover:text-white"><IconChevronLeft size={24} /></button>
+                    <button onClick={() => changeMonth(-1)} className="p-2 -ml-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"><IconChevronLeft size={24} /></button>
                     <h2 className="font-orbitron text-2xl font-bold tracking-wider">{monthYearFormat.format(currentMonth).toUpperCase()}</h2>
-                    <button onClick={() => changeMonth(1)} className="p-2 -mr-2 text-zinc-400 hover:text-white"><IconChevronRight size={24} /></button>
+                    <button onClick={() => changeMonth(1)} className="p-2 -mr-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"><IconChevronRight size={24} /></button>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 divide-y-0 md:divide-x divide-zinc-700 text-center">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 divide-y-0 md:divide-x divide-[var(--border)] text-center">
                     <div className="pr-2 col-span-1">
                         <p className="font-orbitron text-2xl font-bold">{stats.total}</p>
-                        <p className="text-xs text-zinc-400">Total Gigs</p>
+                        <p className="text-xs text-[var(--text-secondary)]">Total Gigs</p>
                     </div>
                     <div className="md:px-2 col-span-1">
                         <p className="font-orbitron text-2xl font-bold text-lime-400">{stats.confirmed}</p>
-                        <p className="text-xs text-zinc-400">Confirmed</p>
+                        <p className="text-xs text-[var(--text-secondary)]">Confirmed</p>
                     </div>
                     <div className="md:px-2 col-span-1">
                         <p className="font-orbitron text-2xl font-bold text-yellow-400">{stats.pending}</p>
-                        <p className="text-xs text-zinc-400">Pending</p>
+                        <p className="text-xs text-[var(--text-secondary)]">Pending</p>
                     </div>
                     <div className="md:pl-2 col-span-1">
                         <p className={`font-orbitron text-2xl font-bold ${stats.earningsColor}`}>R{stats.earnings.toLocaleString()}</p>
-                        <p className="text-xs text-zinc-400">{stats.earningsLabel}</p>
+                        <p className="text-xs text-[var(--text-secondary)]">{stats.earningsLabel}</p>
                     </div>
                 </div>
 
                 <div className="flex gap-2">
                     { (['all', 'pending', 'confirmed'] as const).map(f => (
-                        <button key={f} onClick={() => setFilter(f)} className={`flex-1 p-2.5 rounded-full font-bold text-sm transition-colors duration-200 ${filter === f ? 'bg-lime-400 text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'}`}>
-                           <span className="capitalize">{f}</span> <span className={`text-xs opacity-75 px-1.5 py-0.5 rounded-full ${filter === f ? 'bg-black/20' : 'bg-zinc-700'}`}>{f === 'all' ? stats.total : f === 'pending' ? stats.pending : stats.confirmed}</span>
+                        <button key={f} onClick={() => setFilter(f)} className={`flex-1 p-2.5 rounded-full font-bold text-sm transition-colors duration-200 ${filter === f ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--border)]'}`}>
+                           <span className="capitalize">{f}</span> <span className={`text-xs opacity-75 px-1.5 py-0.5 rounded-full ${filter === f ? 'bg-black/20' : 'bg-[var(--surface-1)]'}`}>{f === 'all' ? stats.total : f === 'pending' ? stats.pending : stats.confirmed}</span>
                         </button>
                     ))}
                 </div>
@@ -240,8 +245,8 @@ export const MyGigs = () => {
                     {Object.entries(groupedGigs).map(([dateStr, gigsOnDate]) => (
                         <div key={dateStr}>
                              <div className="flex justify-between items-center mb-3">
-                                <h4 className="font-bold text-zinc-300">{new Date(dateStr+'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</h4>
-                                <div className="px-2 py-0.5 bg-zinc-800 text-zinc-400 text-xs rounded-full flex items-center gap-1.5">
+                                <h4 className="font-bold text-[var(--text-secondary)]">{new Date(dateStr+'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</h4>
+                                <div className="px-2 py-0.5 bg-[var(--surface-2)] text-[var(--text-muted)] text-xs rounded-full flex items-center gap-1.5">
                                     <IconCalendar size={12} /> {gigsOnDate.length} {gigsOnDate.length === 1 ? 'gig' : 'gigs'}
                                 </div>
                             </div>
@@ -260,12 +265,12 @@ export const MyGigs = () => {
                     ))}
                      {Object.keys(groupedGigs).length === 0 && !loading && (
                         <div className="text-center pt-8">
-                            <p className="text-zinc-500">No {filter !== 'all' ? filter : ''} gigs for {monthYearFormat.format(currentMonth)}.</p>
+                            <p className="text-[var(--text-muted)]">No {filter !== 'all' ? filter : ''} gigs for {monthYearFormat.format(currentMonth)}.</p>
                         </div>
                      )}
                 </div>
             </div>
-            <Link to="/find-gigs" title="Find New Gigs" className="fixed bottom-6 right-6 md:bottom-10 md:right-10 bg-lime-400 text-black p-4 rounded-full shadow-lg shadow-lime-500/30 z-30 hover:bg-lime-300 transition-all transform hover:scale-110">
+            <Link to="/find-gigs" title="Find New Gigs" className="fixed bottom-6 right-6 md:bottom-10 md:right-10 bg-[var(--accent)] text-[var(--accent-text)] p-4 rounded-full shadow-lg shadow-[var(--accent)]/30 z-30 hover:bg-[var(--accent-hover)] transition-all transform hover:scale-110">
                 <IconSearch size={28} />
             </Link>
         </div>

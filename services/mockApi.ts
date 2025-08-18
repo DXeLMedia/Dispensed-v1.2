@@ -1,6 +1,4 @@
-
-
-import { DJ, Business, Gig, Track, Playlist, Role, Tier, User, FeedItem, Notification, NotificationType, Chat, Message, EnrichedChat, Listener, StreamSession } from '../types';
+import { DJ, Business, Gig, Track, Playlist, Role, Tier, User, FeedItem, Notification, NotificationType, Chat, Message, EnrichedChat, Listener, StreamSession, Review, EnrichedReview, Comment, EnrichedComment, UserSettings } from '../types';
 
 // --- DATA POPULATION ---
 
@@ -236,7 +234,7 @@ const userList: { id: string; name: string; email: string; role: Role; }[] = [
   { id: 'biz-27', 'name': 'The Other Side', 'email': 'otherside@test.com', 'role': Role.Business },
   { id: 'biz-28', 'name': 'Alive', 'email': 'alive@test.com', 'role': Role.Business },
   { id: 'biz-29', 'name': 'HER', 'email': 'her@test.com', 'role': Role.Business },
-  { id: 'biz-30', 'name': 'Chinchilla', 'email': 'chinchilla@test.com', 'role': Role.Business },
+  { id: 'biz-30', name: 'Chinchilla', email: 'chinchilla@test.com', role: Role.Business },
   { id: 'biz-31', 'name': 'Cabo Beach Club', 'email': 'cabo@test.com', 'role': Role.Business },
   { id: 'biz-32', 'name': 'The Movemint', 'email': 'movemint@test.com', 'role': Role.Business },
   { id: 'biz-33', 'name': 'Kulture', 'email': 'kulture@test.com', 'role': Role.Business },
@@ -313,96 +311,75 @@ const userList: { id: string; name: string; email: string; role: Role; }[] = [
   })),
 ];
 
-const djAvatars: Record<string, string> = {
-  'dj-1': 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800&auto=format&fit=crop', // K-DOLLA
-  'dj-2': 'https://images.unsplash.com/photo-1621282662052-163351a84b23?q=80&w=800&auto=format&fit=crop', // FKA Mash
-  'dj-3': 'https://images.unsplash.com/photo-1594623930335-9491a343a429?q=80&w=800&auto=format&fit=crop', // Desiree
-  'dj-4': 'https://images.unsplash.com/photo-1542628635-43a968949826?q=80&w=800&auto=format&fit=crop', // Sides
-  'dj-5': 'https://images.unsplash.com/photo-1619472579549-3c873ael22b2?q=80&w=800&auto=format&fit=crop', // DJ Loyd
-  'dj-6': 'https://images.unsplash.com/photo-1520870122482-7cc13f185f83?q=80&w=800&auto=format&fit=crop', // Paradise Citizens
-  'dj-7': 'https://images.unsplash.com/photo-1616298829923-264379e43657?q=80&w=800&auto=format&fit=crop', // The Fogshow
-  'dj-8': 'https://images.unsplash.com/photo-1608615349429-2c6369527f7f?q=80&w=800&auto=format&fit=crop', // Vinny Da Vinci
-  'dj-9': 'https://images.unsplash.com/photo-1575822648834-7589088194a2?q=80&w=800&auto=format&fit=crop', // Lawrence Dix
-  'dj-10': 'https://images.unsplash.com/photo-1558656255-442475651c6c?q=80&w=800&auto=format&fit=crop', // Dwson
-  'dj-11': 'https://images.unsplash.com/photo-1582236340244-a74b0c519a8f?q=80&w=800&auto=format&fit=crop', // Pierre Johnson
-  'dj-12': 'https://images.unsplash.com/photo-1516223337229-923e42841364?q=80&w=800&auto=format&fit=crop', // Leighton Moody
-  'dj-13': 'https://images.unsplash.com/photo-1581353108502-9907b539b56f?q=80&w=800&auto=format&fit=crop', // Jullian Gomes
-  'dj-14': 'https://images.unsplash.com/photo-1519690740683-3669b9e59d57?q=80&w=800&auto=format&fit=crop', // Kat La Kat
-  'dj-15': 'https://images.unsplash.com/photo-1534349762237-7227e7f3541e?q=80&w=800&auto=format&fit=crop', // Sir Vincent
-  'dj-24': 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?q=80&w=800&auto=format&fit=crop', // Ryan Murgatroyd
-  'dj-26': 'https://images.unsplash.com/photo-1505248203168-38379342ca2d?q=80&w=800&auto=format&fit=crop', // Enoo Napa
-  'dj-29': 'https://images.unsplash.com/photo-1563200085-c16de8676936?q=80&w=800&auto=format&fit=crop', // Culoe De Song
-  'dj-39': 'https://images.unsplash.com/photo-1587329314902-142834b6b158?q=80&w=800&auto=format&fit=crop', // Ivan Turanjanin
-  'dj-44': 'https://images.unsplash.com/photo-1598289431512-b970a5971716?q=80&w=800&auto=format&fit=crop', // Rose Bonica
-  'dj-45': 'https://images.unsplash.com/photo-1567011319082-6281b3737b6a?q=80&w=800&auto=format&fit=crop', // Dean FUEL
-  'dj-194': 'https://images.unsplash.com/photo-1509372448373-c35b6a445694?q=80&w=800&auto=format&fit=crop', // Tale Of Us
+const getAvatarUrl = (role: Role, id: string): string => {
+    const keywords: Record<Role, string[]> = {
+        [Role.DJ]: ['dj', 'music', 'portrait', 'techno', 'house', 'electronic music'],
+        [Role.Business]: ['venue', 'club', 'nightlife', 'event', 'crowd', 'architecture'],
+        [Role.Listener]: ['person', 'portrait', 'music fan', 'crowd', 'festival'],
+    };
+    const keyword = keywords[role][(id.charCodeAt(id.length - 1) || 0) % keywords[role].length];
+    return `https://source.unsplash.com/400x400/?${keyword},${role}&sig=${id}`;
 };
 
-const venueAvatars: Record<string, string> = {
-  'biz-1': 'https://images.unsplash.com/photo-1587329314902-142834b6b158?q=80&w=800&auto=format&fit=crop', // Mødular
-  'biz-2': 'https://images.unsplash.com/photo-1549449336-720f78a2e6a1?q=80&w=800&auto=format&fit=crop', // The Waiting Room
-  'biz-3': 'https://images.unsplash.com/photo-1578736641334-6294a5595f56?q=80&w=800&auto=format&fit=crop', // We House Sundays
-  'biz-4': 'https://images.unsplash.com/photo-1563814039345-4581caf83f7a?q=80&w=800&auto=format&fit=crop', // District
-  'biz-5': 'https://images.unsplash.com/photo-1594122230689-45899d9e6f69?q=80&w=800&auto=format&fit=crop', // ERA
-  'biz-23': 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?q=80&w=800&auto=format&fit=crop', // Wolfkop Weekender
-  'biz-38': 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=800&auto=format&fit=crop', // Sexy Groovy Love
-  'biz-43': 'https://images.unsplash.com/photo-1519638399535-1b036603ac77?q=80&w=800&auto=format&fit=crop', // Bridges for Music
-  'biz-44': 'https://images.unsplash.com/photo-1618397769533-cb6f6a9ce725?q=80&w=800&auto=format&fit=crop', // PULSE
-  'biz-45': 'https://images.unsplash.com/photo-1561489401-fc217c649dc7?q=80&w=800&auto=format&fit=crop', // CTEMF
-  'biz-51': 'https://images.unsplash.com/photo-1627429188421-3e5454625b64?q=80&w=800&auto=format&fit=crop', // Origin Festival
-  'biz-54': 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?q=80&w=800&auto=format&fit=crop',  // Bazique Festival
-  'biz-201': 'https://images.unsplash.com/photo-1556912173-3c662c938c82?q=80&w=800&auto=format&fit=crop', // Neon Nights Club
-  'biz-202': 'https://images.unsplash.com/photo-1582642250450-498a835b6f6f?q=80&w=800&auto=format&fit=crop', // Skyline Rooftop
-  'biz-203': 'https://images.unsplash.com/photo-1516970039352-25ec6e02de8b?q=80&w=800&auto=format&fit=crop', // The Bassment
-  'biz-204': 'https://images.unsplash.com/photo-1517457373958-b7bdd4e87205?q=80&w=800&auto=format&fit=crop', // Groove Garden
-};
-
-const users: User[] = userList.map((u) => {
-  let avatarUrl = `https://picsum.photos/seed/${u.id}/200`; // Default
-  if (u.role === Role.DJ && djAvatars[u.id]) {
-    avatarUrl = djAvatars[u.id];
-  } else if (u.role === Role.Business && venueAvatars[u.id]) {
-    avatarUrl = venueAvatars[u.id];
-  }
-  return { ...u, avatarUrl, settings: { theme: 'electric_blue' } };
-});
+const users: User[] = userList.map((u) => ({
+    ...u,
+    avatarUrl: getAvatarUrl(u.role, u.id),
+    settings: { theme: 'electric_blue' },
+}));
 
 
 // --- TRACKS & PLAYLISTS ---
-const tracks: Track[] = [
-  { id: 't1', title: 'Midnight Groove', artistId: 'dj-1', artworkUrl: 'https://picsum.photos/seed/t1/200', duration: '4:12' },
-  { id: 't2', title: 'Soweto Blues', artistId: 'dj-2', artworkUrl: 'https://picsum.photos/seed/t2/200', duration: '6:30' },
-  { id: 't3', title: 'Femme', artistId: 'dj-3', artworkUrl: 'https://picsum.photos/seed/t3/200', duration: '5:55' },
-  { id: 't4', title: 'Observatory', artistId: 'dj-4', artworkUrl: 'https://picsum.photos/seed/t4/200', duration: '7:01' },
-  { id: 't5', 'title': 'Impulse', 'artistId': 'dj-10', 'artworkUrl': 'https://picsum.photos/seed/t5/200', 'duration': '6:45' },
-  { id: 't6', 'title': 'Stay True', 'artistId': 'dj-13', 'artworkUrl': 'https://picsum.photos/seed/t6/200', 'duration': '7:10' },
-  { id: 't7', 'title': 'The Calling', 'artistId': 'dj-7', 'artworkUrl': 'https://picsum.photos/seed/t7/200', 'duration': '6:30' },
-  { id: 't8', 'title': 'Webaba', 'artistId': 'dj-29', 'artworkUrl': 'https://picsum.photos/seed/t8/200', 'duration': '8:05' },
-  { id: 't9', 'title': 'Obscure', 'artistId': 'dj-33', 'artworkUrl': 'https://picsum.photos/seed/t9/200', 'duration': '7:20' },
-  { id: 't10', 'title': 'Raw Logic', 'artistId': 'dj-44', 'artworkUrl': 'https://picsum.photos/seed/t10/200', 'duration': '5:50' },
+let tracks: Track[] = [
+  { id: 't1', title: 'Midnight Groove', artistId: 'dj-1', artworkUrl: 'https://source.unsplash.com/200x200/?music,abstract&sig=t1', duration: '4:12', trackUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+  { id: 't2', title: 'Soweto Blues', artistId: 'dj-2', artworkUrl: 'https://source.unsplash.com/200x200/?music,abstract&sig=t2', duration: '6:30', trackUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+  { id: 't3', title: 'Femme', artistId: 'dj-3', artworkUrl: 'https://source.unsplash.com/200x200/?music,abstract&sig=t3', duration: '5:55', trackUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+  { id: 't4', title: 'Observatory', artistId: 'dj-4', artworkUrl: 'https://source.unsplash.com/200x200/?music,abstract&sig=t4', duration: '7:01', trackUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
+  { id: 't5', 'title': 'Impulse', 'artistId': 'dj-10', 'artworkUrl': 'https://source.unsplash.com/200x200/?music,abstract&sig=t5', 'duration': '6:45', trackUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3' },
+  { id: 't6', 'title': 'Stay True', 'artistId': 'dj-13', 'artworkUrl': 'https://source.unsplash.com/200x200/?music,abstract&sig=t6', 'duration': '7:10', trackUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3' },
+  { id: 't7', 'title': 'The Calling', 'artistId': 'dj-7', 'artworkUrl': 'https://source.unsplash.com/200x200/?music,abstract&sig=t7', 'duration': '6:30', trackUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3' },
+  { id: 't8', 'title': 'Webaba', 'artistId': 'dj-29', 'artworkUrl': 'https://source.unsplash.com/200x200/?music,abstract&sig=t8', 'duration': '8:05', trackUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3' },
+  { id: 't9', 'title': 'Obscure', 'artistId': 'dj-33', 'artworkUrl': 'https://source.unsplash.com/200x200/?music,abstract&sig=t9', 'duration': '7:20', trackUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3' },
+  { id: 't10', 'title': 'Raw Logic', 'artistId': 'dj-44', 'artworkUrl': 'https://source.unsplash.com/200x200/?music,abstract&sig=t10', 'duration': '5:50', trackUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3' },
+  { id: 't11', 'title': 'Langa', 'artistId': 'dj-11', 'artworkUrl': 'https://source.unsplash.com/200x200/?music,abstract&sig=t11', 'duration': '6:15', trackUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
 ];
 
-const playlists: Playlist[] = [
-  { id: 'pl1', name: 'Deep Tech Cape Town', creatorId: 'dj-1', trackIds: ['t1', 't5'], artworkUrl: 'https://picsum.photos/seed/pl1/200' },
-  { id: 'pl2', name: 'Afro House Sunset', creatorId: 'dj-2', trackIds: ['t2', 't6', 't8'], artworkUrl: 'https://picsum.photos/seed/pl2/200' },
-  { id: 'pl3', name: 'Modular Moments', creatorId: 'dj-39', trackIds: [], artworkUrl: 'https://picsum.photos/seed/pl3/200' },
-  { id: 'pl4', name: 'Dub Echoes Vol. 5', creatorId: 'dj-4', trackIds: ['t4', 't1', 't5'], artworkUrl: 'https://picsum.photos/seed/pl4/200' },
+let playlists: Playlist[] = [
+  { id: 'pl1', name: 'Deep Tech Cape Town', creatorId: 'dj-1', trackIds: ['t1', 't5'], artworkUrl: '' }, // No custom artwork, will use t1's cover
+  { id: 'pl2', name: 'Afro House Sunset', creatorId: 'dj-2', trackIds: ['t2', 't6', 't8'], artworkUrl: 'https://source.unsplash.com/200x200/?sunset,beach,music&sig=pl2' },
+  { id: 'pl3', name: 'Modular Moments', creatorId: 'dj-39', trackIds: [], artworkUrl: '' }, // Empty playlist, no custom artwork
+  { id: 'pl4', name: 'Dub Echoes Vol. 5', creatorId: 'dj-4', trackIds: ['t4', 't1', 't5'], artworkUrl: 'https://source.unsplash.com/200x200/?dub,echo,soundwave&sig=pl4' },
+];
+
+// --- REVIEWS ---
+let reviews: Review[] = [
+    // Reviews for K-DOLLA (dj-1)
+    { id: 'r1', authorId: 'biz-1', targetId: 'dj-1', rating: 5, comment: "K-DOLLA absolutely destroyed the dancefloor. A true professional with impeccable track selection. Can't wait to have him back.", timestamp: '2 days ago' },
+    { id: 'r2', authorId: 'listener-1', targetId: 'dj-1', rating: 5, comment: "Saw him at Mødular. Best set I've heard all year.", timestamp: '3 days ago' },
+    { id: 'r3', authorId: 'dj-2', targetId: 'dj-1', rating: 5, comment: "Techno masterclass. Always inspiring to watch him play.", timestamp: '1 week ago' },
+
+    // Reviews for Mødular (biz-1)
+    { id: 'r4', authorId: 'dj-1', targetId: 'biz-1', rating: 5, comment: "My favorite club to play at in Cape Town. The sound system is incredible and the crowd is always up for it.", timestamp: '2 days ago', gigId: 'g18' },
+    { id: 'r5', authorId: 'listener-1', targetId: 'biz-1', rating: 5, comment: "If you love techno, this is the only place to be. Dark, loud, and perfect.", timestamp: '5 days ago' },
+    { id: 'r6', authorId: 'listener-2', targetId: 'biz-1', rating: 4, comment: "Great music, but the bar can get a bit crowded.", timestamp: '2 weeks ago' },
+
+    // Review for Dwson (dj-10)
+    { id: 'r7', authorId: 'biz-42', targetId: 'dj-10', rating: 5, comment: "Dwson is one of the most talented producers and DJs out there. A true asset to the Stay True Sounds family.", timestamp: '1 month ago' },
 ];
 
 // --- DETAILED PROFILES ---
 let djs: DJ[] = (users.filter(u => u.role === Role.DJ) as User[]).map((user, index) => {
     const specificDjs = [
-        { id: 'dj-1', location: 'City Bowl, Cape Town', genres: ['Deep House', 'Techno'], bio: 'Pushing the boundaries of electronic music from the heart of Cape Town. Known for deep, melodic journeys.', rating: 4.98, reviewsCount: 154, followers: 12500, tier: Tier.NeonLegend, following: ['dj-2', 'dj-3', 'biz-1', 'biz-3'] },
+        { id: 'dj-1', location: 'City Bowl, Cape Town', genres: ['Deep House', 'Techno'], bio: 'Pushing the boundaries of electronic music from the heart of Cape Town. Known for deep, melodic journeys.', rating: 5.0, reviewsCount: 3, followers: 12500, tier: Tier.NeonLegend, following: ['dj-2', 'dj-3', 'biz-1', 'biz-3'], socials: { instagram: "k_dolla_official", soundcloud: "k-dolla", website: "k-dolla.com" } },
         { id: 'dj-2', location: 'Camps Bay, Cape Town', genres: ['Afro House', 'Soulful House'], bio: 'Curating sonic experiences that blend traditional African rhythms with modern electronic beats.', rating: 4.95, reviewsCount: 120, followers: 8500, tier: Tier.GoldGroove, following: ['dj-1', 'dj-8'] },
         { id: 'dj-3', location: 'Observatory, Cape Town', genres: ['Techno', 'Minimal'], bio: 'A rising star in the underground scene, delivering powerful and hypnotic techno sets.', rating: 4.92, reviewsCount: 65, followers: 9800, tier: Tier.GoldGroove, following: ['dj-1', 'dj-7', 'dj-10'] },
         { id: 'dj-4', location: 'Woodstock, Cape Town', genres: ['Dub-Techno', 'Deep House'], bio: 'Specializing in deep, atmospheric dub techno. All about the space between the notes.', rating: 4.85, reviewsCount: 45, followers: 2500, tier: Tier.Silver, following: ['dj-9', 'dj-10'] },
         { id: 'dj-6', location: 'Sea Point, Cape Town', genres: ['Melodic House', 'Progressive House'], bio: 'A duo known for their euphoric and uplifting melodic house sets, perfect for sunsets.', rating: 4.9, reviewsCount: 78, followers: 6000, tier: Tier.GoldGroove, following: ['dj-24'] },
         { id: 'dj-7', location: 'Green Point, Cape Town', genres: ['Deep-Tech', 'Minimal'], bio: 'Head of The Other Side events, The Fogshow crafts intricate and groovy minimal soundscapes.', rating: 4.91, reviewsCount: 92, followers: 7500, tier: Tier.GoldGroove, following: ['dj-3', 'dj-9'] },
         { id: 'dj-9', location: 'Tamboerskloof, Cape Town', genres: ['Minimal', 'House'], bio: 'A vinyl purist, Lawrence Dix brings a raw, authentic energy to his funky minimal house sets.', rating: 4.88, reviewsCount: 60, followers: 4200, tier: Tier.Silver, following: ['dj-4', 'dj-7'] },
-        { id: 'dj-10', location: 'Woodstock, Cape Town', genres: ['Deep House', 'Lo-fi House'], bio: 'Deep, atmospheric, and emotionally charged house music.', rating: 4.89, reviewsCount: 95, followers: 15000, tier: Tier.GoldGroove, following: ['dj-11', 'dj-12'] },
-        { id: 'dj-39', location: 'City Bowl, Cape Town', genres: ['Techno', 'Progressive'], bio: 'The driving force behind Mødular and a stalwart of the Cape Town techno scene.', rating: 4.96, reviewsCount: 200, followers: 18000, tier: Tier.NeonLegend, following: ['dj-1', 'dj-3'] },
+        { id: 'dj-10', location: 'Woodstock, Cape Town', genres: ['Deep House', 'Lo-fi House'], bio: 'Deep, atmospheric, and emotionally charged house music.', rating: 5.0, reviewsCount: 1, followers: 15000, tier: Tier.GoldGroove, following: ['dj-11', 'dj-12'] },
+        { id: 'dj-39', location: 'City Bowl, Cape Town', genres: ['Techno', 'Progressive'], bio: 'The driving force behind Mødular and a stalwart of the Cape Town techno scene.', rating: 4.96, reviewsCount: 200, followers: 18000, tier: Tier.NeonLegend, following: ['dj-1', 'dj-3'], socials: { instagram: "modular_club_cpt", website: "modularclub.co.za" } },
         { id: 'dj-44', location: 'Salt River, Cape Town', genres: ['Techno', 'Industrial', 'EBM'], bio: 'Uncompromising, raw, and experimental. Pushing the harder edges of techno.', rating: 4.86, reviewsCount: 55, followers: 5500, tier: Tier.Silver, following: [] },
-        { id: 'dj-46', location: 'Gardens, Cape Town', genres: ['Deep House', '90s House'], bio: 'selector. producer. @untitled.deep head honcho. bookings/promos: bookingsdoublex@gmail.com', rating: 4.9, reviewsCount: 88, followers: 7800, tier: Tier.GoldGroove, following: ['dj-5', 'dj-12'] },
+        { id: 'dj-46', location: 'Gardens, Cape Town', genres: ['Deep House', '90s House'], bio: 'selector. producer. @untitled.deep head honcho. bookings/promos: bookingsdoublex@gmail.com', rating: 4.901123595505618, reviewsCount: 89, followers: 7800, tier: Tier.GoldGroove, following: ['dj-5', 'dj-12'], socials: { instagram: "doublex_el", soundcloud: "doublex_el" } },
     ];
     const specific = specificDjs.find(d => d.id === user.id);
     const genres = [
@@ -424,14 +401,15 @@ let djs: DJ[] = (users.filter(u => u.role === Role.DJ) as User[]).map((user, ind
         tier: specific?.tier || [Tier.GoldGroove, Tier.Silver, Tier.Bronze][index % 3],
         tracks: tracks.filter(t => t.artistId === user.id),
         mixes: playlists.filter(p => p.creatorId === user.id),
+        socials: specific?.socials || {},
     };
 });
 
 let businesses: Business[] = (users.filter(u => u.role === Role.Business) as User[]).map((user, index) => {
     const specificVenues = [
-        { id: 'biz-1', venueName: 'Mødular.', location: '34 Riebeek St, Cape Town', description: 'Cape Town\'s home for underground techno and house music. Dark, loud, and intimate.', rating: 4.9, reviewsCount: 255, followers: 22000, following: ['dj-1', 'dj-3', 'dj-10', 'dj-39'] },
+        { id: 'biz-1', venueName: 'Mødular.', location: '34 Riebeek St, Cape Town', description: 'Cape Town\'s home for underground techno and house music. Dark, loud, and intimate.', rating: 4.7, reviewsCount: 3, followers: 22000, following: ['dj-1', 'dj-3', 'dj-10', 'dj-39'], socials: { website: "modularclub.co.za", instagram: "modular_club_cpt" } },
         { id: 'biz-2', venueName: 'The Waiting Room', location: '273 Long St, Cape Town', description: 'Iconic rooftop bar and music venue with a diverse lineup of local and international talent.', rating: 4.7, reviewsCount: 430, followers: 18000, following: ['dj-5'] },
-        { id: 'biz-3', venueName: 'We House Sundays', location: 'Event Series, Cape Town', description: 'A soulful house movement that celebrates music and togetherness through iconic Sunday gatherings.', rating: 4.95, reviewsCount: 180, followers: 35000, following: ['dj-2', 'dj-8'] },
+        { id: 'biz-3', venueName: 'We House Sundays', location: 'Event Series, Cape Town', description: 'A soulful house movement that celebrates music and togetherness through iconic Sunday gatherings.', rating: 4.95, reviewsCount: 180, followers: 35000, following: ['dj-2', 'dj-8'], socials: { instagram: "wehousesundays", facebook: "wehousesundays" } },
         { id: 'biz-23', venueName: 'Wolfkop Weekender', location: 'Festival, Citrusdal', description: 'A boutique music festival experience set in nature, known for its curated electronic music.', rating: 4.98, reviewsCount: 300, followers: 45000, following: ['dj-11', 'dj-12'] },
         { id: 'biz-38', venueName: 'Sexy Groovy Love', location: 'Festival, The Cape Winelands', description: 'Lush, vibrant, and stylish boutique festivals in beautiful locations.', rating: 4.85, reviewsCount: 220, followers: 60000, following: ['dj-25'] },
         { id: 'biz-42', venueName: 'Stay True Sounds', location: 'Label / Event Series, Cape Town', description: 'One of South Africa\'s most respected deep house labels, curating showcases with their family of artists.', rating: 4.95, reviewsCount: 150, followers: 40000, following: ['dj-13', 'dj-20'] },
@@ -442,7 +420,7 @@ let businesses: Business[] = (users.filter(u => u.role === Role.Business) as Use
         { id: 'biz-50', venueName: 'UNTMD', location: 'Event Series, Cape Town', description: 'Raw, industrial, and experimental techno nights. No photos on the dancefloor.', rating: 4.85, reviewsCount: 65, followers: 7200, following: ['dj-44'] },
         { id: 'biz-51', venueName: 'Origin Festival', location: 'Festival, Elandskloof', description: 'Annual psychedelic music & arts festival in the mountains.', rating: 4.92, reviewsCount: 450, followers: 95000, following: [] },
         { id: 'biz-52', venueName: 'Vortex Parallel Universe', location: 'Festival, Riviersonderend', description: 'Legendary trance and electronic music festival with a rich history.', rating: 4.89, reviewsCount: 400, followers: 120000, following: [] },
-        { id: 'biz-53', venueName: 'Earthdance Cape Town', location: 'Festival, Nekkies Resort', description: 'Part of a global music and peace festival, known for its conscious vibes.', rating: 4.85, reviewsCount: 320, followers: 65000, following: [] },
+        { id: 'biz-53', name: 'Earthdance Cape Town', location: 'Festival, Nekkies Resort', description: 'Part of a global music and peace festival, known for its conscious vibes.', rating: 4.85, reviewsCount: 320, followers: 65000, following: [] },
         { id: 'biz-54', venueName: 'Bazique Festival', location: 'Festival, Riviersonderend', description: 'A surreal wonderland of music, art, and absurdity.', rating: 4.9, reviewsCount: 280, followers: 75000, following: [] },
         { id: 'biz-201', venueName: 'Neon Nights Club', location: 'City Bowl, Cape Town', description: 'Underground club with a focus on neon aesthetics and driving techno.', rating: 4.8, reviewsCount: 112, followers: 9500, following: [] },
         { id: 'biz-202', venueName: 'Skyline Rooftop', location: 'De Waterkant, Cape Town', description: 'Chic rooftop bar with panoramic views, specializing in sunset house sessions.', rating: 4.7, reviewsCount: 180, followers: 12000, following: [] },
@@ -460,6 +438,7 @@ let businesses: Business[] = (users.filter(u => u.role === Role.Business) as Use
         reviewsCount: specific?.reviewsCount || (300 - index * 5),
         followers: specific?.followers || (15000 - index * 250),
         following: specific?.following || [],
+        socials: specific?.socials || {},
     };
 });
 
@@ -495,30 +474,30 @@ let allUsers = [...djs, ...businesses, ...listeners];
 
 // --- GIGS ---
 let gigs: Gig[] = [
-  { id: 'g1', title: 'Deep Tech Invites: K-DOLLA', venueId: 'biz-1', date: '2025-08-15', time: '22:00', budget: 1500, description: 'Prepare for a journey into the deep. K-DOLLA takes over Mødular for a night of relentless techno.', genres: ['Techno', 'Deep-Tech'], status: 'Open' },
+  { id: 'g1', title: 'Deep Tech Invites: K-DOLLA', venueId: 'biz-1', date: '2025-08-15', time: '22:00', budget: 1500, description: 'Prepare for a journey into the deep. K-DOLLA takes over Mødular for a night of relentless techno.', genres: ['Techno', 'Deep-Tech'], status: 'Open', flyerUrl: 'https://source.unsplash.com/800x600/?techno,dj,dark&sig=g1' },
   { id: 'g2', title: 'Rooftop Grooves with DJ Loyd', venueId: 'biz-2', date: '2025-08-17', time: '19:00', budget: 800, description: 'Sunset vibes on the Long Street rooftop. Spinning soulful and deep house.', genres: ['Deep House', 'Soulful House'], status: 'Completed', bookedDjId: 'dj-5' },
-  { id: 'g3', title: 'We House Sundays - August Edition', venueId: 'biz-3', date: '2025-08-18', time: '14:00', budget: 1200, description: 'Join the movement. Seeking a DJ who understands the soulful core of house music.', genres: ['Soulful House', 'Afro House'], status: 'Open'},
+  { id: 'g3', title: 'We House Sundays - August Edition', venueId: 'biz-3', date: '2025-08-18', time: '14:00', budget: 1200, description: 'Join the movement. Seeking a DJ who understands the soulful core of house music.', genres: ['Soulful House', 'Afro House'], status: 'Open', flyerUrl: 'https://source.unsplash.com/800x600/?house,music,party,sunday&sig=g3' },
   { id: 'g4', title: 'Minimal Effort with The Fogshow', venueId: 'biz-4', date: '2025-08-22', time: '23:00', budget: 900, description: 'Intricate grooves and minimal soundscapes all night long with The Other Side head honcho.', genres: ['Minimal', 'Deep-Tech'], status: 'Booked', bookedDjId: 'dj-7'},
   { id: 'g5', title: 'ERA Re-opening Party', venueId: 'biz-5', date: '2025-09-01', time: '21:00', budget: 2000, description: 'The legend is back. We are looking for a headline techno act to celebrate our return.', genres: ['Techno'], status: 'Open'},
-  { id: 'g6', title: 'Wolfkop Weekender - Main Stage', venueId: 'biz-23', date: '2026-01-28', time: '18:00', budget: 3500, description: 'Seeking artists for our annual journey into sound. Melodic and groovy sets preferred.', genres: ['Melodic House', 'Deep House', 'Techno'], status: 'Open'},
+  { id: 'g6', title: 'Wolfkop Weekender - Main Stage', venueId: 'biz-23', date: '2026-01-28', time: '18:00', budget: 3500, description: 'Seeking artists for our annual journey into sound. Melodic and groovy sets preferred.', genres: ['Melodic House', 'Deep House', 'Techno'], status: 'Open', flyerUrl: 'https://source.unsplash.com/800x600/?festival,nature,music&sig=g6' },
   { id: 'g7', title: 'Stay True Sounds Showcase', venueId: 'biz-42', date: '2025-09-15', time: '20:00', budget: 1800, description: 'A night dedicated to the finest deep house, with Kid Fonque at the helm.', genres: ['Deep House', 'Jazz'], status: 'Completed', bookedDjId: 'dj-20'},
   { id: 'g8', title: 'Minimal Effort with Pierre Johnson', venueId: 'biz-1', date: '2025-09-05', time: '23:00', budget: 1000, description: 'An intimate night of minimal and deep tech.', genres: ['Minimal', 'Deep-Tech'], status: 'Open'},
   { id: 'g9', title: 'Afro House Journey with Atmos Blaq', venueId: 'biz-7', date: '2025-09-06', time: '20:00', budget: 1200, description: 'An epic journey through the sounds of afro house and afro tech.', genres: ['Afro House', 'Afro Tech'], status: 'Open'},
   { id: 'g10', title: 'Dub Techno Special: Sides', venueId: 'biz-49', date: '2025-09-12', time: '22:00', budget: 750, description: 'Deep End presents a night of pure dub techno. Heads down, eyes closed.', genres: ['Dub-Techno', 'Deep House'], status: 'Open'},
   { id: 'g11', title: 'UNTMD Presents: Rose Bonica', venueId: 'biz-50', date: '2025-09-13', time: '23:00', budget: 900, description: 'Raw, industrial, and experimental techno all night long.', genres: ['Techno', 'Industrial'], status: 'Booked', bookedDjId: 'dj-44'},
   { id: 'g12', title: 'The Search: Leighton Moody All Night Long', venueId: 'biz-41', date: '2025-09-19', time: '21:00', budget: 1500, description: 'A masterclass in soulful and deep house from a Cape Town legend.', genres: ['Deep House', 'Soulful House'], status: 'Open'},
-  { id: 'g13', title: 'Sexy Groovy Love - Spring Edition', venueId: 'biz-38', date: '2025-09-27', time: '12:00', budget: 2500, description: 'Our first party of the season! Looking for DJs that bring the vibe.', genres: ['House', 'Tech House', 'Deep House'], status: 'Open'},
+  { id: 'g13', title: 'Sexy Groovy Love - Spring Edition', venueId: 'biz-38', date: '2025-09-27', time: '12:00', budget: 2500, description: 'Our first party of the season! Looking for DJs that bring the vibe.', genres: ['House', 'Tech House', 'Deep House'], status: 'Open', flyerUrl: 'https://source.unsplash.com/800x600/?festival,love,groovy&sig=g13' },
   { id: 'g14', title: 'Fiction Fridays: Call for Residents', venueId: 'biz-10', date: '2025-10-01', time: '21:00', budget: 500, description: 'Fiction is looking for new resident DJs to join our family. Send us your mixes!', genres: ['Techno', 'House', 'Break-Dub'], status: 'Open'},
   { id: 'g15', title: 'It Is What It Is ft. Jullian Gomes', venueId: 'biz-26', date: '2025-09-28', time: '14:00', budget: 2000, description: 'The legendary Jullian Gomes graces the IIWII stage for a magical afternoon set.', genres: ['Deep House', 'Soulful House'], status: 'Booked', bookedDjId: 'dj-13'},
 
   // Gigs for dj-46 (Double X eL) to populate MyGigs page
-  { id: 'g16', title: 'Neon Nights Club ft. Double X eL', venueId: 'biz-201', date: '2025-08-15', time: '9:00 PM - 2:00 AM', budget: 450, description: 'Bring extra speakers for outdoor area', genres: ['Techno', 'House'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g17', title: 'Sunset Session', venueId: 'biz-202', date: '2025-08-18', time: '7:00 PM - 11:00 PM', budget: 320, description: 'Prepare a chill sunset vibe set', genres: ['Deep House', 'Melodic House'], status: 'Open' },
+  { id: 'g16', title: 'Neon Nights Club ft. Double X eL', venueId: 'biz-201', date: '2025-08-15', time: '9:00 PM - 2:00 AM', budget: 450, description: 'Bring extra speakers for outdoor area', genres: ['Techno', 'House'], status: 'Booked', bookedDjId: 'dj-46', flyerUrl: 'https://source.unsplash.com/800x600/?neon,club,night&sig=g16' },
+  { id: 'g17', title: 'Sunset Session', venueId: 'biz-202', date: '2025-08-18', time: '7:00 PM - 11:00 PM', budget: 320, description: 'Prepare a chill sunset vibe set', genres: ['Deep House', 'Melodic House'], status: 'Open', flyerUrl: 'https://source.unsplash.com/800x600/?sunset,rooftop,dj&sig=g17' },
   { id: 'g18', title: 'Late Night Grooves', venueId: 'biz-1', date: '2025-08-29', time: '11:00 PM - 4:00 AM', budget: 500, description: 'Main room closing set', genres: ['Techno'], status: 'Booked', bookedDjId: 'dj-46' },
   { id: 'g19', title: 'Rooftop Day Party', venueId: 'biz-202', date: '2025-08-22', time: '2:00 PM - 8:00 PM', budget: 280, description: 'Day time event, play groovy house.', genres: ['House'], status: 'Open' },
   { id: 'g20', title: 'The Bassment Opening', venueId: 'biz-203', date: '2025-08-02', time: '10:00 PM - 3:00 AM', budget: 300, description: '', genres: ['Deep-Tech'], status: 'Booked', bookedDjId: 'dj-46' },
   { id: 'g21', title: 'Saturday Social', venueId: 'biz-6', date: '2025-08-09', time: '8:00 PM - 1:00 AM', budget: 250, description: 'Vibey, social atmosphere.', genres: ['House', 'Soulful House'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g22', title: 'Groove Garden Festival', venueId: 'biz-204', date: '2025-08-16', time: '12:00 PM - 10:00 PM', budget: 400, description: 'Main stage, peak time slot.', genres: ['Melodic House', 'Progressive'], status: 'Booked', bookedDjId: 'dj-46' },
+  { id: 'g22', title: 'Groove Garden Festival', venueId: 'biz-204', date: '2025-08-16', time: '12:00 PM - 10:00 PM', budget: 400, description: 'Main stage, peak time slot.', genres: ['Melodic House', 'Progressive'], status: 'Booked', bookedDjId: 'dj-46', flyerUrl: 'https://source.unsplash.com/800x600/?garden,party,music&sig=g22' },
   { id: 'g23', title: 'We House Sundays Guest Slot', venueId: 'biz-3', date: '2025-08-24', time: '4:00 PM - 6:00 PM', budget: 350, description: 'Warm up for the headliner.', genres: ['Soulful House'], status: 'Booked', bookedDjId: 'dj-46' },
   { id: 'g24', title: 'Fiction Wednesdays', venueId: 'biz-10', date: '2025-08-27', time: '10:00 PM - 1:00 AM', budget: 200, description: 'Mid-week party, anything goes.', genres: ['Breaks', 'House'], status: 'Booked', bookedDjId: 'dj-46' },
   { id: 'g25', title: 'Reset Closing Set', venueId: 'biz-8', date: '2025-08-30', time: '2:00 AM - 4:00 AM', budget: 250, description: '', genres: ['Techno'], status: 'Booked', bookedDjId: 'dj-46' },
@@ -557,21 +536,30 @@ const streamSessions: StreamSession[] = [
 
 // --- FEED ITEMS ---
 let feedItems: FeedItem[] = [
-    { id: 'f1', type: 'live_now', userId: 'dj-3', title: 'Desiree is LIVE from a secret warehouse.', description: 'Tuning in for some heavy techno vibes!', imageUrl: 'https://images.unsplash.com/photo-1594623930335-9491a343a429?q=80&w=800&auto=format&fit=crop', timestamp: '2h ago', likes: 1200, comments: 88, shares: 45, relatedId: 'stream-1' },
-    { id: 'f2', type: 'new_track', userId: 'dj-10', title: 'New Track: City Lights', description: 'My new single "City Lights" is out now. A deep, lo-fi journey for late nights. Hope you enjoy.', imageUrl: 'https://picsum.photos/seed/dwson-track/600/400', timestamp: '18h ago', likes: 1800, comments: 130, shares: 77 },
-    { id: 'f3', type: 'gig_announcement', userId: 'biz-3', title: 'We House Sundays - August Lineup!', description: 'So excited to announce FKA Mash will be headlining our next event! Tickets are flying.', imageUrl: 'https://picsum.photos/seed/whsaug/600/400', timestamp: '1d ago', likes: 950, comments: 45, shares: 30 },
-    { id: 'f4', type: 'new_connection', userId: 'dj-1', title: 'K-DOLLA is now following Desiree', description: 'Two of the city\'s techno titans are now connected. We love to see it!', imageUrl: 'https://picsum.photos/seed/connect1/600/400', timestamp: '2d ago', likes: 450, comments: 23, shares: 12 },
-    { id: 'f5', type: 'new_review', userId: 'dj-39', title: 'Ivan Turanjanin gets a 5-star review!', description: '"An absolutely mind-blowing, raw performance at Mødular. The master at work." The people have spoken!', imageUrl: 'https://picsum.photos/seed/ivan-review/600/400', timestamp: '3d ago', likes: 1500, comments: 99, shares: 60 },
-    { id: 'f6', type: 'new_mix', userId: 'dj-4', title: 'New Mix: Dub Echoes Vol. 5', description: '60 minutes of deep, dubby techno. Perfect for a rainy day in the city.', imageUrl: 'https://picsum.photos/seed/sidesmix/600/400', timestamp: '4d ago', likes: 800, comments: 110, shares: 90, relatedId: 'pl4' },
-    { id: 'f14', type: 'new_mix', userId: 'dj-2', title: 'Afro House Sunset Mix', description: 'Here is my latest mix for all the sunset chasers. Enjoy!', imageUrl: 'https://picsum.photos/seed/pl2/600/400', timestamp: '3d ago', likes: 2100, comments: 250, shares: 150, relatedId: 'pl2' },
-    { id: 'f7', type: 'gig_announcement', userId: 'biz-1', title: 'Open Decks next Wednesday!', description: 'Think you have what it takes? We\'re hosting an open decks night. Come through and show us what you got. Best selector gets a paid gig.', imageUrl: 'https://picsum.photos/seed/opendecks/600/400', timestamp: '5d ago', likes: 800, comments: 150, shares: 50},
-    { id: 'f8', type: 'new_track', userId: 'dj-11', title: 'Out Now: "Langa"', description: 'My new EP just dropped on all platforms. This one is for my home. Big love to everyone supporting.', imageUrl: 'https://picsum.photos/seed/pierrejohnson/600/400', timestamp: '5d ago', likes: 2200, comments: 180, shares: 90},
-    { id: 'f9', type: 'live_now', userId: 'dj-12', title: 'Leighton Moody is live!', description: 'Sunday vinyl session incoming. Deep and soulful vibes only.', imageUrl: 'https://picsum.photos/seed/leightonlive/600/400', timestamp: '6d ago', likes: 980, comments: 75, shares: 40},
-    { id: 'f10', type: 'new_connection', userId: 'biz-23', title: 'Wolfkop Weekender is now following Pierre Johnson', description: 'Looks like a future collaboration might be on the cards!', imageUrl: 'https://picsum.photos/seed/wolfkoppierre/600/400', timestamp: '1w ago', likes: 1100, comments: 40, shares: 20},
-    { id: 'f11', type: 'gig_announcement', userId: 'biz-49', title: 'Deep End returns with Sides', description: 'We\'re back in the warehouse on Sept 12. Limited tickets available for this one.', imageUrl: 'https://picsum.photos/seed/deependg10/600/400', timestamp: '1w ago', likes: 600, comments: 55, shares: 35},
-    { id: 'f12', type: 'new_mix', userId: 'dj-7', title: 'The Other Side Live Recording', description: 'Here\'s my set from last weekend. All minimal, all groovy.', imageUrl: 'https://picsum.photos/seed/fogshowmix/600/400', timestamp: '1w ago', likes: 1300, comments: 95, shares: 65},
-    { id: 'f13', type: 'new_track', userId: 'dj-33', title: 'Chronical Deep - "Karbau"', description: 'New music alert! My track Karbau is officially out. Go stream it and let me know what you think.', imageUrl: 'https://picsum.photos/seed/chronicaldeep/600/400', timestamp: '8d ago', likes: 2500, comments: 250, shares: 120},
+    { id: 'f1', type: 'live_now', userId: 'dj-3', title: 'Desiree is LIVE from a secret warehouse.', description: 'Tuning in for some heavy techno vibes!', mediaUrl: getAvatarUrl(Role.DJ, 'dj-3'), mediaType: 'image', timestamp: '2h ago', likes: 1200, likedBy:[], comments: 88, reposts: 45, relatedId: 'stream-1' },
+    { id: 'f2', type: 'new_track', userId: 'dj-10', title: 'New Track: City Lights', description: 'My new single "City Lights" is out now. A deep, lo-fi journey for late nights. Hope you enjoy.', mediaUrl: 'https://source.unsplash.com/600x400/?city,night,lights&sig=f2', mediaType: 'image', timestamp: '18h ago', likes: 1800, likedBy:[], comments: 130, reposts: 77, relatedId: 't5' },
+    { id: 'f3', type: 'gig_announcement', userId: 'biz-3', title: 'We House Sundays - August Lineup!', description: 'So excited to announce FKA Mash will be headlining our next event! Tickets are flying.', mediaUrl: 'https://source.unsplash.com/600x400/?house,music,party,sunday&sig=f3', mediaType: 'image', timestamp: '1d ago', likes: 950, likedBy:[], comments: 45, reposts: 30 },
+    { id: 'f4', type: 'new_connection', userId: 'dj-1', title: 'K-DOLLA is now following Desiree', description: 'Two of the city\'s techno titans are now connected. We love to see it!', mediaUrl: 'https://source.unsplash.com/600x400/?connection,network,abstract&sig=f4', mediaType: 'image', timestamp: '2d ago', likes: 450, likedBy:[], comments: 23, reposts: 12 },
+    { id: 'f5', type: 'new_review', userId: 'dj-1', title: 'K-DOLLA received a new review from Mødular.', description: "K-DOLLA absolutely destroyed the dancefloor. A true professional with impeccable track selection. Can't wait to have him back.", mediaUrl: getAvatarUrl(Role.DJ, 'dj-1'), mediaType: 'image', timestamp: '3d ago', likes: 150, likedBy:[], comments: 9, reposts: 6, rating: 5, relatedId: 'r1' },
+    { id: 'f6', type: 'new_mix', userId: 'dj-4', title: 'New Mix: Dub Echoes Vol. 5', description: '60 minutes of deep, dubby techno. Perfect for a rainy day in the city.', mediaUrl: 'https://source.unsplash.com/600x400/?rain,city,window&sig=f6', mediaType: 'image', timestamp: '4d ago', likes: 800, likedBy:[], comments: 110, reposts: 90, relatedId: 'pl4' },
+    { id: 'f14', type: 'new_mix', userId: 'dj-2', title: 'Afro House Sunset Mix', description: 'Here is my latest mix for all the sunset chasers. Enjoy!', mediaUrl: 'https://source.unsplash.com/600x400/?sunset,ocean,dj&sig=f14', mediaType: 'image', timestamp: '3d ago', likes: 2100, likedBy:[], comments: 250, reposts: 150, relatedId: 'pl2' },
+    { id: 'f7', type: 'gig_announcement', userId: 'biz-1', title: 'Open Decks next Wednesday!', description: 'Think you have what it takes? We\'re hosting an open decks night. Come through and show us what you got. Best selector gets a paid gig.', mediaUrl: 'https://source.unsplash.com/600x400/?dj,turntables,crowd&sig=f7', mediaType: 'image', timestamp: '5d ago', likes: 800, likedBy:[], comments: 150, reposts: 50},
+    { id: 'f8', type: 'new_track', userId: 'dj-11', title: 'Out Now: "Langa"', description: 'My new EP just dropped on all platforms. This one is for my home. Big love to everyone supporting.', mediaUrl: 'https://source.unsplash.com/600x400/?township,south-africa,music&sig=f8', mediaType: 'image', timestamp: '5d ago', likes: 2200, likedBy:[], comments: 180, reposts: 90, relatedId: 't11'},
+    { id: 'f9', type: 'live_now', userId: 'dj-12', title: 'Leighton Moody is live!', description: 'Sunday vinyl session incoming. Deep and soulful vibes only.', mediaUrl: 'https://source.unsplash.com/600x400/?vinyl,records,dj,soulful&sig=f9', mediaType: 'image', timestamp: '6d ago', likes: 980, likedBy:[], comments: 75, reposts: 40},
+    { id: 'f10', type: 'new_connection', userId: 'biz-23', title: 'Wolfkop Weekender is now following Pierre Johnson', description: 'Looks like a future collaboration might be on the cards!', mediaUrl: 'https://source.unsplash.com/600x400/?nature,festival,collaboration&sig=f10', mediaType: 'image', timestamp: '1w ago', likes: 1100, likedBy:[], comments: 40, reposts: 20},
+    { id: 'f11', type: 'gig_announcement', userId: 'biz-49', title: 'Deep End returns with Sides', description: 'We\'re back in the warehouse on Sept 12. Limited tickets available for this one.', mediaUrl: 'https://source.unsplash.com/600x400/?warehouse,industrial,dark&sig=f11', mediaType: 'image', timestamp: '1w ago', likes: 600, likedBy:[], comments: 55, reposts: 35},
+    { id: 'f12', type: 'new_mix', userId: 'dj-7', title: 'The Other Side Live Recording', description: 'Here\'s my set from last weekend. All minimal, all groovy.', mediaUrl: 'https://source.unsplash.com/600x400/?minimal,abstract,soundwave&sig=f12', mediaType: 'image', timestamp: '1w ago', likes: 1300, likedBy:[], comments: 95, reposts: 65},
+    { id: 'f13', type: 'new_track', userId: 'dj-33', title: 'Chronical Deep - "Karbau"', description: 'New music alert! My track Karbau is officially out. Go stream it and let me know what you think.', mediaUrl: 'https://source.unsplash.com/600x400/?deep,ocean,abstract&sig=f13', mediaType: 'image', timestamp: '8d ago', likes: 2500, likedBy:[], comments: 250, reposts: 120, relatedId: 't9'},
 ];
+
+// --- COMMENTS ---
+let comments: Comment[] = [
+    { id: 'c1', postId: 'f2', authorId: 'listener-1', text: 'Absolute banger!', timestamp: '17h ago' },
+    { id: 'c2', postId: 'f2', authorId: 'dj-1', text: 'Nice one Dwson!', timestamp: '16h ago' },
+    { id: 'c3', postId: 'f6', authorId: 'listener-3', text: 'Perfect for a moody Cape Town day. Love it.', timestamp: '4d ago'},
+];
+let nextCommentId = 4;
+
 
 // --- NOTIFICATIONS ---
 let notifications: Notification[] = [
@@ -584,9 +572,13 @@ let notifications: Notification[] = [
     { id: 'n4', userId: 'biz-1', type: NotificationType.BookingRequest, text: 'K-DOLLA expressed interest in your gig: "Deep Tech Invites".', timestamp: '5m ago', read: false, relatedId: 'g1' },
     { id: 'n5', userId: 'biz-1', type: NotificationType.BookingRequest, text: 'Pierre Johnson expressed interest in your gig: "Minimal Effort".', timestamp: '2h ago', read: false, relatedId: 'g8' },
     { id: 'n6', userId: 'biz-1', type: NotificationType.NewFollower, text: 'Cape Town Raver started following you.', timestamp: '1d ago', read: true, relatedId: 'listener-1' },
+    { id: 'n8', userId: 'biz-1', type: NotificationType.NewReview, text: 'DJ K-DOLLA left you a 5-star review!', timestamp: '1d ago', read: true, relatedId: 'r4'},
 
     // For Listener: Cape Town Raver (listener-1)
     { id: 'n7', userId: 'listener-1', type: NotificationType.EventUpdate, text: 'We House Sundays just announced their August lineup!', timestamp: '4h ago', read: false, relatedId: 'g3' },
+    
+    // For DJ Dwson (dj-10) for new comment
+    { id: 'n9', userId: 'dj-10', type: NotificationType.NewComment, text: 'Cape Town Raver commented on your post.', timestamp: '17h ago', read: true, relatedId: 'f2' },
 ];
 
 // --- CHATS ---
@@ -623,7 +615,22 @@ const simulate = <T,>(data: T): Promise<T> => new Promise(res => {
 
 
 export const getDJs = () => simulate(djs);
-export const getDJById = (id: string) => simulate(djs.find(d => d.id === id));
+export const getDJById = (id: string) => {
+    const dj = djs.find(d => d.id === id);
+    if (dj) {
+        // This function ensures that when a profile is requested, it always gets the
+        // most up-to-date list of tracks and mixes from the global source arrays,
+        // rather than relying on a potentially stale list stored on the DJ object itself.
+        // This is crucial for reflecting new uploads immediately.
+        const freshDj = {
+            ...dj,
+            tracks: tracks.filter(t => t.artistId === id),
+            mixes: playlists.filter(p => p.creatorId === id),
+        };
+        return simulate(freshDj);
+    }
+    return simulate(undefined);
+};
 export const getBusinesses = () => simulate(businesses);
 export const getBusinessById = (id: string) => simulate(businesses.find(b => b.id === id));
 export const getUserById = (id: string) => simulate(allUsers.find(u => u.id === id));
@@ -660,16 +667,20 @@ export const getDJByTrack = (trackId: string) => {
     const track = tracks.find(t => t.id === trackId);
     return simulate(djs.find(d => d.id === track?.artistId));
 }
-export const getFeedItems = () => simulate(feedItems.sort((a,b) => 0.5 - Math.random()));
+export const getFeedItems = () => simulate(feedItems);
+export const getFeedItemById = (id: string) => simulate(feedItems.find(f => f.id === id));
+export const getTrackById = (id: string) => simulate(tracks.find(t => t.id === id));
 
-export const addFeedItem = (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'comments' | 'shares'>) => {
+
+export const addFeedItem = (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'comments' | 'reposts'>) => {
     const newFeedItem: FeedItem = {
         ...item,
         id: `f${feedItems.length + 1}`,
         timestamp: 'Just now',
         likes: 0,
+        likedBy: [],
         comments: 0,
-        shares: 0,
+        reposts: 0,
     };
     feedItems.unshift(newFeedItem);
     return simulate(newFeedItem);
@@ -756,9 +767,10 @@ export const sendMessage = (chatId: string, senderId: string, text: string) => {
 };
 
 
-export const authenticate = (email: string): Promise<User | undefined> => {
+export const authenticate = (email: string, password: string): Promise<User | undefined> => {
   const user = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (!user) return simulate(undefined);
+  // Any password works for the demo, but it must be provided.
+  if (!user || !password) return simulate(undefined);
 
   // Return the detailed profile based on role
   if (user.role === Role.DJ) {
@@ -773,13 +785,34 @@ export const authenticate = (email: string): Promise<User | undefined> => {
   return simulate(user);
 }
 
-export const addGig = (newGig: Omit<Gig, 'id' | 'status'>) => {
+export const addGig = (newGigData: Omit<Gig, 'id' | 'status'>) => {
     const gig: Gig = {
-        ...newGig,
         id: `g${gigs.length + 1}`,
-        status: 'Open'
+        status: 'Open',
+        title: newGigData.title,
+        venueId: newGigData.venueId,
+        date: newGigData.date,
+        time: newGigData.time,
+        budget: newGigData.budget,
+        description: newGigData.description,
+        genres: newGigData.genres,
+        flyerUrl: newGigData.flyerUrl,
     };
     gigs.unshift(gig);
+
+    // Also create a feed item
+    const venue = businesses.find(b => b.id === newGigData.venueId);
+    if (venue) {
+        addFeedItem({
+            type: 'gig_announcement',
+            userId: newGigData.venueId,
+            title: newGigData.title,
+            description: `We're hosting ${newGigData.title} on ${new Date(newGigData.date).toLocaleDateString('en-ZA', { month: 'long', day: 'numeric' })}! Find out more and get involved.`,
+            mediaUrl: newGigData.flyerUrl || venue.avatarUrl,
+            mediaType: 'image',
+            relatedId: gig.id,
+        })
+    }
     return simulate(gig);
 }
 
@@ -887,10 +920,12 @@ export const getTopVenues = () => simulate(businesses.slice().sort((a, b) => b.r
 
 // Social Functions
 const findMutableProfile = (userId: string): DJ | Business | Listener | undefined => {
-    let user: DJ | Business | Listener | undefined = djs.find(u => u.id === userId);
-    if (user) return user;
-    user = businesses.find(u => u.id === userId);
-    if (user) return user;
+    const dj = djs.find(u => u.id === userId);
+    if (dj) return dj;
+    
+    const business = businesses.find(u => u.id === userId);
+    if (business) return business;
+
     return listeners.find(u => u.id === userId);
 }
 
@@ -965,6 +1000,19 @@ export const createStreamSession = (djId: string, title: string) => {
     return simulate(newSession);
 };
 
+export const endStreamSession = (sessionId: string): Promise<StreamSession | null> => {
+    const session = streamSessions.find(s => s.id === sessionId);
+    if (session) {
+        session.isLive = false;
+        
+        // Remove the 'live_now' feed item associated with this stream
+        feedItems = feedItems.filter(item => !(item.type === 'live_now' && item.relatedId === sessionId));
+        
+        return simulate(session);
+    }
+    return simulate(null);
+};
+
 export const getTracksForDj = (djId: string) => {
     const djTracks = tracks.filter(t => t.artistId === djId);
     return simulate(djTracks);
@@ -973,4 +1021,289 @@ export const getTracksForDj = (djId: string) => {
 export const getPlaylistsForDj = (djId: string) => {
     const djPlaylists = playlists.filter(p => p.creatorId === djId);
     return simulate(djPlaylists);
+}
+
+export const getReviewsForUser = (targetId: string): Promise<EnrichedReview[]> => {
+    const userReviews = reviews.filter(r => r.targetId === targetId);
+    const enrichedReviews = userReviews.map(review => {
+        const author = allUsers.find(u => u.id === review.authorId);
+        return { ...review, author: author! };
+    }).filter(r => r.author); // ensure author was found
+    return simulate(enrichedReviews.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+}
+
+export const submitReview = (reviewData: Omit<Review, 'id' | 'timestamp'>): Promise<Review> => {
+    const newReview: Review = {
+        ...reviewData,
+        id: `r${reviews.length + 1}`,
+        timestamp: 'Just now',
+    };
+    reviews.unshift(newReview);
+
+    const targetProfile = findMutableProfile(newReview.targetId);
+    const author = allUsers.find(u => u.id === newReview.authorId);
+
+    if(targetProfile && author && (targetProfile.role === Role.DJ || targetProfile.role === Role.Business)) {
+        const newTotalRating = (targetProfile.rating * targetProfile.reviewsCount) + newReview.rating;
+        targetProfile.reviewsCount++;
+        targetProfile.rating = newTotalRating / targetProfile.reviewsCount;
+
+        addFeedItem({
+            type: 'new_review',
+            userId: targetProfile.id,
+            title: `${targetProfile.name} received a new review from ${author.name}.`,
+            description: newReview.comment || '',
+            mediaUrl: targetProfile.avatarUrl,
+            mediaType: 'image',
+            rating: newReview.rating,
+            relatedId: newReview.id,
+        });
+        
+        notifications.unshift({
+             id: `n${notifications.length + 1}`,
+             userId: targetProfile.id,
+             type: NotificationType.NewReview,
+             text: `${author.name} left you a ${newReview.rating}-star review!`,
+             timestamp: 'Just now',
+             read: false,
+             relatedId: newReview.id,
+        });
+    }
+
+    return simulate(newReview);
+}
+
+export const getCommentsForPost = (postId: string): Promise<EnrichedComment[]> => {
+    const postComments = comments.filter(c => c.postId === postId);
+    const enriched = postComments.map(comment => {
+        const author = allUsers.find(u => u.id === comment.authorId);
+        return { ...comment, author: author! };
+    }).filter(c => c.author);
+    // sort by oldest first for display
+    return simulate(enriched.sort((a,b) => (a.id < b.id ? -1 : 1)));
+};
+
+export const addCommentToPost = (postId: string, authorId: string, text: string): Promise<EnrichedComment | null> => {
+    const post = feedItems.find(f => f.id === postId);
+    const author = allUsers.find(u => u.id === authorId);
+    if (!post || !author) return simulate(null);
+
+    const newComment: Comment = {
+        id: `c${nextCommentId++}`,
+        postId,
+        authorId,
+        text,
+        timestamp: 'Just now',
+    };
+    comments.push(newComment); // Add to end of array to maintain order
+    post.comments++;
+
+    if (post.userId !== authorId) {
+         notifications.unshift({
+            id: `n${notifications.length + 1}`,
+            userId: post.userId,
+            type: NotificationType.NewComment,
+            text: `${author.name} commented on your post.`,
+            timestamp: 'Just now',
+            read: false,
+            relatedId: postId,
+         });
+    }
+    
+    const enrichedComment: EnrichedComment = { ...newComment, author };
+    return simulate(enrichedComment);
+};
+
+export const addTrack = (artistId: string, title: string, artworkUrl: string, trackUrl: string) => {
+    const newTrack: Track = {
+        id: `t${tracks.length + 1}`,
+        title,
+        artistId,
+        artworkUrl,
+        trackUrl: trackUrl,
+        duration: `${Math.floor(Math.random() * 5) + 3}:${Math.floor(Math.random()*60).toString().padStart(2,'0')}` // random duration
+    };
+    tracks.unshift(newTrack);
+    
+    const artist = djs.find(d => d.id === artistId);
+    if(artist) {
+         // This is a bit of a hack for the mock API to keep the main DJ object in sync.
+         // In a real API, the DJ's track list would be a relation, not a static array.
+         if (!artist.tracks.find(t => t.id === newTrack.id)) {
+            artist.tracks.unshift(newTrack);
+         }
+
+         addFeedItem({
+            type: 'new_track',
+            userId: artistId,
+            title: `New Track: ${title}`,
+            description: `Check out my new track, "${title}"!`,
+            mediaUrl: artworkUrl,
+            mediaType: 'image',
+            relatedId: newTrack.id,
+        });
+    }
+
+    return simulate(newTrack);
+};
+
+export const createPlaylist = (creatorId: string, name: string, artworkUrl = '') => {
+    const newPlaylist: Playlist = {
+        id: `pl${playlists.length + 1}`,
+        name,
+        creatorId,
+        trackIds: [],
+        artworkUrl,
+    };
+    playlists.unshift(newPlaylist);
+    
+    const dj = djs.find(d => d.id === creatorId);
+    if (dj) {
+        dj.mixes.unshift(newPlaylist);
+    }
+    
+    return simulate(newPlaylist);
+};
+
+export const updatePlaylist = (playlistId: string, { name, artworkUrl }: { name?: string, artworkUrl?: string }) => {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (playlist) {
+        if (name) playlist.name = name;
+        if (typeof artworkUrl === 'string') playlist.artworkUrl = artworkUrl;
+        return simulate(playlist);
+    }
+    return simulate(null);
+}
+
+export const addTrackToPlaylist = (playlistId: string, trackId: string) => {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (playlist && !playlist.trackIds.includes(trackId)) {
+        playlist.trackIds.push(trackId);
+        return simulate(playlist);
+    }
+    return simulate(null);
+};
+
+export const updateUserProfile = (userId: string, data: Partial<DJ> | Partial<Business>): Promise<(DJ | Business | null)> => {
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return simulate(null);
+
+    let profile;
+    if (user.role === Role.DJ) {
+        profile = djs.find(d => d.id === userId);
+    } else if (user.role === Role.Business) {
+        profile = businesses.find(b => b.id === userId);
+    }
+
+    if (profile) {
+        // Update specific properties, not overwriting the whole object.
+        // This mutates the object in place, and since `allUsers` holds a reference
+        // to it, `allUsers` is also updated.
+        Object.assign(profile, data);
+        
+        // also update allUsers array for consistency, but the object reference is the same
+        const userIndexInAll = allUsers.findIndex(u => u.id === userId);
+        if (userIndexInAll !== -1) {
+            Object.assign(allUsers[userIndexInAll], data);
+        }
+        
+        return simulate(profile);
+    }
+    return simulate(null);
+}
+
+export const updateUserSettings = (userId: string, newSettings: Partial<UserSettings>): Promise<boolean> => {
+    const user = allUsers.find(u => u.id === userId);
+    if (user) {
+        if (!user.settings) {
+            user.settings = { theme: 'electric_blue' }; // Default
+        }
+        Object.assign(user.settings, newSettings);
+        
+        const profile = findMutableProfile(userId);
+        if (profile) {
+            if (!profile.settings) {
+                profile.settings = { theme: 'electric_blue' };
+            }
+            Object.assign(profile.settings, newSettings);
+        }
+        
+        return simulate(true);
+    }
+    return simulate(false);
+}
+
+export const toggleLikePost = (postId: string, userId: string): Promise<{ likes: number; likedBy: string[] } | null> => {
+    const post = feedItems.find(f => f.id === postId);
+    if (post) {
+        if (!post.likedBy) {
+            post.likedBy = [];
+        }
+        const userIndex = post.likedBy.indexOf(userId);
+        if (userIndex > -1) {
+            // User has liked it, so unlike it
+            post.likedBy.splice(userIndex, 1);
+            post.likes--;
+        } else {
+            // User hasn't liked it, so like it
+            post.likedBy.push(userId);
+            post.likes++;
+        }
+        return simulate({ likes: post.likes, likedBy: post.likedBy });
+    }
+    return simulate(null);
+};
+
+export const repost = (originalPostId: string, reposterId: string): Promise<FeedItem | null> => {
+    const originalPost = feedItems.find(f => f.id === originalPostId);
+    const reposter = allUsers.find(u => u.id === reposterId);
+    if (!originalPost || !reposter) return simulate(null);
+
+    // Don't allow reposting a repost to avoid nesting hell.
+    if (originalPost.repostOf) return simulate(null);
+
+    const newRepost: FeedItem = {
+        id: `f${Date.now()}`, // Use timestamp for unique ID
+        type: 'user_post',
+        userId: reposterId,
+        title: '', // Reposts don't have titles
+        description: '', // User could add a comment, but for now it's empty
+        timestamp: 'Just now',
+        likes: 0,
+        likedBy: [],
+        comments: 0,
+        reposts: 0,
+        repostOf: originalPostId,
+    };
+    feedItems.unshift(newRepost);
+
+    // Increment repost count on original post
+    if (typeof originalPost.reposts !== 'number') {
+        originalPost.reposts = 0;
+    }
+    originalPost.reposts++;
+    
+    // Add notification for the original author
+    if (originalPost.userId !== reposterId) {
+        notifications.unshift({
+            id: `n${notifications.length + 1}`,
+            userId: originalPost.userId,
+            type: NotificationType.Repost,
+            text: `${reposter.name} reposted your post.`,
+            timestamp: 'Just now',
+            read: false,
+            relatedId: newRepost.id, // Link to the new repost
+        });
+    }
+
+    return simulate(newRepost);
+};
+
+export const searchUsers = (query: string): Promise<User[]> => {
+    if (!query) return simulate([]);
+    const lowercasedQuery = query.toLowerCase();
+    const results = allUsers
+        .filter(u => u.name.toLowerCase().includes(lowercasedQuery))
+        .slice(0, 5); // Limit to 5 results
+    return simulate(results);
 }
