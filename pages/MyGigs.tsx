@@ -35,7 +35,7 @@ const GigCard = ({ gig, venue, isHighlighted, highlightedRef }: { gig: Gig; venu
                 <div className="flex justify-between items-start mb-3">
                     {venue ? (
                         <Link to={`/profile/${venue.id}`}>
-                            <h3 className="font-bold text-lg text-[var(--text-primary)] hover:underline">{venue.venueName}</h3>
+                            <h3 className="font-bold text-lg text-[var(--text-primary)] hover:underline">{venue.name}</h3>
                         </Link>
                     ) : (
                         <h3 className="font-bold text-lg text-[var(--text-primary)]">...</h3>
@@ -72,7 +72,7 @@ export const MyGigs = () => {
     const location = useLocation();
     const highlightedRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
-    const [currentMonth, setCurrentMonth] = useState(new Date('2025-08-01'));
+    const [currentMonth, setCurrentMonth] = useState(new Date());
     const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
     
     const [bookedGigs, setBookedGigs] = useState<Gig[]>([]);
@@ -103,6 +103,12 @@ export const MyGigs = () => {
             setCompletedGigs(completed);
 
             const allGigs = [...booked, ...interested, ...completed];
+            if (allGigs.length > 0) {
+                const monthStrings = [...new Set(allGigs.map(g => g.date.substring(0, 7)))].sort();
+                const latestMonth = monthStrings[monthStrings.length - 1];
+                setCurrentMonth(new Date(latestMonth + '-01T12:00:00Z'));
+            }
+
             const venueIds = [...new Set(allGigs.map(g => g.venueId))];
             if (venueIds.length > 0) {
                  const venueData = await Promise.all(venueIds.map(id => api.getBusinessById(id)));
@@ -118,15 +124,21 @@ export const MyGigs = () => {
         fetchData();
     }, [user, navigate]);
 
+    const activeMonths = useMemo(() => {
+        const allGigs = [...bookedGigs, ...interestedGigs, ...completedGigs];
+        if (allGigs.length === 0) return [];
+        const monthStrings = allGigs.map(g => g.date.substring(0, 7)); // 'YYYY-MM'
+        return [...new Set(monthStrings)].sort((a, b) => a.localeCompare(b));
+    }, [bookedGigs, interestedGigs, completedGigs]);
+
     const monthGigs = useMemo(() => {
+        const currentMonthString = currentMonth.toISOString().substring(0, 7);
         const interestedWithStatus = interestedGigs.map(g => ({ ...g, status: 'Open' as const }));
         const bookedWithStatus = bookedGigs.map(g => ({ ...g, status: 'Booked' as const }));
         const completedWithStatus = completedGigs.map(g => ({ ...g, status: 'Completed' as const }));
         
         return [...interestedWithStatus, ...bookedWithStatus, ...completedWithStatus].filter(gig => {
-            const gigDate = new Date(gig.date);
-            return gigDate.getFullYear() === currentMonth.getFullYear() &&
-                   gigDate.getMonth() === currentMonth.getMonth();
+            return gig.date.startsWith(currentMonthString);
         });
     }, [bookedGigs, interestedGigs, completedGigs, currentMonth]);
     
@@ -194,14 +206,25 @@ export const MyGigs = () => {
     }, [highlightedGigId, groupedGigs]); // Depend on groupedGigs to re-run if data changes
 
     const changeMonth = (amount: number) => {
-        setCurrentMonth(prev => {
-            const newDate = new Date(prev);
-            newDate.setMonth(newDate.getMonth() + amount);
-            return newDate;
-        });
+        if (activeMonths.length === 0) return;
+        const currentMonthStr = currentMonth.toISOString().substring(0, 7);
+        const currentIndex = activeMonths.indexOf(currentMonthStr);
+        
+        if (currentIndex === -1) return; // Should not happen if initialized correctly
+        
+        const nextIndex = currentIndex + amount;
+        
+        if (nextIndex >= 0 && nextIndex < activeMonths.length) {
+            setCurrentMonth(new Date(activeMonths[nextIndex] + '-01T12:00:00Z'));
+        }
     };
     
     const monthYearFormat = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
+    
+    const currentMonthIndex = activeMonths.indexOf(currentMonth.toISOString().substring(0, 7));
+    const isFirstMonth = currentMonthIndex === 0;
+    const isLastMonth = currentMonthIndex === activeMonths.length - 1;
+
 
     if (loading) return <PageSpinner />;
     
@@ -209,9 +232,9 @@ export const MyGigs = () => {
         <div className="text-[var(--text-primary)] min-h-full bg-[var(--background)]">
             <div className="p-4 space-y-6">
                 <div className="flex justify-between items-center">
-                    <button onClick={() => changeMonth(-1)} className="p-2 -ml-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"><IconChevronLeft size={24} /></button>
+                    <button onClick={() => changeMonth(-1)} disabled={isFirstMonth || activeMonths.length === 0} className="p-2 -ml-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:text-zinc-700 disabled:cursor-not-allowed"><IconChevronLeft size={24} /></button>
                     <h2 className="font-orbitron text-2xl font-bold tracking-wider">{monthYearFormat.format(currentMonth).toUpperCase()}</h2>
-                    <button onClick={() => changeMonth(1)} className="p-2 -mr-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"><IconChevronRight size={24} /></button>
+                    <button onClick={() => changeMonth(1)} disabled={isLastMonth || activeMonths.length === 0} className="p-2 -mr-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:text-zinc-700 disabled:cursor-not-allowed"><IconChevronRight size={24} /></button>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 divide-y-0 md:divide-x divide-[var(--border)] text-center">

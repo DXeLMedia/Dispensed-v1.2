@@ -49,7 +49,7 @@ const GigCard = ({ gig, onInterestSent }: { gig: Gig; onInterestSent: (gigId: st
           <div className="flex justify-between items-start">
             <div>
               <h3 className="font-orbitron text-lg font-bold text-[var(--text-primary)]">{gig.title}</h3>
-               <Link to={`/profile/${venue.id}`} className="text-sm text-[var(--accent)] font-semibold hover:underline">{venue.venueName}</Link>
+               <Link to={`/profile/${venue.id}`} className="text-sm text-[var(--accent)] font-semibold hover:underline">{venue.name}</Link>
             </div>
             <div className="text-right">
                 <p className="text-lg font-bold text-[var(--text-primary)]">R{gig.budget.toLocaleString()}</p>

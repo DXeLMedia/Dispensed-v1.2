@@ -1,8 +1,12 @@
+import { supabase } from './supabaseClient';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { DJ, Business, Gig, Track, Playlist, Role, Tier, User, FeedItem, Notification, NotificationType, Chat, Message, EnrichedChat, Listener, StreamSession, Review, EnrichedReview, Comment, EnrichedComment, UserSettings } from '../types';
+import { persistenceService } from './persistenceService';
 
 // --- DATA POPULATION ---
+// This data is now primarily for seeding the database.
 
-const userList: { id: string; name: string; email: string; role: Role; }[] = [
+export const userList: { id: string; name: string; email: string; role: Role; }[] = [
   // DJs (200) - Curated for Cape Town Based Deep House, Techno, Minimal (Excluding Gqom/Amapiano & non-CPT)
   { id: 'dj-1', name: 'K-DOLLA', email: 'k-dolla@test.com', role: Role.DJ },
   { id: 'dj-2', name: 'FKA Mash', email: 'fka@test.com', role: Role.DJ },
@@ -407,31 +411,31 @@ let djs: DJ[] = (users.filter(u => u.role === Role.DJ) as User[]).map((user, ind
 
 let businesses: Business[] = (users.filter(u => u.role === Role.Business) as User[]).map((user, index) => {
     const specificVenues = [
-        { id: 'biz-1', venueName: 'Mødular.', location: '34 Riebeek St, Cape Town', description: 'Cape Town\'s home for underground techno and house music. Dark, loud, and intimate.', rating: 4.7, reviewsCount: 3, followers: 22000, following: ['dj-1', 'dj-3', 'dj-10', 'dj-39'], socials: { website: "modularclub.co.za", instagram: "modular_club_cpt" } },
-        { id: 'biz-2', venueName: 'The Waiting Room', location: '273 Long St, Cape Town', description: 'Iconic rooftop bar and music venue with a diverse lineup of local and international talent.', rating: 4.7, reviewsCount: 430, followers: 18000, following: ['dj-5'] },
-        { id: 'biz-3', venueName: 'We House Sundays', location: 'Event Series, Cape Town', description: 'A soulful house movement that celebrates music and togetherness through iconic Sunday gatherings.', rating: 4.95, reviewsCount: 180, followers: 35000, following: ['dj-2', 'dj-8'], socials: { instagram: "wehousesundays", facebook: "wehousesundays" } },
-        { id: 'biz-23', venueName: 'Wolfkop Weekender', location: 'Festival, Citrusdal', description: 'A boutique music festival experience set in nature, known for its curated electronic music.', rating: 4.98, reviewsCount: 300, followers: 45000, following: ['dj-11', 'dj-12'] },
-        { id: 'biz-38', venueName: 'Sexy Groovy Love', location: 'Festival, The Cape Winelands', description: 'Lush, vibrant, and stylish boutique festivals in beautiful locations.', rating: 4.85, reviewsCount: 220, followers: 60000, following: ['dj-25'] },
-        { id: 'biz-42', venueName: 'Stay True Sounds', location: 'Label / Event Series, Cape Town', description: 'One of South Africa\'s most respected deep house labels, curating showcases with their family of artists.', rating: 4.95, reviewsCount: 150, followers: 40000, following: ['dj-13', 'dj-20'] },
-        { id: 'biz-43', venueName: 'Bridges for Music', location: 'Langa, Cape Town', description: 'A non-profit organization creating positive change in underserved communities through music.', rating: 4.99, reviewsCount: 100, followers: 25000, following: ['dj-11', 'dj-2'] },
-        { id: 'biz-44', venueName: 'PULSE', location: 'Secret Warehouse, Cape Town', description: 'Hard-hitting, hypnotic techno events in unique industrial spaces.', rating: 4.87, reviewsCount: 80, followers: 8500, following: ['dj-39', 'dj-44'] },
-        { id: 'biz-45', venueName: 'Cape Town Electronic Music Festival', location: 'Festival, Cape Town', description: 'The city\'s flagship electronic music festival, showcasing local and international talent.', rating: 4.91, reviewsCount: 500, followers: 85000, following: [] },
-        { id: 'biz-49', venueName: 'Deep End', location: 'Event Series, Cape Town', description: 'For the heads. A recurring party focused on the deeper, dubbier side of techno and house.', rating: 4.88, reviewsCount: 70, followers: 6500, following: ['dj-4'] },
-        { id: 'biz-50', venueName: 'UNTMD', location: 'Event Series, Cape Town', description: 'Raw, industrial, and experimental techno nights. No photos on the dancefloor.', rating: 4.85, reviewsCount: 65, followers: 7200, following: ['dj-44'] },
-        { id: 'biz-51', venueName: 'Origin Festival', location: 'Festival, Elandskloof', description: 'Annual psychedelic music & arts festival in the mountains.', rating: 4.92, reviewsCount: 450, followers: 95000, following: [] },
-        { id: 'biz-52', venueName: 'Vortex Parallel Universe', location: 'Festival, Riviersonderend', description: 'Legendary trance and electronic music festival with a rich history.', rating: 4.89, reviewsCount: 400, followers: 120000, following: [] },
+        { id: 'biz-1', name: 'Mødular.', location: '34 Riebeek St, Cape Town', description: 'Cape Town\'s home for underground techno and house music. Dark, loud, and intimate.', rating: 4.7, reviewsCount: 3, followers: 22000, following: ['dj-1', 'dj-3', 'dj-10', 'dj-39'], socials: { website: "modularclub.co.za", instagram: "modular_club_cpt" } },
+        { id: 'biz-2', name: 'The Waiting Room', location: '273 Long St, Cape Town', description: 'Iconic rooftop bar and music venue with a diverse lineup of local and international talent.', rating: 4.7, reviewsCount: 430, followers: 18000, following: ['dj-5'] },
+        { id: 'biz-3', name: 'We House Sundays', location: 'Event Series, Cape Town', description: 'A soulful house movement that celebrates music and togetherness through iconic Sunday gatherings.', rating: 4.95, reviewsCount: 180, followers: 35000, following: ['dj-2', 'dj-8'], socials: { instagram: "wehousesundays", facebook: "wehousesundays" } },
+        { id: 'biz-23', name: 'Wolfkop Weekender', location: 'Festival, Citrusdal', description: 'A boutique music festival experience set in nature, known for its curated electronic music.', rating: 4.98, reviewsCount: 300, followers: 45000, following: ['dj-11', 'dj-12'] },
+        { id: 'biz-38', name: 'Sexy Groovy Love', location: 'Festival, The Cape Winelands', description: 'Lush, vibrant, and stylish boutique festivals in beautiful locations.', rating: 4.85, reviewsCount: 220, followers: 60000, following: ['dj-25'] },
+        { id: 'biz-42', name: 'Stay True Sounds', location: 'Label / Event Series, Cape Town', description: 'One of South Africa\'s most respected deep house labels, curating showcases with their family of artists.', rating: 4.95, reviewsCount: 150, followers: 40000, following: ['dj-13', 'dj-20'] },
+        { id: 'biz-43', name: 'Bridges for Music', location: 'Langa, Cape Town', description: 'A non-profit organization creating positive change in underserved communities through music.', rating: 4.99, reviewsCount: 100, followers: 25000, following: ['dj-11', 'dj-2'] },
+        { id: 'biz-44', name: 'PULSE', location: 'Secret Warehouse, Cape Town', description: 'Hard-hitting, hypnotic techno events in unique industrial spaces.', rating: 4.87, reviewsCount: 80, followers: 8500, following: ['dj-39', 'dj-44'] },
+        { id: 'biz-45', name: 'Cape Town Electronic Music Festival', location: 'Festival, Cape Town', description: 'The city\'s flagship electronic music festival, showcasing local and international talent.', rating: 4.91, reviewsCount: 500, followers: 85000, following: [] },
+        { id: 'biz-49', name: 'Deep End', location: 'Event Series, Cape Town', description: 'For the heads. A recurring party focused on the deeper, dubbier side of techno and house.', rating: 4.88, reviewsCount: 70, followers: 6500, following: ['dj-4'] },
+        { id: 'biz-50', name: 'UNTMD', location: 'Event Series, Cape Town', description: 'Raw, industrial, and experimental techno nights. No photos on the dancefloor.', rating: 4.85, reviewsCount: 65, followers: 7200, following: ['dj-44'] },
+        { id: 'biz-51', name: 'Origin Festival', location: 'Festival, Elandskloof', description: 'Annual psychedelic music & arts festival in the mountains.', rating: 4.92, reviewsCount: 450, followers: 95000, following: [] },
+        { id: 'biz-52', name: 'Vortex Parallel Universe', location: 'Festival, Riviersonderend', description: 'Legendary trance and electronic music festival with a rich history.', rating: 4.89, reviewsCount: 400, followers: 120000, following: [] },
         { id: 'biz-53', name: 'Earthdance Cape Town', location: 'Festival, Nekkies Resort', description: 'Part of a global music and peace festival, known for its conscious vibes.', rating: 4.85, reviewsCount: 320, followers: 65000, following: [] },
-        { id: 'biz-54', venueName: 'Bazique Festival', location: 'Festival, Riviersonderend', description: 'A surreal wonderland of music, art, and absurdity.', rating: 4.9, reviewsCount: 280, followers: 75000, following: [] },
-        { id: 'biz-201', venueName: 'Neon Nights Club', location: 'City Bowl, Cape Town', description: 'Underground club with a focus on neon aesthetics and driving techno.', rating: 4.8, reviewsCount: 112, followers: 9500, following: [] },
-        { id: 'biz-202', venueName: 'Skyline Rooftop', location: 'De Waterkant, Cape Town', description: 'Chic rooftop bar with panoramic views, specializing in sunset house sessions.', rating: 4.7, reviewsCount: 180, followers: 12000, following: [] },
-        { id: 'biz-203', venueName: 'The Bassment', location: 'CBD, Cape Town', description: 'No-frills basement club for serious music heads.', rating: 4.8, reviewsCount: 95, followers: 7500, following: [] },
-        { id: 'biz-204', venueName: 'Groove Garden', location: 'Stellenbosch', description: 'Outdoor venue for day parties and festivals.', rating: 4.7, reviewsCount: 150, followers: 15000, following: [] },
+        { id: 'biz-54', name: 'Bazique Festival', location: 'Festival, Riviersonderend', description: 'A surreal wonderland of music, art, and absurdity.', rating: 4.9, reviewsCount: 280, followers: 75000, following: [] },
+        { id: 'biz-201', name: 'Neon Nights Club', location: 'City Bowl, Cape Town', description: 'Underground club with a focus on neon aesthetics and driving techno.', rating: 4.8, reviewsCount: 112, followers: 9500, following: [] },
+        { id: 'biz-202', name: 'Skyline Rooftop', location: 'De Waterkant, Cape Town', description: 'Chic rooftop bar with panoramic views, specializing in sunset house sessions.', rating: 4.7, reviewsCount: 180, followers: 12000, following: [] },
+        { id: 'biz-203', name: 'The Bassment', location: 'CBD, Cape Town', description: 'No-frills basement club for serious music heads.', rating: 4.8, reviewsCount: 95, followers: 7500, following: [] },
+        { id: 'biz-204', name: 'Groove Garden', location: 'Stellenbosch', description: 'Outdoor venue for day parties and festivals.', rating: 4.7, reviewsCount: 150, followers: 15000, following: [] },
     ];
     const specific = specificVenues.find(v => v.id === user.id);
     return {
         ...user,
         role: Role.Business,
-        venueName: specific?.venueName || user.name,
+        name: specific?.name || user.name,
         location: specific?.location || 'Cape Town, South Africa',
         description: specific?.description || 'A key player in the Cape Town music and events scene.',
         rating: specific?.rating || Number((4.8 - index * 0.02).toFixed(2)),
@@ -474,53 +478,53 @@ let allUsers = [...djs, ...businesses, ...listeners];
 
 // --- GIGS ---
 let gigs: Gig[] = [
-  { id: 'g1', title: 'Deep Tech Invites: K-DOLLA', venueId: 'biz-1', date: '2025-08-15', time: '22:00', budget: 1500, description: 'Prepare for a journey into the deep. K-DOLLA takes over Mødular for a night of relentless techno.', genres: ['Techno', 'Deep-Tech'], status: 'Open', flyerUrl: 'https://source.unsplash.com/800x600/?techno,dj,dark&sig=g1' },
-  { id: 'g2', title: 'Rooftop Grooves with DJ Loyd', venueId: 'biz-2', date: '2025-08-17', time: '19:00', budget: 800, description: 'Sunset vibes on the Long Street rooftop. Spinning soulful and deep house.', genres: ['Deep House', 'Soulful House'], status: 'Completed', bookedDjId: 'dj-5' },
-  { id: 'g3', title: 'We House Sundays - August Edition', venueId: 'biz-3', date: '2025-08-18', time: '14:00', budget: 1200, description: 'Join the movement. Seeking a DJ who understands the soulful core of house music.', genres: ['Soulful House', 'Afro House'], status: 'Open', flyerUrl: 'https://source.unsplash.com/800x600/?house,music,party,sunday&sig=g3' },
-  { id: 'g4', title: 'Minimal Effort with The Fogshow', venueId: 'biz-4', date: '2025-08-22', time: '23:00', budget: 900, description: 'Intricate grooves and minimal soundscapes all night long with The Other Side head honcho.', genres: ['Minimal', 'Deep-Tech'], status: 'Booked', bookedDjId: 'dj-7'},
-  { id: 'g5', title: 'ERA Re-opening Party', venueId: 'biz-5', date: '2025-09-01', time: '21:00', budget: 2000, description: 'The legend is back. We are looking for a headline techno act to celebrate our return.', genres: ['Techno'], status: 'Open'},
-  { id: 'g6', title: 'Wolfkop Weekender - Main Stage', venueId: 'biz-23', date: '2026-01-28', time: '18:00', budget: 3500, description: 'Seeking artists for our annual journey into sound. Melodic and groovy sets preferred.', genres: ['Melodic House', 'Deep House', 'Techno'], status: 'Open', flyerUrl: 'https://source.unsplash.com/800x600/?festival,nature,music&sig=g6' },
-  { id: 'g7', title: 'Stay True Sounds Showcase', venueId: 'biz-42', date: '2025-09-15', time: '20:00', budget: 1800, description: 'A night dedicated to the finest deep house, with Kid Fonque at the helm.', genres: ['Deep House', 'Jazz'], status: 'Completed', bookedDjId: 'dj-20'},
-  { id: 'g8', title: 'Minimal Effort with Pierre Johnson', venueId: 'biz-1', date: '2025-09-05', time: '23:00', budget: 1000, description: 'An intimate night of minimal and deep tech.', genres: ['Minimal', 'Deep-Tech'], status: 'Open'},
-  { id: 'g9', title: 'Afro House Journey with Atmos Blaq', venueId: 'biz-7', date: '2025-09-06', time: '20:00', budget: 1200, description: 'An epic journey through the sounds of afro house and afro tech.', genres: ['Afro House', 'Afro Tech'], status: 'Open'},
-  { id: 'g10', title: 'Dub Techno Special: Sides', venueId: 'biz-49', date: '2025-09-12', time: '22:00', budget: 750, description: 'Deep End presents a night of pure dub techno. Heads down, eyes closed.', genres: ['Dub-Techno', 'Deep House'], status: 'Open'},
-  { id: 'g11', title: 'UNTMD Presents: Rose Bonica', venueId: 'biz-50', date: '2025-09-13', time: '23:00', budget: 900, description: 'Raw, industrial, and experimental techno all night long.', genres: ['Techno', 'Industrial'], status: 'Booked', bookedDjId: 'dj-44'},
-  { id: 'g12', title: 'The Search: Leighton Moody All Night Long', venueId: 'biz-41', date: '2025-09-19', time: '21:00', budget: 1500, description: 'A masterclass in soulful and deep house from a Cape Town legend.', genres: ['Deep House', 'Soulful House'], status: 'Open'},
-  { id: 'g13', title: 'Sexy Groovy Love - Spring Edition', venueId: 'biz-38', date: '2025-09-27', time: '12:00', budget: 2500, description: 'Our first party of the season! Looking for DJs that bring the vibe.', genres: ['House', 'Tech House', 'Deep House'], status: 'Open', flyerUrl: 'https://source.unsplash.com/800x600/?festival,love,groovy&sig=g13' },
-  { id: 'g14', title: 'Fiction Fridays: Call for Residents', venueId: 'biz-10', date: '2025-10-01', time: '21:00', budget: 500, description: 'Fiction is looking for new resident DJs to join our family. Send us your mixes!', genres: ['Techno', 'House', 'Break-Dub'], status: 'Open'},
-  { id: 'g15', title: 'It Is What It Is ft. Jullian Gomes', venueId: 'biz-26', date: '2025-09-28', time: '14:00', budget: 2000, description: 'The legendary Jullian Gomes graces the IIWII stage for a magical afternoon set.', genres: ['Deep House', 'Soulful House'], status: 'Booked', bookedDjId: 'dj-13'},
+  { id: 'g1', title: 'Deep Tech Invites: K-DOLLA', venueId: 'biz-1', date: '2025-08-15', time: '22:00', budget: 3000, description: 'Prepare for a journey into the deep. K-DOLLA takes over Mødular for a night of relentless techno.', genres: ['Techno', 'Deep-Tech'], status: 'Open' },
+  { id: 'g2', title: 'Rooftop Grooves with DJ Loyd', venueId: 'biz-2', date: '2025-08-17', time: '19:00', budget: 2500, description: 'Sunset vibes on the Long Street rooftop. Spinning soulful and deep house.', genres: ['Deep House', 'Soulful House'], status: 'Completed', bookedDjId: 'dj-5' },
+  { id: 'g3', title: 'We House Sundays - August Edition', venueId: 'biz-3', date: '2025-08-18', time: '14:00', budget: 2800, description: 'Join the movement. Seeking a DJ who understands the soulful core of house music.', genres: ['Soulful House', 'Afro House'], status: 'Open' },
+  { id: 'g4', title: 'Minimal Effort with The Fogshow', venueId: 'biz-4', date: '2025-08-22', time: '23:00', budget: 2600, description: 'Intricate grooves and minimal soundscapes all night long with The Other Side head honcho.', genres: ['Minimal', 'Deep-Tech'], status: 'Booked', bookedDjId: 'dj-7'},
+  { id: 'g5', title: 'ERA Re-opening Party', venueId: 'biz-5', date: '2025-09-01', time: '21:00', budget: 3500, description: 'The legend is back. We are looking for a headline techno act to celebrate our return.', genres: ['Techno'], status: 'Open'},
+  { id: 'g6', title: 'Wolfkop Weekender - Main Stage', venueId: 'biz-23', date: '2026-01-28', time: '18:00', budget: 3500, description: 'Seeking artists for our annual journey into sound. Melodic and groovy sets preferred.', genres: ['Melodic House', 'Deep House', 'Techno'], status: 'Open' },
+  { id: 'g7', title: 'Stay True Sounds Showcase', venueId: 'biz-42', date: '2025-09-15', time: '20:00', budget: 3200, description: 'A night dedicated to the finest deep house, with Kid Fonque at the helm.', genres: ['Deep House', 'Jazz'], status: 'Completed', bookedDjId: 'dj-20'},
+  { id: 'g8', title: 'Minimal Effort with Pierre Johnson', venueId: 'biz-1', date: '2025-09-05', time: '23:00', budget: 2700, description: 'An intimate night of minimal and deep tech.', genres: ['Minimal', 'Deep-Tech'], status: 'Open'},
+  { id: 'g9', title: 'Afro House Journey with Atmos Blaq', venueId: 'biz-7', date: '2025-09-06', time: '20:00', budget: 2900, description: 'An epic journey through the sounds of afro house and afro tech.', genres: ['Afro House', 'Afro Tech'], status: 'Open'},
+  { id: 'g10', title: 'Dub Techno Special: Sides', venueId: 'biz-49', date: '2025-09-12', time: '22:00', budget: 2500, description: 'Deep End presents a night of pure dub techno. Heads down, eyes closed.', genres: ['Dub-Techno', 'Deep House'], status: 'Open'},
+  { id: 'g11', title: 'UNTMD Presents: Rose Bonica', venueId: 'biz-50', date: '2025-09-13', time: '23:00', budget: 2600, description: 'Raw, industrial, and experimental techno all night long.', genres: ['Techno', 'Industrial'], status: 'Booked', bookedDjId: 'dj-44'},
+  { id: 'g12', title: 'The Search: Leighton Moody All Night Long', venueId: 'biz-41', date: '2025-09-19', time: '21:00', budget: 3000, description: 'A masterclass in soulful and deep house from a Cape Town legend.', genres: ['Deep House', 'Soulful House'], status: 'Open'},
+  { id: 'g13', title: 'Sexy Groovy Love - Spring Edition', venueId: 'biz-38', date: '2025-09-27', time: '12:00', budget: 2500, description: 'Our first party of the season! Looking for DJs that bring the vibe.', genres: ['House', 'Tech House', 'Deep House'], status: 'Open' },
+  { id: 'g14', title: 'Fiction Fridays: Call for Residents', venueId: 'biz-10', date: '2025-10-01', time: '21:00', budget: 2500, description: 'Fiction is looking for new resident DJs to join our family. Send us your mixes!', genres: ['Techno', 'House', 'Break-Dub'], status: 'Open'},
+  { id: 'g15', title: 'It Is What It Is ft. Jullian Gomes', venueId: 'biz-26', date: '2025-09-28', time: '14:00', budget: 3400, description: 'The legendary Jullian Gomes graces the IIWII stage for a magical afternoon set.', genres: ['Deep House', 'Soulful House'], status: 'Booked', bookedDjId: 'dj-13'},
 
   // Gigs for dj-46 (Double X eL) to populate MyGigs page
-  { id: 'g16', title: 'Neon Nights Club ft. Double X eL', venueId: 'biz-201', date: '2025-08-15', time: '9:00 PM - 2:00 AM', budget: 450, description: 'Bring extra speakers for outdoor area', genres: ['Techno', 'House'], status: 'Booked', bookedDjId: 'dj-46', flyerUrl: 'https://source.unsplash.com/800x600/?neon,club,night&sig=g16' },
-  { id: 'g17', title: 'Sunset Session', venueId: 'biz-202', date: '2025-08-18', time: '7:00 PM - 11:00 PM', budget: 320, description: 'Prepare a chill sunset vibe set', genres: ['Deep House', 'Melodic House'], status: 'Open', flyerUrl: 'https://source.unsplash.com/800x600/?sunset,rooftop,dj&sig=g17' },
-  { id: 'g18', title: 'Late Night Grooves', venueId: 'biz-1', date: '2025-08-29', time: '11:00 PM - 4:00 AM', budget: 500, description: 'Main room closing set', genres: ['Techno'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g19', title: 'Rooftop Day Party', venueId: 'biz-202', date: '2025-08-22', time: '2:00 PM - 8:00 PM', budget: 280, description: 'Day time event, play groovy house.', genres: ['House'], status: 'Open' },
-  { id: 'g20', title: 'The Bassment Opening', venueId: 'biz-203', date: '2025-08-02', time: '10:00 PM - 3:00 AM', budget: 300, description: '', genres: ['Deep-Tech'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g21', title: 'Saturday Social', venueId: 'biz-6', date: '2025-08-09', time: '8:00 PM - 1:00 AM', budget: 250, description: 'Vibey, social atmosphere.', genres: ['House', 'Soulful House'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g22', title: 'Groove Garden Festival', venueId: 'biz-204', date: '2025-08-16', time: '12:00 PM - 10:00 PM', budget: 400, description: 'Main stage, peak time slot.', genres: ['Melodic House', 'Progressive'], status: 'Booked', bookedDjId: 'dj-46', flyerUrl: 'https://source.unsplash.com/800x600/?garden,party,music&sig=g22' },
-  { id: 'g23', title: 'We House Sundays Guest Slot', venueId: 'biz-3', date: '2025-08-24', time: '4:00 PM - 6:00 PM', budget: 350, description: 'Warm up for the headliner.', genres: ['Soulful House'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g24', title: 'Fiction Wednesdays', venueId: 'biz-10', date: '2025-08-27', time: '10:00 PM - 1:00 AM', budget: 200, description: 'Mid-week party, anything goes.', genres: ['Breaks', 'House'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g25', title: 'Reset Closing Set', venueId: 'biz-8', date: '2025-08-30', time: '2:00 AM - 4:00 AM', budget: 250, description: '', genres: ['Techno'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g26', title: 'Warehouse Rave', venueId: 'biz-44', date: '2025-08-23', time: '11:00 PM - 4:00 AM', budget: 300, description: 'Hard and fast techno.', genres: ['Hard Techno', 'Industrial'], status: 'Open' },
+  { id: 'g16', title: 'Neon Nights Club ft. Double X eL', venueId: 'biz-201', date: '2025-08-15', time: '9:00 PM - 2:00 AM', budget: 2500, description: 'Bring extra speakers for outdoor area', genres: ['Techno', 'House'], status: 'Booked', bookedDjId: 'dj-46' },
+  { id: 'g17', title: 'Sunset Session', venueId: 'biz-202', date: '2025-08-18', time: '7:00 PM - 11:00 PM', budget: 2750, description: 'Prepare a chill sunset vibe set', genres: ['Deep House', 'Melodic House'], status: 'Open' },
+  { id: 'g18', title: 'Late Night Grooves', venueId: 'biz-1', date: '2025-08-29', time: '11:00 PM - 4:00 AM', budget: 2600, description: 'Main room closing set', genres: ['Techno'], status: 'Booked', bookedDjId: 'dj-46' },
+  { id: 'g19', title: 'Rooftop Day Party', venueId: 'biz-202', date: '2025-08-22', time: '2:00 PM - 8:00 PM', budget: 2800, description: 'Day time event, play groovy house.', genres: ['House'], status: 'Open' },
+  { id: 'g20', title: 'The Bassment Opening', venueId: 'biz-203', date: '2025-08-02', time: '10:00 PM - 3:00 AM', budget: 2500, description: '', genres: ['Deep-Tech'], status: 'Booked', bookedDjId: 'dj-46' },
+  { id: 'g21', title: 'Saturday Social', venueId: 'biz-6', date: '2025-08-09', time: '8:00 PM - 1:00 AM', budget: 2500, description: 'Vibey, social atmosphere.', genres: ['House', 'Soulful House'], status: 'Booked', bookedDjId: 'dj-46' },
+  { id: 'g22', title: 'Groove Garden Festival', venueId: 'biz-204', date: '2025-08-16', time: '12:00 PM - 10:00 PM', budget: 2900, description: 'Main stage, peak time slot.', genres: ['Melodic House', 'Progressive'], status: 'Booked', bookedDjId: 'dj-46' },
+  { id: 'g23', title: 'We House Sundays Guest Slot', venueId: 'biz-3', date: '2025-08-24', time: '4:00 PM - 6:00 PM', budget: 2650, description: 'Warm up for the headliner.', genres: ['Soulful House'], status: 'Booked', bookedDjId: 'dj-46' },
+  { id: 'g24', title: 'Fiction Wednesdays', venueId: 'biz-10', date: '2025-08-27', time: '10:00 PM - 1:00 AM', budget: 2500, description: 'Mid-week party, anything goes.', genres: ['Breaks', 'House'], status: 'Booked', bookedDjId: 'dj-46' },
+  { id: 'g25', title: 'Reset Closing Set', venueId: 'biz-8', date: '2025-08-30', time: '2:00 AM - 4:00 AM', budget: 2550, description: '', genres: ['Techno'], status: 'Booked', bookedDjId: 'dj-46' },
+  { id: 'g26', title: 'Warehouse Rave', venueId: 'biz-44', date: '2025-08-23', time: '11:00 PM - 4:00 AM', budget: 2700, description: 'Hard and fast techno.', genres: ['Hard Techno', 'Industrial'], status: 'Open' },
 
   // Gigs for dj-46 to populate previous months on MyGigs page
   // July 2025
-  { id: 'g27', title: 'Mid-Month Modular', venueId: 'biz-1', date: '2025-07-15', time: '10:00 PM - 3:00 AM', budget: 400, description: 'Past gig.', genres: ['Techno'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g28', title: 'Winter Warmer at Waiting Room', venueId: 'biz-2', date: '2025-07-22', time: '8:00 PM - 1:00 AM', budget: 250, description: 'Past gig.', genres: ['Deep House'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g29', title: 'Souk Saturday', venueId: 'biz-7', date: '2025-07-12', time: '9:00 PM - 2:00 AM', budget: 300, description: 'Past gig.', genres: ['Melodic House'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g30', title: 'Fiction Flashback', venueId: 'biz-10', date: '2025-07-04', time: '10:00 PM - 2:00 AM', budget: 200, description: 'Past gig.', genres: ['90s House'], status: 'Completed', bookedDjId: 'dj-46' },
+  { id: 'g27', title: 'Mid-Month Modular', venueId: 'biz-1', date: '2025-07-15', time: '10:00 PM - 3:00 AM', budget: 2800, description: 'Past gig.', genres: ['Techno'], status: 'Completed', bookedDjId: 'dj-46' },
+  { id: 'g28', title: 'Winter Warmer at Waiting Room', venueId: 'biz-2', date: '2025-07-22', time: '8:00 PM - 1:00 AM', budget: 2500, description: 'Past gig.', genres: ['Deep House'], status: 'Completed', bookedDjId: 'dj-46' },
+  { id: 'g29', title: 'Souk Saturday', venueId: 'biz-7', date: '2025-07-12', time: '9:00 PM - 2:00 AM', budget: 2600, description: 'Past gig.', genres: ['Melodic House'], status: 'Completed', bookedDjId: 'dj-46' },
+  { id: 'g30', title: 'Fiction Flashback', venueId: 'biz-10', date: '2025-07-04', time: '10:00 PM - 2:00 AM', budget: 2500, description: 'Past gig.', genres: ['90s House'], status: 'Completed', bookedDjId: 'dj-46' },
   
   // June 2025
-  { id: 'g31', title: 'Deep Tech Night', venueId: 'biz-203', date: '2025-06-20', time: '11:00 PM - 4:00 AM', budget: 350, description: 'Past gig.', genres: ['Deep-Tech'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g32', title: 'House of Machines Social', venueId: 'biz-6', date: '2025-06-13', time: '7:00 PM - 12:00 AM', budget: 200, description: 'Past gig.', genres: ['House', 'Soulful House'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g33', title: 'Colorbox Showcase', venueId: 'biz-9', date: '2025-06-06', time: '9:00 PM - 2:00 AM', budget: 300, description: 'Past gig.', genres: ['Techno', 'Minimal'], status: 'Completed', bookedDjId: 'dj-46' },
+  { id: 'g31', title: 'Deep Tech Night', venueId: 'biz-203', date: '2025-06-20', time: '11:00 PM - 4:00 AM', budget: 2700, description: 'Past gig.', genres: ['Deep-Tech'], status: 'Completed', bookedDjId: 'dj-46' },
+  { id: 'g32', title: 'House of Machines Social', venueId: 'biz-6', date: '2025-06-13', time: '7:00 PM - 12:00 AM', budget: 2500, description: 'Past gig.', genres: ['House', 'Soulful House'], status: 'Completed', bookedDjId: 'dj-46' },
+  { id: 'g33', title: 'Colorbox Showcase', venueId: 'biz-9', date: '2025-06-06', time: '9:00 PM - 2:00 AM', budget: 2600, description: 'Past gig.', genres: ['Techno', 'Minimal'], status: 'Completed', bookedDjId: 'dj-46' },
   
   // May 2025
-  { id: 'g34', title: 'ERA Special Guest', venueId: 'biz-5', date: '2025-05-30', time: '10:00 PM - 4:00 AM', budget: 500, description: 'Past gig.', genres: ['Progressive', 'Techno'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g35', title: 'Rooftop Sundowners', venueId: 'biz-202', date: '2025-05-16', time: '5:00 PM - 10:00 PM', budget: 320, description: 'Past gig.', genres: ['Melodic House'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g36', title: 'Athletic Club Groove', venueId: 'biz-13', date: '2025-05-23', time: '8:00 PM - 1:00 AM', budget: 280, description: 'Past gig.', genres: ['Soulful House'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g37', title: 'The Movemint', venueId: 'biz-32', date: '2025-05-09', time: '9:00 PM - 2:00 AM', budget: 250, description: 'Past gig.', genres: ['Deep House'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g38', title: 'Kulture Klub Night', venueId: 'biz-33', date: '2025-05-02', time: '10:00 PM - 3:00 AM', budget: 220, description: 'Past gig.', genres: ['Tech House'], status: 'Completed', bookedDjId: 'dj-46' },
+  { id: 'g34', title: 'ERA Special Guest', venueId: 'biz-5', date: '2025-05-30', time: '10:00 PM - 4:00 AM', budget: 2900, description: 'Past gig.', genres: ['Progressive', 'Techno'], status: 'Completed', bookedDjId: 'dj-46' },
+  { id: 'g35', title: 'Rooftop Sundowners', venueId: 'biz-202', date: '2025-05-16', time: '5:00 PM - 10:00 PM', budget: 2750, description: 'Past gig.', genres: ['Melodic House'], status: 'Completed', bookedDjId: 'dj-46' },
+  { id: 'g36', title: 'Athletic Club Groove', venueId: 'biz-13', date: '2025-05-23', time: '8:00 PM - 1:00 AM', budget: 2600, description: 'Past gig.', genres: ['Soulful House'], status: 'Completed', bookedDjId: 'dj-46' },
+  { id: 'g37', title: 'The Movemint', venueId: 'biz-32', date: '2025-05-09', time: '9:00 PM - 2:00 AM', budget: 2500, description: 'Past gig.', genres: ['Deep House'], status: 'Completed', bookedDjId: 'dj-46' },
+  { id: 'g38', title: 'Kulture Klub Night', venueId: 'biz-33', date: '2025-05-02', time: '10:00 PM - 3:00 AM', budget: 2500, description: 'Past gig.', genres: ['Tech House'], status: 'Completed', bookedDjId: 'dj-46' },
 ];
 
 let interests: { gigId: string; djId: string; timestamp: string }[] = [
@@ -537,19 +541,19 @@ const streamSessions: StreamSession[] = [
 // --- FEED ITEMS ---
 let feedItems: FeedItem[] = [
     { id: 'f1', type: 'live_now', userId: 'dj-3', title: 'Desiree is LIVE from a secret warehouse.', description: 'Tuning in for some heavy techno vibes!', mediaUrl: getAvatarUrl(Role.DJ, 'dj-3'), mediaType: 'image', timestamp: '2h ago', likes: 1200, likedBy:[], comments: 88, reposts: 45, relatedId: 'stream-1' },
-    { id: 'f2', type: 'new_track', userId: 'dj-10', title: 'New Track: City Lights', description: 'My new single "City Lights" is out now. A deep, lo-fi journey for late nights. Hope you enjoy.', mediaUrl: 'https://source.unsplash.com/600x400/?city,night,lights&sig=f2', mediaType: 'image', timestamp: '18h ago', likes: 1800, likedBy:[], comments: 130, reposts: 77, relatedId: 't5' },
-    { id: 'f3', type: 'gig_announcement', userId: 'biz-3', title: 'We House Sundays - August Lineup!', description: 'So excited to announce FKA Mash will be headlining our next event! Tickets are flying.', mediaUrl: 'https://source.unsplash.com/600x400/?house,music,party,sunday&sig=f3', mediaType: 'image', timestamp: '1d ago', likes: 950, likedBy:[], comments: 45, reposts: 30 },
-    { id: 'f4', type: 'new_connection', userId: 'dj-1', title: 'K-DOLLA is now following Desiree', description: 'Two of the city\'s techno titans are now connected. We love to see it!', mediaUrl: 'https://source.unsplash.com/600x400/?connection,network,abstract&sig=f4', mediaType: 'image', timestamp: '2d ago', likes: 450, likedBy:[], comments: 23, reposts: 12 },
+    { id: 'f2', type: 'new_track', userId: 'dj-10', title: 'New Track: City Lights', description: 'My new single "City Lights" is out now. A deep, lo-fi journey for late nights. Hope you enjoy.', mediaType: 'image', timestamp: '18h ago', likes: 1800, likedBy:[], comments: 130, reposts: 77, relatedId: 't5' },
+    { id: 'f3', type: 'gig_announcement', userId: 'biz-3', title: 'We House Sundays - August Lineup!', description: 'So excited to announce FKA Mash will be headlining our next event! Tickets are flying.', mediaType: 'image', timestamp: '1d ago', likes: 950, likedBy:[], comments: 45, reposts: 30 },
+    { id: 'f4', type: 'new_connection', userId: 'dj-1', title: 'K-DOLLA is now following Desiree', description: 'Two of the city\'s techno titans are now connected. We love to see it!', mediaType: 'image', timestamp: '2d ago', likes: 450, likedBy:[], comments: 23, reposts: 12 },
     { id: 'f5', type: 'new_review', userId: 'dj-1', title: 'K-DOLLA received a new review from Mødular.', description: "K-DOLLA absolutely destroyed the dancefloor. A true professional with impeccable track selection. Can't wait to have him back.", mediaUrl: getAvatarUrl(Role.DJ, 'dj-1'), mediaType: 'image', timestamp: '3d ago', likes: 150, likedBy:[], comments: 9, reposts: 6, rating: 5, relatedId: 'r1' },
-    { id: 'f6', type: 'new_mix', userId: 'dj-4', title: 'New Mix: Dub Echoes Vol. 5', description: '60 minutes of deep, dubby techno. Perfect for a rainy day in the city.', mediaUrl: 'https://source.unsplash.com/600x400/?rain,city,window&sig=f6', mediaType: 'image', timestamp: '4d ago', likes: 800, likedBy:[], comments: 110, reposts: 90, relatedId: 'pl4' },
-    { id: 'f14', type: 'new_mix', userId: 'dj-2', title: 'Afro House Sunset Mix', description: 'Here is my latest mix for all the sunset chasers. Enjoy!', mediaUrl: 'https://source.unsplash.com/600x400/?sunset,ocean,dj&sig=f14', mediaType: 'image', timestamp: '3d ago', likes: 2100, likedBy:[], comments: 250, reposts: 150, relatedId: 'pl2' },
-    { id: 'f7', type: 'gig_announcement', userId: 'biz-1', title: 'Open Decks next Wednesday!', description: 'Think you have what it takes? We\'re hosting an open decks night. Come through and show us what you got. Best selector gets a paid gig.', mediaUrl: 'https://source.unsplash.com/600x400/?dj,turntables,crowd&sig=f7', mediaType: 'image', timestamp: '5d ago', likes: 800, likedBy:[], comments: 150, reposts: 50},
-    { id: 'f8', type: 'new_track', userId: 'dj-11', title: 'Out Now: "Langa"', description: 'My new EP just dropped on all platforms. This one is for my home. Big love to everyone supporting.', mediaUrl: 'https://source.unsplash.com/600x400/?township,south-africa,music&sig=f8', mediaType: 'image', timestamp: '5d ago', likes: 2200, likedBy:[], comments: 180, reposts: 90, relatedId: 't11'},
+    { id: 'f6', type: 'new_mix', userId: 'dj-4', title: 'New Mix: Dub Echoes Vol. 5', description: '60 minutes of deep, dubby techno. Perfect for a rainy day in the city.', mediaType: 'image', timestamp: '4d ago', likes: 800, likedBy:[], comments: 110, reposts: 90, relatedId: 'pl4' },
+    { id: 'f14', type: 'new_mix', userId: 'dj-2', title: 'Afro House Sunset Mix', description: 'Here is my latest mix for all the sunset chasers. Enjoy!', mediaType: 'image', timestamp: '3d ago', likes: 2100, likedBy:[], comments: 250, reposts: 150, relatedId: 'pl2' },
+    { id: 'f7', type: 'gig_announcement', userId: 'biz-1', title: 'Open Decks next Wednesday!', description: 'Think you have what it takes? We\'re hosting an open decks night. Come through and show us what you got. Best selector gets a paid gig.', mediaType: 'image', timestamp: '5d ago', likes: 800, likedBy:[], comments: 150, reposts: 50},
+    { id: 'f8', type: 'new_track', userId: 'dj-11', title: 'Out Now: "Langa"', description: 'My new EP just dropped on all platforms. This one is for my home. Big love to everyone supporting.', mediaType: 'image', timestamp: '5d ago', likes: 2200, likedBy:[], comments: 180, reposts: 90, relatedId: 't11'},
     { id: 'f9', type: 'live_now', userId: 'dj-12', title: 'Leighton Moody is live!', description: 'Sunday vinyl session incoming. Deep and soulful vibes only.', mediaUrl: 'https://source.unsplash.com/600x400/?vinyl,records,dj,soulful&sig=f9', mediaType: 'image', timestamp: '6d ago', likes: 980, likedBy:[], comments: 75, reposts: 40},
-    { id: 'f10', type: 'new_connection', userId: 'biz-23', title: 'Wolfkop Weekender is now following Pierre Johnson', description: 'Looks like a future collaboration might be on the cards!', mediaUrl: 'https://source.unsplash.com/600x400/?nature,festival,collaboration&sig=f10', mediaType: 'image', timestamp: '1w ago', likes: 1100, likedBy:[], comments: 40, reposts: 20},
-    { id: 'f11', type: 'gig_announcement', userId: 'biz-49', title: 'Deep End returns with Sides', description: 'We\'re back in the warehouse on Sept 12. Limited tickets available for this one.', mediaUrl: 'https://source.unsplash.com/600x400/?warehouse,industrial,dark&sig=f11', mediaType: 'image', timestamp: '1w ago', likes: 600, likedBy:[], comments: 55, reposts: 35},
-    { id: 'f12', type: 'new_mix', userId: 'dj-7', title: 'The Other Side Live Recording', description: 'Here\'s my set from last weekend. All minimal, all groovy.', mediaUrl: 'https://source.unsplash.com/600x400/?minimal,abstract,soundwave&sig=f12', mediaType: 'image', timestamp: '1w ago', likes: 1300, likedBy:[], comments: 95, reposts: 65},
-    { id: 'f13', type: 'new_track', userId: 'dj-33', title: 'Chronical Deep - "Karbau"', description: 'New music alert! My track Karbau is officially out. Go stream it and let me know what you think.', mediaUrl: 'https://source.unsplash.com/600x400/?deep,ocean,abstract&sig=f13', mediaType: 'image', timestamp: '8d ago', likes: 2500, likedBy:[], comments: 250, reposts: 120, relatedId: 't9'},
+    { id: 'f10', type: 'new_connection', userId: 'biz-23', title: 'Wolfkop Weekender is now following Pierre Johnson', description: 'Looks like a future collaboration might be on the cards!', mediaType: 'image', timestamp: '1w ago', likes: 1100, likedBy:[], comments: 40, reposts: 20},
+    { id: 'f11', type: 'gig_announcement', userId: 'biz-49', title: 'Deep End returns with Sides', description: 'We\'re back in the warehouse on Sept 12. Limited tickets available for this one.', mediaType: 'image', timestamp: '1w ago', likes: 600, likedBy:[], comments: 55, reposts: 35},
+    { id: 'f12', type: 'new_mix', userId: 'dj-7', title: 'The Other Side Live Recording', description: 'Here\'s my set from last weekend. All minimal, all groovy.', mediaType: 'image', timestamp: '1w ago', likes: 1300, likedBy:[], comments: 95, reposts: 65},
+    { id: 'f13', type: 'new_track', userId: 'dj-33', title: 'Chronical Deep - "Karbau"', description: 'New music alert! My track Karbau is officially out. Go stream it and let me know what you think.', mediaType: 'image', timestamp: '8d ago', likes: 2500, likedBy:[], comments: 250, reposts: 120, relatedId: 't9'},
 ];
 
 // --- COMMENTS ---
@@ -613,27 +617,87 @@ const simulate = <T,>(data: T): Promise<T> => new Promise(res => {
     }, 300);
 });
 
-
-export const getDJs = () => simulate(djs);
-export const getDJById = (id: string) => {
-    const dj = djs.find(d => d.id === id);
-    if (dj) {
-        // This function ensures that when a profile is requested, it always gets the
-        // most up-to-date list of tracks and mixes from the global source arrays,
-        // rather than relying on a potentially stale list stored on the DJ object itself.
-        // This is crucial for reflecting new uploads immediately.
-        const freshDj = {
-            ...dj,
-            tracks: tracks.filter(t => t.artistId === id),
-            mixes: playlists.filter(p => p.creatorId === id),
-        };
-        return simulate(freshDj);
+// Helper for Supabase queries to gracefully fall back to mock data.
+const fromSupabase = async <T,>(query: PromiseLike<{ data: T | null; error: any }>): Promise<T | null> => {
+    try {
+        const { data, error } = await query;
+        if (error) {
+            // Be silent for the expected "table does not exist" error.
+            if (error.message && !error.message.includes('does not exist')) {
+                 console.warn("Supabase query failed, falling back to mock data. Error:", error.message);
+            }
+            return null;
+        }
+        return data;
+    } catch(e: any) {
+        console.warn("Supabase network request failed, falling back to mock data. Error:", e.message || e);
+        return null;
     }
-    return simulate(undefined);
 };
-export const getBusinesses = () => simulate(businesses);
-export const getBusinessById = (id: string) => simulate(businesses.find(b => b.id === id));
-export const getUserById = (id: string) => simulate(allUsers.find(u => u.id === id));
+
+export const getDJs = async (): Promise<DJ[]> => {
+    const data = await fromSupabase(supabase.from('djs').select('*'));
+    if (data === null) {
+        return simulate(djs);
+    }
+    return (data || []) as DJ[];
+};
+
+export const getDJById = async (id: string): Promise<DJ | undefined> => {
+    const dbData = await fromSupabase(supabase.from('djs').select('*').eq('id', id).single());
+    
+    if (dbData) {
+        // Database is set up, fetch related data and return
+        const [tracks, mixes] = await Promise.all([
+            getTracksForDj(id),
+            getPlaylistsForDj(id)
+        ]);
+        return { ...dbData, tracks, mixes } as DJ;
+    }
+
+    // Fallback if DB query fails
+    const mockDj = djs.find(d => d.id === id);
+    return simulate(mockDj);
+};
+
+
+export const getBusinesses = async (): Promise<Business[]> => {
+    const data = await fromSupabase(supabase.from('businesses').select('*'));
+    if (data === null) {
+        return simulate(businesses);
+    }
+    return (data || []) as Business[];
+};
+
+export const getBusinessById = async (id: string): Promise<Business | undefined> => {
+    const dbData = await fromSupabase(supabase.from('businesses').select('*').eq('id', id).single());
+    
+    if (dbData) {
+        // Database is set up and contains the user
+        return dbData as Business;
+    }
+
+    // Fallback if DB query fails
+    const mockBusiness = businesses.find(b => b.id === id);
+    return simulate(mockBusiness);
+}
+
+export const getUserById = async (id: string): Promise<User | undefined> => {
+    // This is simplified; a real app might need a unified 'users' table or view.
+    let user = await getDJById(id);
+    if (user) return user;
+    
+    let business = await getBusinessById(id);
+    if (business) return business;
+
+    // Fallback for listeners who are not in djs or businesses tables
+    const listener = listeners.find(l => l.id === id);
+    if(listener) return listener;
+
+    return undefined;
+};
+
+
 export const getGigById = (id: string) => {
     const gig = gigs.find(g => g.id === id);
     if (!gig) return simulate(undefined);
@@ -669,7 +733,13 @@ export const getDJByTrack = (trackId: string) => {
 }
 export const getFeedItems = () => simulate(feedItems);
 export const getFeedItemById = (id: string) => simulate(feedItems.find(f => f.id === id));
-export const getTrackById = (id: string) => simulate(tracks.find(t => t.id === id));
+
+export const getTrackById = async (id: string): Promise<Track | null> => {
+    const dbData = await fromSupabase(supabase.from('tracks').select('*').eq('id', id).single());
+    if(dbData) return dbData as Track;
+
+    return simulate(tracks.find(t => t.id === id) || null);
+}
 
 
 export const addFeedItem = (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'comments' | 'reposts'>) => {
@@ -683,14 +753,45 @@ export const addFeedItem = (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 
         reposts: 0,
     };
     feedItems.unshift(newFeedItem);
+    persistenceService.markDirty();
     return simulate(newFeedItem);
 }
 
 
 export const getNotifications = (userId: string) => simulate(notifications.filter(n => n.userId === userId));
 
-export const getPlaylistById = (id: string) => simulate(playlists.find(p => p.id === id));
-export const getTracksByIds = (ids: string[]) => simulate(tracks.filter(t => ids.includes(t.id)));
+export const getPlaylistById = async (id: string): Promise<Playlist | null> => {
+    const playlistData = await fromSupabase(supabase.from('playlists').select('*').eq('id', id).single());
+
+    if (!playlistData) {
+        const mockPlaylist = playlists.find(p => p.id === id);
+        return simulate(mockPlaylist || null);
+    }
+    
+    // Get track IDs from the join table
+    const { data: trackLinks, error } = await supabase
+        .from('playlist_tracks')
+        .select('track_id')
+        .eq('playlist_id', id);
+        
+    if (error) {
+        // If join table doesn't exist, return playlist with no tracks from DB
+        return { ...playlistData, trackIds: [] } as Playlist;
+    }
+        
+    const trackIds = trackLinks ? trackLinks.map(link => link.track_id) : [];
+    
+    return { ...playlistData, trackIds } as Playlist;
+};
+
+export const getTracksByIds = async (ids: string[]): Promise<Track[]> => {
+    if (ids.length === 0) return [];
+    const data = await fromSupabase(supabase.from('tracks').select('*').in('id', ids));
+    if (data === null) {
+        return simulate(tracks.filter(t => ids.includes(t.id)));
+    }
+    return (data || []) as Track[];
+};
 export const getStreamSessionById = (id: string) => simulate(streamSessions.find(s => s.id === id));
 
 export const markAllAsRead = (userId: string) => {
@@ -699,6 +800,7 @@ export const markAllAsRead = (userId: string) => {
             n.read = true;
         }
     });
+    persistenceService.markDirty();
     return simulate(true);
 }
 
@@ -733,6 +835,7 @@ export const createChat = (userId1: string, userId2: string) => {
         messages: []
     };
     chats.push(newChat);
+    persistenceService.markDirty();
     return simulate(newChat);
 }
 
@@ -760,14 +863,14 @@ export const sendMessage = (chatId: string, senderId: string, text: string) => {
                 relatedId: chatId,
              });
         }
-
+        persistenceService.markDirty();
         return simulate(newMessage);
     }
     return simulate(null);
 };
 
 
-export const authenticate = (email: string, password: string): Promise<User | undefined> => {
+export const authenticate = async (email: string, password: string): Promise<User | undefined> => {
   const user = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
   // Any password works for the demo, but it must be provided.
   if (!user || !password) return simulate(undefined);
@@ -799,6 +902,7 @@ export const addGig = (newGigData: Omit<Gig, 'id' | 'status'>) => {
         flyerUrl: newGigData.flyerUrl,
     };
     gigs.unshift(gig);
+    persistenceService.markDirty();
 
     // Also create a feed item
     const venue = businesses.find(b => b.id === newGigData.venueId);
@@ -815,6 +919,16 @@ export const addGig = (newGigData: Omit<Gig, 'id' | 'status'>) => {
     }
     return simulate(gig);
 }
+
+export const updateGig = (gigId: string, venueId: string, updatedData: Partial<Gig>) => {
+    const gigIndex = gigs.findIndex(g => g.id === gigId && g.venueId === venueId);
+    if (gigIndex > -1) {
+        gigs[gigIndex] = { ...gigs[gigIndex], ...updatedData };
+        persistenceService.markDirty();
+        return simulate(gigs[gigIndex]);
+    }
+    return simulate(null);
+};
 
 export const expressInterestInGig = (gigId: string, djId: string) => {
     const gig = gigs.find(g => g.id === gigId);
@@ -837,6 +951,7 @@ export const expressInterestInGig = (gigId: string, djId: string) => {
             read: false,
             relatedId: gig.id,
         });
+        persistenceService.markDirty();
         return simulate(true);
     }
     return simulate(false);
@@ -877,13 +992,14 @@ export const bookDJForGig = (gigId: string, djId: string) => {
 
         gig.status = 'Booked';
         gig.bookedDjId = dj.id;
+        persistenceService.markDirty();
 
         // Notify the booked DJ
         notifications.unshift({
             id: `n${notifications.length + 1}`,
             userId: dj.id,
             type: NotificationType.BookingConfirmed,
-            text: `You have been booked for "${gig.title}" at ${venue.venueName}!`,
+            text: `You have been booked for "${gig.title}" at ${venue.name}!`,
             timestamp: 'Just now',
             read: false,
             relatedId: gig.id,
@@ -915,8 +1031,35 @@ export const bookDJForGig = (gigId: string, djId: string) => {
 
 
 // Leaderboard Functions
-export const getTopDJs = () => simulate(djs.slice().sort((a, b) => b.rating - a.rating));
-export const getTopVenues = () => simulate(businesses.slice().sort((a, b) => b.rating - a.rating));
+export const getTopDJs = async (): Promise<DJ[]> => {
+    const data = await fromSupabase(
+        supabase
+            .from('djs')
+            .select('*')
+            .order('rating', { ascending: false })
+            .limit(50)
+    );
+     if (data === null) {
+        const sortedDjs = [...djs].sort((a, b) => b.rating - a.rating).slice(0, 50);
+        return simulate(sortedDjs);
+    }
+    return (data || []) as DJ[];
+};
+
+export const getTopVenues = async (): Promise<Business[]> => {
+    const data = await fromSupabase(
+        supabase
+            .from('businesses')
+            .select('*')
+            .order('rating', { ascending: false })
+            .limit(50)
+    );
+    if (data === null) {
+        const sortedBusinesses = [...businesses].sort((a, b) => b.rating - a.rating).slice(0, 50);
+        return simulate(sortedBusinesses);
+    }
+    return (data || []) as Business[];
+};
 
 // Social Functions
 const findMutableProfile = (userId: string): DJ | Business | Listener | undefined => {
@@ -952,6 +1095,7 @@ export const followUser = (currentUserId: string, targetUserId: string) => {
              read: false,
              relatedId: currentUserId,
         });
+        persistenceService.markDirty();
     }
     
     return simulate(true);
@@ -967,6 +1111,7 @@ export const unfollowUser = (currentUserId: string, targetUserId: string) => {
      if (targetUser) {
         targetUser.followers--;
     }
+    persistenceService.markDirty();
     return simulate(true);
 }
 
@@ -997,6 +1142,7 @@ export const createStreamSession = (djId: string, title: string) => {
         listenerCount: 0,
     };
     streamSessions.push(newSession);
+    persistenceService.markDirty();
     return simulate(newSession);
 };
 
@@ -1008,19 +1154,33 @@ export const endStreamSession = (sessionId: string): Promise<StreamSession | nul
         // Remove the 'live_now' feed item associated with this stream
         feedItems = feedItems.filter(item => !(item.type === 'live_now' && item.relatedId === sessionId));
         
+        persistenceService.markDirty();
         return simulate(session);
     }
     return simulate(null);
 };
 
-export const getTracksForDj = (djId: string) => {
-    const djTracks = tracks.filter(t => t.artistId === djId);
-    return simulate(djTracks);
+export const getTracksForDj = async (djId: string): Promise<Track[]> => {
+    const data = await fromSupabase(supabase.from('tracks').select('*').eq('artistId', djId));
+    if(data === null) {
+        return simulate(tracks.filter(t => t.artistId === djId));
+    }
+    return (data || []) as Track[];
 }
 
-export const getPlaylistsForDj = (djId: string) => {
-    const djPlaylists = playlists.filter(p => p.creatorId === djId);
-    return simulate(djPlaylists);
+export const getPlaylistsForDj = async (djId: string): Promise<Playlist[]> => {
+    const data = await fromSupabase(supabase.from('playlists').select('*').eq('creatorId', djId));
+    if(data === null) {
+        return simulate(playlists.filter(p => p.creatorId === djId));
+    }
+    
+    const dbPlaylists = (data || []) as Omit<Playlist, 'trackIds'>[];
+    const enrichedPlaylists = await Promise.all(dbPlaylists.map(async (p) => {
+        const { data: trackLinks } = await supabase.from('playlist_tracks').select('track_id').eq('playlist_id', p.id);
+        return { ...p, trackIds: trackLinks ? trackLinks.map(l => l.track_id) : [] };
+    }));
+
+    return enrichedPlaylists;
 }
 
 export const getReviewsForUser = (targetId: string): Promise<EnrichedReview[]> => {
@@ -1039,6 +1199,7 @@ export const submitReview = (reviewData: Omit<Review, 'id' | 'timestamp'>): Prom
         timestamp: 'Just now',
     };
     reviews.unshift(newReview);
+    persistenceService.markDirty();
 
     const targetProfile = findMutableProfile(newReview.targetId);
     const author = allUsers.find(u => u.id === newReview.authorId);
@@ -1097,6 +1258,7 @@ export const addCommentToPost = (postId: string, authorId: string, text: string)
     };
     comments.push(newComment); // Add to end of array to maintain order
     post.comments++;
+    persistenceService.markDirty();
 
     if (post.userId !== authorId) {
          notifications.unshift({
@@ -1114,124 +1276,202 @@ export const addCommentToPost = (postId: string, authorId: string, text: string)
     return simulate(enrichedComment);
 };
 
-export const addTrack = (artistId: string, title: string, artworkUrl: string, trackUrl: string) => {
-    const newTrack: Track = {
-        id: `t${tracks.length + 1}`,
+export const addTrack = async (artistId: string, title: string, artworkUrl: string, trackUrl: string) => {
+    const newTrackData: Track = {
+        id: `t${Math.random().toString(36).substr(2, 9)}`,
         title,
         artistId,
         artworkUrl,
         trackUrl: trackUrl,
         duration: `${Math.floor(Math.random() * 5) + 3}:${Math.floor(Math.random()*60).toString().padStart(2,'0')}` // random duration
     };
-    tracks.unshift(newTrack);
-    
-    const artist = djs.find(d => d.id === artistId);
-    if(artist) {
-         // This is a bit of a hack for the mock API to keep the main DJ object in sync.
-         // In a real API, the DJ's track list would be a relation, not a static array.
-         if (!artist.tracks.find(t => t.id === newTrack.id)) {
-            artist.tracks.unshift(newTrack);
-         }
 
-         addFeedItem({
-            type: 'new_track',
-            userId: artistId,
-            title: `New Track: ${title}`,
-            description: `Check out my new track, "${title}"!`,
-            mediaUrl: artworkUrl,
-            mediaType: 'image',
-            relatedId: newTrack.id,
-        });
+    if (!persistenceService.isSeeded) {
+        tracks.push(newTrackData);
+        persistenceService.markDirty();
+    } else {
+        const { data: newTrack, error } = await supabase.from('tracks').insert(newTrackData).select().single();
+        if (error) {
+            console.error("Supabase insert failed for 'tracks':", error);
+            throw error;
+        }
+        tracks.push(newTrack as Track);
     }
+    
+    addFeedItem({
+        type: 'new_track',
+        userId: artistId,
+        title: `New Track: ${title}`,
+        description: `Check out my new track, "${title}"!`,
+        mediaUrl: artworkUrl,
+        mediaType: 'image',
+        relatedId: newTrackData.id,
+    });
 
-    return simulate(newTrack);
+    return newTrackData;
 };
 
-export const createPlaylist = (creatorId: string, name: string, artworkUrl = '') => {
-    const newPlaylist: Playlist = {
-        id: `pl${playlists.length + 1}`,
+export const createPlaylist = async (creatorId: string, name: string, artworkUrl = '') => {
+    const newPlaylistData: Omit<Playlist, 'trackIds'> = {
+        id: `pl${Math.random().toString(36).substr(2, 9)}`,
         name,
         creatorId,
-        trackIds: [],
         artworkUrl,
     };
-    playlists.unshift(newPlaylist);
-    
-    const dj = djs.find(d => d.id === creatorId);
-    if (dj) {
-        dj.mixes.unshift(newPlaylist);
+    const newPlaylist: Playlist = { ...newPlaylistData, trackIds: [] };
+
+    if (!persistenceService.isSeeded) {
+        playlists.push(newPlaylist);
+        persistenceService.markDirty();
+        return newPlaylist;
     }
-    
-    return simulate(newPlaylist);
+
+    const { data, error } = await supabase.from('playlists').insert(newPlaylistData).select().single();
+    if (error) {
+        console.error("Supabase insert failed for 'playlists':", error);
+        throw error;
+    }
+    if (!data) return null;
+
+    playlists.push(newPlaylist);
+    return newPlaylist;
 };
 
-export const updatePlaylist = (playlistId: string, { name, artworkUrl }: { name?: string, artworkUrl?: string }) => {
-    const playlist = playlists.find(p => p.id === playlistId);
-    if (playlist) {
-        if (name) playlist.name = name;
-        if (typeof artworkUrl === 'string') playlist.artworkUrl = artworkUrl;
-        return simulate(playlist);
+export const updatePlaylist = async (playlistId: string, { name, artworkUrl }: { name?: string, artworkUrl?: string }) => {
+    const updateData: { name?: string; artworkUrl?: string } = {};
+    if (name) updateData.name = name;
+    if (typeof artworkUrl === 'string') updateData.artworkUrl = artworkUrl;
+
+    const mockPlaylist = playlists.find(p => p.id === playlistId);
+    if (!mockPlaylist) throw new Error("Playlist not found");
+
+    if (!persistenceService.isSeeded) {
+        if(name) mockPlaylist.name = name;
+        if(typeof artworkUrl === 'string') mockPlaylist.artworkUrl = artworkUrl;
+        persistenceService.markDirty();
+        return { ...mockPlaylist };
     }
-    return simulate(null);
+
+    const { data, error } = await supabase
+        .from('playlists')
+        .update(updateData)
+        .eq('id', playlistId)
+        .select()
+        .single();
+    
+    if (error) {
+        console.error("Supabase update failed for 'playlists':", error);
+        throw error;
+    }
+
+    if(name) mockPlaylist.name = name;
+    if(typeof artworkUrl === 'string') mockPlaylist.artworkUrl = artworkUrl;
+    
+    return data;
 }
 
-export const addTrackToPlaylist = (playlistId: string, trackId: string) => {
+export const addTrackToPlaylist = async (playlistId: string, trackId: string) => {
     const playlist = playlists.find(p => p.id === playlistId);
-    if (playlist && !playlist.trackIds.includes(trackId)) {
+    if (!playlist) return null;
+
+    if (!persistenceService.isSeeded) {
+        if (!playlist.trackIds.includes(trackId)) {
+            playlist.trackIds.push(trackId);
+            persistenceService.markDirty();
+        }
+        return playlist;
+    }
+
+    const { error } = await supabase.from('playlist_tracks').insert({
+        playlist_id: playlistId,
+        track_id: trackId,
+    });
+
+    if (error) {
+        console.error("Supabase insert failed for 'playlist_tracks':", error);
+        throw error;
+    }
+
+    if (!playlist.trackIds.includes(trackId)) {
         playlist.trackIds.push(trackId);
-        return simulate(playlist);
     }
-    return simulate(null);
+
+    return getPlaylistById(playlistId);
 };
 
-export const updateUserProfile = (userId: string, data: Partial<DJ> | Partial<Business>): Promise<(DJ | Business | null)> => {
-    const user = allUsers.find(u => u.id === userId);
-    if (!user) return simulate(null);
+export const updateUserProfile = async (userId: string, data: Partial<DJ> | Partial<Business>): Promise<(DJ | Business | null)> => {
+    const userProfile = findMutableProfile(userId);
+    if (!userProfile) return null;
 
-    let profile;
-    if (user.role === Role.DJ) {
-        profile = djs.find(d => d.id === userId);
-    } else if (user.role === Role.Business) {
-        profile = businesses.find(b => b.id === userId);
+    if (!persistenceService.isSeeded) {
+        Object.assign(userProfile, data);
+        persistenceService.markDirty();
+        return simulate(userProfile as DJ | Business);
     }
+    
+    const tableName: 'djs' | 'businesses' = userProfile.role === Role.DJ ? 'djs' : 'businesses';
 
-    if (profile) {
-        // Update specific properties, not overwriting the whole object.
-        // This mutates the object in place, and since `allUsers` holds a reference
-        // to it, `allUsers` is also updated.
-        Object.assign(profile, data);
-        
-        // also update allUsers array for consistency, but the object reference is the same
-        const userIndexInAll = allUsers.findIndex(u => u.id === userId);
-        if (userIndexInAll !== -1) {
-            Object.assign(allUsers[userIndexInAll], data);
+    const updatePayload: { [key: string]: any } = {};
+    Object.keys(data).forEach(key => {
+        const value = data[key as keyof typeof data];
+        if (value !== undefined) {
+            if (key === 'socials' && typeof value === 'object' && value !== null) {
+                const cleanSocials: { [key: string]: any } = {};
+                Object.entries(value).forEach(([socialKey, socialValue]) => {
+                    if (socialValue) { 
+                        cleanSocials[socialKey] = socialValue;
+                    }
+                });
+                updatePayload[key] = Object.keys(cleanSocials).length > 0 ? cleanSocials : null;
+            } else {
+                updatePayload[key] = value;
+            }
         }
-        
-        return simulate(profile);
+    });
+
+    const { data: updatedData, error } = await supabase
+        .from(tableName)
+        .update(updatePayload)
+        .eq('id', userId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error(`Supabase update failed for '${tableName}':`, error);
+        throw error;
     }
-    return simulate(null);
+    
+    Object.assign(userProfile, data);
+
+    return updatedData as DJ | Business;
 }
 
-export const updateUserSettings = (userId: string, newSettings: Partial<UserSettings>): Promise<boolean> => {
-    const user = allUsers.find(u => u.id === userId);
-    if (user) {
-        if (!user.settings) {
-            user.settings = { theme: 'electric_blue' }; // Default
-        }
-        Object.assign(user.settings, newSettings);
-        
-        const profile = findMutableProfile(userId);
-        if (profile) {
-            if (!profile.settings) {
-                profile.settings = { theme: 'electric_blue' };
-            }
-            Object.assign(profile.settings, newSettings);
-        }
-        
+export const updateUserSettings = async (userId: string, newSettings: Partial<UserSettings>): Promise<boolean> => {
+    const userProfile = findMutableProfile(userId);
+    if (!userProfile) return false;
+
+    if (!persistenceService.isSeeded) {
+        userProfile.settings = { ...userProfile.settings, ...newSettings };
+        persistenceService.markDirty();
         return simulate(true);
     }
-    return simulate(false);
+    
+    const tableName = userProfile.role === Role.DJ ? 'djs' : 'businesses';
+
+    const { error } = await supabase
+        .from(tableName)
+        .update({ settings: newSettings })
+        .eq('id', userId);
+
+    if (error) {
+        console.error(`Supabase update failed for '${tableName}' settings:`, error);
+        return false;
+    }
+    
+    userProfile.settings = { ...userProfile.settings, ...newSettings };
+    return !error;
 }
+
 
 export const toggleLikePost = (postId: string, userId: string): Promise<{ likes: number; likedBy: string[] } | null> => {
     const post = feedItems.find(f => f.id === postId);
@@ -1249,6 +1489,7 @@ export const toggleLikePost = (postId: string, userId: string): Promise<{ likes:
             post.likedBy.push(userId);
             post.likes++;
         }
+        persistenceService.markDirty();
         return simulate({ likes: post.likes, likedBy: post.likedBy });
     }
     return simulate(null);
@@ -1276,6 +1517,7 @@ export const repost = (originalPostId: string, reposterId: string): Promise<Feed
         repostOf: originalPostId,
     };
     feedItems.unshift(newRepost);
+    persistenceService.markDirty();
 
     // Increment repost count on original post
     if (typeof originalPost.reposts !== 'number') {
@@ -1307,3 +1549,158 @@ export const searchUsers = (query: string): Promise<User[]> => {
         .slice(0, 5); // Limit to 5 results
     return simulate(results);
 }
+
+
+// --- DATABASE SEEDING ---
+
+// Enhanced logging interface
+interface SeedLogEntry {
+    timestamp: string;
+    level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
+    message: string;
+    context?: any;
+}
+
+// Comprehensive table truncation function
+const truncateTables = async (
+    supabase: SupabaseClient, 
+    options: {
+        tables?: string[], 
+        logCallback?: (log: SeedLogEntry) => void,
+        throwOnError?: boolean
+    } = {}
+) => {
+    // Default configuration
+    const config = {
+        tables: ['playlist_tracks', 'tracks', 'playlists', 'djs', 'businesses'],
+        logCallback: console.log,
+        throwOnError: true,
+        ...options
+    };
+
+    // Create a detailed log array
+    const seedLog: SeedLogEntry[] = [];
+
+    // Centralized logging method
+    const log = (
+        level: SeedLogEntry['level'], 
+        message: string, 
+        context?: any
+    ) => {
+        const logEntry: SeedLogEntry = {
+            timestamp: new Date().toISOString(),
+            level,
+            message,
+            context
+        };
+        seedLog.push(logEntry);
+        config.logCallback(logEntry);
+        switch(level) {
+            case 'ERROR': console.error(`[SEED ERROR] ${message}`, context); break;
+            case 'WARN': console.warn(`[SEED WARN] ${message}`, context); break;
+            case 'INFO': console.log(`[SEED INFO] ${message}`, context); break;
+            case 'DEBUG': console.debug(`[SEED DEBUG] ${message}`, context); break;
+        }
+    };
+
+    const startTime = performance.now();
+    try {
+        log('INFO', 'Starting database seed process', { tables: config.tables });
+        if (!config.tables || config.tables.length === 0) throw new Error('No tables specified for seeding');
+
+        log('DEBUG', 'Invoking truncate-tables function', { tables: config.tables });
+        const { data, error } = await supabase.functions.invoke('truncate-tables', {
+            body: { tables: config.tables }
+        });
+
+        if (error) {
+            log('ERROR', 'Function invocation failed', { error: error, rawError: JSON.stringify(error) });
+            if (config.throwOnError) throw error;
+            return { success: false, error, log: seedLog };
+        }
+
+        if (data) {
+            // Assuming data is already a parsed object/array from the function invoke response
+            const truncationResults = data;
+            const failedTables = truncationResults.filter((result: any) => !result.success);
+            if (failedTables.length > 0) {
+                log('WARN', 'Some tables failed truncation', { failedTables });
+                if (config.throwOnError) throw new Error(`Truncation failed for tables: ${failedTables.map((t: any) => t.table).join(', ')}`);
+            } else {
+                log('INFO', 'All tables successfully truncated', { tableCount: config.tables.length });
+            }
+        }
+
+        const endTime = performance.now();
+        log('INFO', 'Seed process completed', { duration: `${(endTime - startTime).toFixed(2)}ms` });
+
+        return { success: true, log: seedLog, duration: endTime - startTime };
+    } catch (unexpectedError) {
+        log('ERROR', 'Unexpected error during seed process', {
+            error: unexpectedError,
+            stack: unexpectedError instanceof Error ? unexpectedError.stack : undefined
+        });
+        if (config.throwOnError) throw unexpectedError;
+        return { success: false, error: unexpectedError, log: seedLog };
+    }
+};
+
+// Data insertion after truncation
+const insertSeedData = async (supabase: SupabaseClient) => {
+    console.log("Seeding DJs...");
+    const djsToInsert = djs.map(({ tracks, mixes, ...dj }) => dj);
+    const { error: djError } = await supabase.from('djs').insert(djsToInsert).select();
+    if (djError) throw djError;
+
+    console.log("Seeding Businesses...");
+    const { error: bizError } = await supabase.from('businesses').insert(businesses).select();
+    if (bizError) throw bizError;
+
+    console.log("Seeding Tracks...");
+    const { error: trackError } = await supabase.from('tracks').insert(tracks).select();
+    if (trackError) throw trackError;
+
+    console.log("Seeding Playlists...");
+    const playlistsToInsert = playlists.map(({ trackIds, ...playlist }) => playlist);
+    const { error: playlistError } = await supabase.from('playlists').insert(playlistsToInsert).select();
+    if (playlistError) throw playlistError;
+
+    console.log("Seeding Playlist Tracks...");
+    const playlistTrackLinks = playlists.flatMap(p => 
+        p.trackIds.map(trackId => ({ playlist_id: p.id, track_id: trackId }))
+    );
+    if (playlistTrackLinks.length > 0) {
+        const { error: ptError } = await supabase.from('playlist_tracks').insert(playlistTrackLinks).select();
+        if (ptError) throw ptError;
+    }
+};
+
+// Main orchestrator function for seeding, called by the UI.
+export const seedDatabase = async () => {
+    console.log("Starting full database seed process...");
+    try {
+        // 1. Truncate tables using the new advanced function
+        const truncationResult = await truncateTables(supabase, {
+             throwOnError: true
+        });
+
+        if (!truncationResult.success) {
+            throw truncationResult.error || new Error("Table truncation failed silently.");
+        }
+        
+        // 2. Insert data
+        await insertSeedData(supabase);
+
+        console.log("Database seeding completed successfully!");
+        persistenceService.markSeeded();
+        return true;
+
+    } catch (error: any) {
+        console.error('Comprehensive Seeding Error:', {
+            message: error.message,
+            name: error.name,
+            stack: error.stack
+        });
+        throw error;
+    }
+};

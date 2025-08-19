@@ -151,7 +151,7 @@ export const SideNav = () => {
   return (
     <nav className="hidden md:flex flex-col w-64 bg-[var(--surface-1)] p-4 border-r border-[var(--border)] flex-shrink-0">
       <div className="font-orbitron text-2xl font-bold text-[var(--text-primary)] mb-8 px-2">
-        <span className="text-[var(--accent)]">D</span>ISPENSED
+        <span className="text-[var(--accent)]">D</span>ISk_onnctd
       </div>
       <div className="flex flex-col gap-2 flex-grow">
         {renderNav()}

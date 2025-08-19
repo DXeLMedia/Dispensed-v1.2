@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
@@ -31,7 +32,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
 
     useEffect(() => {
         if (profileData) {
-            setName(profileData.role === Role.Business ? profileData.venueName : profileData.name);
+            setName(profileData.name);
             setBio(profileData.role === Role.Business ? profileData.description : profileData.bio);
             setLocation(profileData.location);
             setInstagram(profileData.socials?.instagram || '');
@@ -87,7 +88,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 await api.updateUserProfile(profileData.id, updatedData);
             } else { // Role.Business
                 const updatedData: Partial<Business> = {
-                    venueName: name,
+                    name: name,
                     description: bio,
                     location,
                     socials: {

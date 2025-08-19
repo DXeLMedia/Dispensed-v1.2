@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
-import { IconArrowLeft, IconPalette, IconLogOut, IconChevronRight, IconProfile } from '../constants';
+import { IconArrowLeft, IconPalette, IconLogOut, IconChevronRight, IconProfile, IconDownload, IconBriefcase } from '../constants';
+import * as api from '../services/mockApi';
+import { Spinner } from '../components/Spinner';
+import { usePersistence } from '../hooks/usePersistence';
 
-const SettingRow = ({ icon, title, subtitle, onClick }: { icon: React.ReactNode, title: string, subtitle?: string, onClick?: () => void }) => (
-    <button onClick={onClick} className="w-full flex items-center p-4 bg-[var(--surface-1)] hover:bg-[var(--surface-2)] rounded-lg transition-colors text-left">
+const SettingRow = ({ icon, title, subtitle, onClick, disabled = false }: { icon: React.ReactNode, title: string, subtitle?: string, onClick?: () => void, disabled?: boolean }) => (
+    <button onClick={onClick} disabled={disabled} className="w-full flex items-center p-4 bg-[var(--surface-1)] hover:bg-[var(--surface-2)] rounded-lg transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed">
         <div className="mr-4 text-[var(--accent)]">{icon}</div>
         <div className="flex-1">
             <p className="text-[var(--text-primary)] font-bold">{title}</p>
@@ -16,7 +19,9 @@ const SettingRow = ({ icon, title, subtitle, onClick }: { icon: React.ReactNode,
 
 export const Settings = () => {
     const { logout, user, theme, updateTheme } = useAuth();
+    const { showToast } = usePersistence();
     const navigate = useNavigate();
+    const [isSeeding, setIsSeeding] = useState(false);
 
     const handleLogout = () => {
         logout();
@@ -26,6 +31,44 @@ export const Settings = () => {
     const handleEditProfile = () => {
         navigate('/profile/me?edit=true');
     }
+
+    const handleDownloadUsers = () => {
+        const userList = api.userList;
+        const headers = ['id', 'name', 'email', 'role'];
+        const csvRows = [
+            headers.join(','), 
+            ...userList.map(user => 
+                [user.id, `"${user.name.replace(/"/g, '""')}"`, user.email, user.role].join(',')
+            )
+        ];
+        
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'user_list.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleSeedDatabase = async () => {
+        if (window.confirm("Are you sure you want to seed the database? This will delete all existing data in the 'djs', 'businesses', 'tracks', and 'playlists' tables and replace it with mock data.")) {
+            setIsSeeding(true);
+            try {
+                await api.seedDatabase();
+                showToast('Database seeded! Your data is now published.');
+            } catch (error) {
+                console.error("Seeding failed:", error);
+                showToast(`Seeding failed: ${(error as Error).message}`, 'error');
+            } finally {
+                setIsSeeding(false);
+            }
+        }
+    };
 
     return (
         <div className="text-[var(--text-primary)] min-h-full">
@@ -69,6 +112,23 @@ export const Settings = () => {
                             </button>
                         </div>
                     </div>
+                </div>
+
+                <div className="space-y-2">
+                    <h2 className="text-sm font-bold text-[var(--text-muted)] uppercase px-2">Developer</h2>
+                    <SettingRow
+                        icon={isSeeding ? <Spinner /> : <IconBriefcase size={24} />}
+                        title={isSeeding ? "Seeding Database..." : "Seed Database"}
+                        subtitle="Populate DB with mock data. Deletes existing data."
+                        onClick={handleSeedDatabase}
+                        disabled={isSeeding}
+                    />
+                     <SettingRow 
+                        icon={<IconDownload size={24} />}
+                        title="Export User List"
+                        subtitle="Download a CSV of all 400+ mock users with their login emails for easy testing."
+                        onClick={handleDownloadUsers}
+                    />
                 </div>
 
                 <div className="space-y-2">

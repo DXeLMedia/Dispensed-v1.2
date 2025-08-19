@@ -354,8 +354,8 @@ const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfil
     return (
         <>
             <div className="p-4 flex flex-col items-center text-center">
-                <Avatar src={business.avatarUrl} alt={business.venueName} size="xl" className="mb-4 border-4 border-[var(--surface-2)]" />
-                <h1 className="font-orbitron text-2xl font-bold text-[var(--text-primary)]">{business.venueName}</h1>
+                <Avatar src={business.avatarUrl} alt={business.name} size="xl" className="mb-4 border-4 border-[var(--surface-2)]" />
+                <h1 className="font-orbitron text-2xl font-bold text-[var(--text-primary)]">{business.name}</h1>
                 <p className="text-[var(--text-secondary)]">{business.location}</p>
             </div>
 
@@ -404,7 +404,7 @@ const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfil
                             </div>
                         )}
                         <div>
-                            <h2 className="font-orbitron text-lg font-bold mb-2 text-[var(--text-primary)]">About {business.venueName}</h2>
+                            <h2 className="font-orbitron text-lg font-bold mb-2 text-[var(--text-primary)]">About {business.name}</h2>
                             <p className="text-[var(--text-secondary)] whitespace-pre-line">{business.description}</p>
                         </div>
                         {gigs.length > 0 && (
@@ -443,7 +443,7 @@ const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfil
                 isOpen={isRatingModalOpen}
                 onClose={() => setIsRatingModalOpen(false)}
                 onSubmit={handleSubmitReview}
-                targetName={business.venueName}
+                targetName={business.name}
                 targetType="Venue"
             />
         </>

@@ -47,7 +47,7 @@ const getRankColor = (rank: number) => {
 
 const LeaderboardItem = ({ item, rank }: { item: DJ | Business; rank: number }) => {
   const isDJ = item.role === Role.DJ;
-  const linkTo = isDJ ? `/profile/${item.id}` : `/profile/${item.id}`; // Assuming venue profiles are also at /profile/:id
+  const linkTo = isDJ ? `/profile/${item.id}` : `/profile/${item.id}`;
 
   return (
     <Link to={linkTo} className={`block bg-[var(--surface-1)] border-2 rounded-lg p-3 hover:bg-[var(--surface-2)] transition-all duration-200 shadow-lg ${getRankColor(rank)}`}>
@@ -57,7 +57,7 @@ const LeaderboardItem = ({ item, rank }: { item: DJ | Business; rank: number }) 
         </div>
         <Avatar src={item.avatarUrl} alt={item.name} size="md" />
         <div className="flex-1">
-          <h3 className="font-bold text-[var(--text-primary)] truncate">{isDJ ? item.name : (item as Business).venueName}</h3>
+          <h3 className="font-bold text-[var(--text-primary)] truncate">{item.name}</h3>
           <p className="text-sm text-[var(--text-secondary)]">{isDJ ? (item as DJ).genres.join(', ') : (item as Business).location}</p>
         </div>
         <div className="flex items-center gap-1 text-lime-400">

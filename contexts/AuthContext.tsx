@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, Role, DJ, Business, Notification, UserSettings, Listener } from '../types';
 import * as api from '../services/mockApi';
@@ -28,18 +27,6 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const getLeanUser = (user: FullUser): FullUser => {
-    if (user.role === Role.DJ) {
-        // Create a copy and remove large arrays to prevent localStorage quota issues.
-        // These are fetched on-demand in the profile/media manager pages anyway.
-        const leanDJ = { ...user };
-        delete (leanDJ as Partial<DJ>).tracks;
-        delete (leanDJ as Partial<DJ>).mixes;
-        return leanDJ;
-    }
-    return user;
-}
-
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<FullUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,23 +47,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user]);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('dispensed-dj-user');
-    if (storedUser) {
-      try {
-        if (storedUser === 'undefined') {
-          throw new Error('Stored user is the literal string "undefined"');
-        }
-        const parsedUser = JSON.parse(storedUser);
-        if (parsedUser) {
-          setUser(parsedUser);
-        } else {
-          localStorage.removeItem('dispensed-dj-user');
-        }
-      } catch (error) {
-        console.error("Failed to parse user from localStorage, clearing invalid data:", error);
-        localStorage.removeItem('dispensed-dj-user');
-      }
-    }
+    // In a real app with session persistence, you'd check for a session token here.
+    // For this mock-based app, we just start fresh on every load.
     setIsLoading(false);
   }, []);
 
@@ -91,13 +63,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user, refreshNotifications]);
 
   const login = async (email: string, password: string) => {
-    const authenticatedUser = await api.authenticate(email, password);
-    if (authenticatedUser) {
-      const leanUser = getLeanUser(authenticatedUser);
-      setUser(leanUser);
-      localStorage.setItem('dispensed-dj-user', JSON.stringify(leanUser));
+    const profile = await api.authenticate(email, password);
+    if (profile) {
+        setUser(profile);
     } else {
-      throw new Error('User not found');
+        throw new Error('Invalid login credentials');
     }
   };
 
@@ -106,14 +76,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setNotifications([]);
     setUnreadCount(0);
-    localStorage.removeItem('dispensed-dj-user');
     document.documentElement.className = 'theme-dark'; // Reset to default on logout
   };
   
   const updateUser = (updatedUser: FullUser) => {
-    const leanUser = getLeanUser(updatedUser);
-    setUser(leanUser);
-    localStorage.setItem('dispensed-dj-user', JSON.stringify(leanUser));
+    setUser(updatedUser);
   };
 
   const updateTheme = async (newTheme: UserSettings['theme']) => {
@@ -135,7 +102,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await refreshNotifications();
     }
   };
-
 
   const value = {
     user,

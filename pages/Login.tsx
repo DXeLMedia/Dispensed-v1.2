@@ -33,7 +33,7 @@ export const Login = () => {
     <div className="bg-[var(--background)] text-[var(--text-primary)] min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-            <h1 className="font-orbitron text-4xl font-bold text-[var(--text-primary)] mb-2">DISPENSED</h1>
+            <h1 className="font-orbitron text-4xl font-bold text-[var(--text-primary)] mb-2">DISk_onnctd</h1>
             <p className="text-[var(--accent)] font-semibold">CAPE TOWN</p>
         </div>
 

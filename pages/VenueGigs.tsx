@@ -5,7 +5,7 @@ import { Gig, DJ } from '../types';
 import * as api from '../services/mockApi';
 import { useAuth } from '../hooks/useAuth';
 import { Spinner } from '../components/Spinner';
-import { IconArrowLeft, IconConnections, IconCalendar, IconCheckCircle2, IconStar, IconPlus } from '../constants';
+import { IconArrowLeft, IconConnections, IconCalendar, IconCheckCircle2, IconStar, IconPlus, IconPencil } from '../constants';
 import { useNavigate, Link } from 'react-router-dom';
 import { RatingModal } from '../components/RatingModal';
 
@@ -42,7 +42,7 @@ const Tabs = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (t
     </div>
 );
 
-const GigManagementCard = ({ gig, onRateClick }: { gig: Gig & { bookedDjName?: string }; onRateClick: (gig: Gig & { bookedDjName?: string }) => void; }) => {
+const GigManagementCard = ({ gig, onRateClick, onEditClick }: { gig: Gig & { bookedDjName?: string }; onRateClick: (gig: Gig & { bookedDjName?: string }) => void; onEditClick: (gigId: string) => void; }) => {
 
     const cardContent = (
          <div className="bg-[var(--surface-1)] border border-[var(--border)] rounded-lg overflow-hidden transition-colors duration-200 hover:border-[var(--accent)]">
@@ -51,14 +51,14 @@ const GigManagementCard = ({ gig, onRateClick }: { gig: Gig & { bookedDjName?: s
             )}
             <div className="p-4">
                 <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex-1 overflow-hidden">
                         <h3 className="font-orbitron text-lg font-bold text-[var(--text-primary)]">{gig.title}</h3>
                         <p className="text-sm text-[var(--text-secondary)] flex items-center gap-2 mt-1">
                             <IconCalendar size={14} />
                             {new Date(gig.date).toLocaleDateString('en-ZA', { month: 'long', day: 'numeric' })}
                         </p>
                     </div>
-                     <div className="text-right">
+                     <div className="flex items-center gap-2 flex-shrink-0">
                         {gig.status === 'Open' ? (
                             <div className="flex items-center gap-2 bg-[var(--surface-2)] px-3 py-1 rounded-full">
                                 <IconConnections size={16} className="text-[var(--accent)]" />
@@ -70,6 +70,11 @@ const GigManagementCard = ({ gig, onRateClick }: { gig: Gig & { bookedDjName?: s
                                 <IconCheckCircle2 size={16} />
                                 <span>{gig.status}</span>
                             </div>
+                        )}
+                        {(gig.status === 'Open' || gig.status === 'Booked') && (
+                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEditClick(gig.id); }} className="p-2 text-zinc-400 hover:text-white rounded-full hover:bg-zinc-700 transition-colors">
+                                <IconPencil size={16} />
+                            </button>
                         )}
                     </div>
                 </div>
@@ -125,6 +130,10 @@ export const VenueGigs = () => {
         setIsRatingModalOpen(true);
     };
 
+    const handleEditClick = (gigId: string) => {
+        navigate(`/edit-gig/${gigId}`);
+    };
+
     const handleSubmitReview = async (rating: number, comment: string) => {
         if (!gigToRate || !gigToRate.bookedDjId || !user) return;
         await api.submitReview({
@@ -151,7 +160,7 @@ export const VenueGigs = () => {
             ) : (
                  <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-3 pb-24">
                     {filteredGigs.length > 0 ? (
-                        filteredGigs.map(gig => <GigManagementCard key={gig.id} gig={gig} onRateClick={handleRateClick} />)
+                        filteredGigs.map(gig => <GigManagementCard key={gig.id} gig={gig} onRateClick={handleRateClick} onEditClick={handleEditClick} />)
                     ) : (
                         <div className="col-span-1 md:col-span-2 text-center text-[var(--text-secondary)] pt-10">
                             <p>No {activeTab} gigs found.</p>

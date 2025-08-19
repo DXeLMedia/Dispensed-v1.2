@@ -51,7 +51,7 @@ export interface DJ extends User, Followable {
 
 export interface Business extends User, Followable {
   role: Role.Business;
-  venueName: string;
+  name: string; // Formerly venueName, updated for consistency with User and DB schema
   location: string;
   description: string;
   rating: number;

@@ -1,6 +1,4 @@
-
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { Role } from './types';
@@ -31,6 +29,9 @@ import { CreatePost } from './pages/CreatePost';
 import { PostDetail } from './pages/PostDetail';
 import { useMediaPlayer } from './contexts/MediaPlayerContext';
 import { MediaPlayer } from './components/MediaPlayer';
+import { EditGig } from './pages/EditGig';
+import { usePersistence } from './hooks/usePersistence';
+import { NotificationToast } from './components/NotificationToast';
 
 
 interface AppContainerProps {
@@ -40,12 +41,31 @@ interface AppContainerProps {
 const AppContainer = ({ children }: AppContainerProps) => {
     const location = useLocation();
     const { currentTrack } = useMediaPlayer();
+    const { isDirty, toast, hideToast } = usePersistence();
     const noNavRoutes = ['/login', '/signup', '/stream-setup'];
     const showNav = !noNavRoutes.includes(location.pathname) && !location.pathname.startsWith('/messages/') && !location.pathname.startsWith('/stream/');
+    
+    useEffect(() => {
+      const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+        if (isDirty) {
+          event.preventDefault();
+          // This is required for Chrome
+          event.returnValue = '';
+        }
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }, [isDirty]);
+
 
     return (
         <div className="bg-[var(--background)] flex justify-center items-center min-h-screen p-0 md:p-4">
             <SplashCursor />
+            {toast && <NotificationToast message={toast.message} type={toast.type} onClose={hideToast} />}
             <div className="w-full h-full md:max-w-6xl md:h-[95vh] md:max-h-[1000px] md:rounded-3xl bg-[var(--background)] overflow-hidden shadow-2xl shadow-lime-500/10 flex flex-col md:flex-row relative md:border-4 md:border-[var(--surface-2)]">
                 {showNav && <SideNav />}
                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -124,6 +144,7 @@ const AppRoutes = () => {
             <Route path="/find-gigs" element={<ProtectedRoute roles={[Role.DJ]}><Gigs /></ProtectedRoute>} />
             <Route path="/discover" element={<ProtectedRoute roles={[Role.DJ, Role.Business, Role.Listener]}><DiscoverRouter /></ProtectedRoute>} />
             <Route path="/create-gig" element={<ProtectedRoute roles={[Role.Business, Role.DJ]}><CreateGig /></ProtectedRoute>} />
+            <Route path="/edit-gig/:gigId" element={<ProtectedRoute roles={[Role.Business]}><EditGig /></ProtectedRoute>} />
             <Route path="/create-post" element={<ProtectedRoute roles={[Role.Business, Role.DJ]}><CreatePost /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute roles={[Role.DJ, Role.Business]}><Messages /></ProtectedRoute>} />
             <Route path="/messages/:chatId" element={<ProtectedRoute roles={[Role.DJ, Role.Business]}><ChatRoom /></ProtectedRoute>} />
