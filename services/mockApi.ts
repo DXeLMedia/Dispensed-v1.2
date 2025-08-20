@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase, supabaseUrl, supabaseAnonKey } from './supabaseClient';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { DJ, Business, Gig, Track, Playlist, Role, Tier, User, FeedItem, Notification, NotificationType, Chat, Message, EnrichedChat, Listener, StreamSession, Review, EnrichedReview, Comment, EnrichedComment, UserSettings } from '../types';
 import { persistenceService } from './persistenceService';
@@ -170,7 +170,6 @@ export const userList: { id: string; name: string; email: string; role: Role; }[
   { id: 'dj-162', name: 'Matrix', email: 'matrix@test.com', role: Role.DJ },
   { id: 'dj-163', name: 'Nexus', email: 'nexus@test.com', role: Role.DJ },
   { id: 'dj-164', name: 'Orbit', email: 'orbit@test.com', role: Role.DJ },
-  { id: 'dj-165', name: 'Pulse', email: 'pulse@test.com', role: Role.DJ },
   { id: 'dj-166', name: 'Quasar', email: 'quasar@test.com', role: Role.DJ },
   { id: 'dj-167', name: 'Rune', email: 'rune@test.com', role: Role.DJ },
   { id: 'dj-168', name: 'Solis', email: 'solis@test.com', role: Role.DJ },
@@ -1290,7 +1289,7 @@ export const addTrack = async (artistId: string, title: string, artworkUrl: stri
         tracks.push(newTrackData);
         persistenceService.markDirty();
     } else {
-        const { data: newTrack, error } = await supabase.from('tracks').insert(newTrackData).select().single();
+        const { data: newTrack, error } = await supabase.from('tracks').insert(newTrackData as never).select().single();
         if (error) {
             console.error("Supabase insert failed for 'tracks':", error);
             throw error;
@@ -1326,7 +1325,7 @@ export const createPlaylist = async (creatorId: string, name: string, artworkUrl
         return newPlaylist;
     }
 
-    const { data, error } = await supabase.from('playlists').insert(newPlaylistData).select().single();
+    const { data, error } = await supabase.from('playlists').insert(newPlaylistData as never).select().single();
     if (error) {
         console.error("Supabase insert failed for 'playlists':", error);
         throw error;
@@ -1354,7 +1353,7 @@ export const updatePlaylist = async (playlistId: string, { name, artworkUrl }: {
 
     const { data, error } = await supabase
         .from('playlists')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', playlistId)
         .select()
         .single();
@@ -1385,7 +1384,7 @@ export const addTrackToPlaylist = async (playlistId: string, trackId: string) =>
     const { error } = await supabase.from('playlist_tracks').insert({
         playlist_id: playlistId,
         track_id: trackId,
-    });
+    } as never);
 
     if (error) {
         console.error("Supabase insert failed for 'playlist_tracks':", error);
@@ -1431,7 +1430,7 @@ export const updateUserProfile = async (userId: string, data: Partial<DJ> | Part
 
     const { data: updatedData, error } = await supabase
         .from(tableName)
-        .update(updatePayload)
+        .update(updatePayload as never)
         .eq('id', userId)
         .select()
         .single();
@@ -1460,7 +1459,7 @@ export const updateUserSettings = async (userId: string, newSettings: Partial<Us
 
     const { error } = await supabase
         .from(tableName)
-        .update({ settings: newSettings })
+        .update({ settings: newSettings } as never)
         .eq('id', userId);
 
     if (error) {
@@ -1553,148 +1552,116 @@ export const searchUsers = (query: string): Promise<User[]> => {
 
 // --- DATABASE SEEDING ---
 
-// Enhanced logging interface
-interface SeedLogEntry {
-    timestamp: string;
-    level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
-    message: string;
-    context?: any;
+// Seed Payload Type Definition
+interface DjProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string;
+  settings?: Record<string, any>;
+  following: string[];
+  followers: number;
+  role: 'dj';
+  genres: string[];
+  bio: string;
+  location: string;
+  rating: number;
+  reviewsCount: number;
+  tier: string;
+  socials: Record<string, string>;
 }
 
-// Comprehensive table truncation function
-const truncateTables = async (
-    supabase: SupabaseClient, 
-    options: {
-        tables?: string[], 
-        logCallback?: (log: SeedLogEntry) => void,
-        throwOnError?: boolean
-    } = {}
-) => {
-    // Default configuration
-    const config = {
-        tables: ['playlist_tracks', 'tracks', 'playlists', 'djs', 'businesses'],
-        logCallback: console.log,
-        throwOnError: true,
-        ...options
-    };
+interface BusinessProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string;
+  settings?: Record<string, any>;
+  following: string[];
+  followers: number;
+  role: 'business';
+  location: string;
+  description: string;
+  rating: number;
+  reviewsCount: number;
+  socials: Record<string, string>;
+}
 
-    // Create a detailed log array
-    const seedLog: SeedLogEntry[] = [];
+interface SeedTrack {
+  id: string;
+  title: string;
+  artistId: string;
+  artworkUrl: string;
+  duration: string;
+  trackUrl?: string;
+}
 
-    // Centralized logging method
-    const log = (
-        level: SeedLogEntry['level'], 
-        message: string, 
-        context?: any
-    ) => {
-        const logEntry: SeedLogEntry = {
-            timestamp: new Date().toISOString(),
-            level,
-            message,
-            context
-        };
-        seedLog.push(logEntry);
-        config.logCallback(logEntry);
-        switch(level) {
-            case 'ERROR': console.error(`[SEED ERROR] ${message}`, context); break;
-            case 'WARN': console.warn(`[SEED WARN] ${message}`, context); break;
-            case 'INFO': console.log(`[SEED INFO] ${message}`, context); break;
-            case 'DEBUG': console.debug(`[SEED DEBUG] ${message}`, context); break;
-        }
-    };
+interface SeedPlaylist {
+  id: string;
+  name: string;
+  creatorId: string;
+  artworkUrl: string;
+}
 
-    const startTime = performance.now();
-    try {
-        log('INFO', 'Starting database seed process', { tables: config.tables });
-        if (!config.tables || config.tables.length === 0) throw new Error('No tables specified for seeding');
+interface PlaylistTrack {
+  playlist_id: string;
+  track_id: string;
+}
 
-        log('DEBUG', 'Invoking truncate-tables function', { tables: config.tables });
-        const { data, error } = await supabase.functions.invoke('truncate-tables', {
-            body: { tables: config.tables }
-        });
+interface SeedPayload {
+  djs?: DjProfile[];
+  businesses?: BusinessProfile[];
+  tracks?: SeedTrack[];
+  playlists?: SeedPlaylist[];
+  playlist_tracks?: PlaylistTrack[];
+}
 
-        if (error) {
-            log('ERROR', 'Function invocation failed', { error: error, rawError: JSON.stringify(error) });
-            if (config.throwOnError) throw error;
-            return { success: false, error, log: seedLog };
-        }
-
-        if (data) {
-            // Assuming data is already a parsed object/array from the function invoke response
-            const truncationResults = data;
-            const failedTables = truncationResults.filter((result: any) => !result.success);
-            if (failedTables.length > 0) {
-                log('WARN', 'Some tables failed truncation', { failedTables });
-                if (config.throwOnError) throw new Error(`Truncation failed for tables: ${failedTables.map((t: any) => t.table).join(', ')}`);
-            } else {
-                log('INFO', 'All tables successfully truncated', { tableCount: config.tables.length });
-            }
-        }
-
-        const endTime = performance.now();
-        log('INFO', 'Seed process completed', { duration: `${(endTime - startTime).toFixed(2)}ms` });
-
-        return { success: true, log: seedLog, duration: endTime - startTime };
-    } catch (unexpectedError) {
-        log('ERROR', 'Unexpected error during seed process', {
-            error: unexpectedError,
-            stack: unexpectedError instanceof Error ? unexpectedError.stack : undefined
-        });
-        if (config.throwOnError) throw unexpectedError;
-        return { success: false, error: unexpectedError, log: seedLog };
-    }
-};
-
-// Data insertion after truncation
-const insertSeedData = async (supabase: SupabaseClient) => {
-    console.log("Seeding DJs...");
-    const djsToInsert = djs.map(({ tracks, mixes, ...dj }) => dj);
-    const { error: djError } = await supabase.from('djs').insert(djsToInsert).select();
-    if (djError) throw djError;
-
-    console.log("Seeding Businesses...");
-    const { error: bizError } = await supabase.from('businesses').insert(businesses).select();
-    if (bizError) throw bizError;
-
-    console.log("Seeding Tracks...");
-    const { error: trackError } = await supabase.from('tracks').insert(tracks).select();
-    if (trackError) throw trackError;
-
-    console.log("Seeding Playlists...");
-    const playlistsToInsert = playlists.map(({ trackIds, ...playlist }) => playlist);
-    const { error: playlistError } = await supabase.from('playlists').insert(playlistsToInsert).select();
-    if (playlistError) throw playlistError;
-
-    console.log("Seeding Playlist Tracks...");
-    const playlistTrackLinks = playlists.flatMap(p => 
-        p.trackIds.map(trackId => ({ playlist_id: p.id, track_id: trackId }))
-    );
-    if (playlistTrackLinks.length > 0) {
-        const { error: ptError } = await supabase.from('playlist_tracks').insert(playlistTrackLinks).select();
-        if (ptError) throw ptError;
-    }
-};
 
 // Main orchestrator function for seeding, called by the UI.
 export const seedDatabase = async () => {
-    console.log("Starting full database seed process...");
+    console.log("Starting full database seed process via fetch to edge function...");
+    
+    // Prepare payload from mock data
+    const djsToInsert = djs.map(({ tracks, mixes, ...dj }) => dj);
+    const playlistsToInsert = playlists.map(({ trackIds, ...playlist }) => playlist);
+    const playlistTrackLinks = playlists.flatMap(p => 
+        p.trackIds.map(trackId => ({ playlist_id: p.id, track_id: trackId }))
+    );
+
+    const payload: SeedPayload = {
+        djs: djsToInsert,
+        businesses,
+        tracks,
+        playlists: playlistsToInsert,
+        playlist_tracks: playlistTrackLinks,
+    };
+
     try {
-        // 1. Truncate tables using the new advanced function
-        const truncationResult = await truncateTables(supabase, {
-             throwOnError: true
-        });
-
-        if (!truncationResult.success) {
-            throw truncationResult.error || new Error("Table truncation failed silently.");
-        }
+        // Using fetch to invoke Supabase Edge Function as requested.
+        const response = await fetch(
+          `${supabaseUrl}/functions/v1/seed-database`, 
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': supabaseAnonKey,
+              // Supabase Edge Functions can be authenticated with the anon key as a bearer token.
+              'Authorization': `Bearer ${supabaseAnonKey}`
+            },
+            body: JSON.stringify(payload)
+          }
+        );
         
-        // 2. Insert data
-        await insertSeedData(supabase);
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`Function returned an error: ${response.status} ${response.statusText}. Body: ${errorBody}`);
+        }
 
-        console.log("Database seeding completed successfully!");
+        const result = await response.json();
+        
+        console.log("Database seeding completed successfully!", result);
         persistenceService.markSeeded();
-        return true;
-
+        return result;
     } catch (error: any) {
         console.error('Comprehensive Seeding Error:', {
             message: error.message,

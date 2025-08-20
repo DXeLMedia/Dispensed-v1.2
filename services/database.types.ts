@@ -1,18 +1,15 @@
 
-import { Role, Tier, UserSettings } from '../types';
+export type Json = any;
 
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[];
+// Inlined from ../types to avoid potential type resolution issues with Supabase.
+export type UserSettings = {
+  theme: 'electric_blue' | 'magenta_pulse' | 'emerald_haze' | 'cyber_glow';
+};
 
 // These are the types for the database rows.
 // They should not include any client-side computed fields.
 
-type DjRow = {
+export interface DjRow {
   id: string;
   name: string;
   email: string;
@@ -20,13 +17,13 @@ type DjRow = {
   settings?: UserSettings;
   following: string[];
   followers: number;
-  role: Role.DJ;
+  role: 'dj';
   genres: string[];
   bio: string;
   location: string;
   rating: number;
   reviewsCount: number;
-  tier: Tier;
+  tier: string;
   socials?: {
     instagram?: string;
     soundcloud?: string;
@@ -35,7 +32,7 @@ type DjRow = {
   };
 };
 
-type BusinessRow = {
+export interface BusinessRow {
   id: string;
   name: string;
   email: string;
@@ -43,7 +40,7 @@ type BusinessRow = {
   settings?: UserSettings;
   following: string[];
   followers: number;
-  role: Role.Business;
+  role: 'business';
   location:string;
   description: string;
   rating: number;
@@ -55,7 +52,7 @@ type BusinessRow = {
   };
 };
 
-type TrackRow = {
+export interface TrackRow {
   id: string;
   title: string;
   artistId: string;
@@ -64,7 +61,7 @@ type TrackRow = {
   trackUrl?: string;
 };
 
-type PlaylistRow = {
+export interface PlaylistRow {
   id: string;
   name: string;
   creatorId: string;
