@@ -1289,7 +1289,7 @@ export const addTrack = async (artistId: string, title: string, artworkUrl: stri
         tracks.push(newTrackData);
         persistenceService.markDirty();
     } else {
-        const { data: newTrack, error } = await supabase.from('tracks').insert(newTrackData as never).select().single();
+        const { data: newTrack, error } = await supabase.from('tracks').insert(newTrackData).select().single();
         if (error) {
             console.error("Supabase insert failed for 'tracks':", error);
             throw error;
@@ -1325,7 +1325,7 @@ export const createPlaylist = async (creatorId: string, name: string, artworkUrl
         return newPlaylist;
     }
 
-    const { data, error } = await supabase.from('playlists').insert(newPlaylistData as never).select().single();
+    const { data, error } = await supabase.from('playlists').insert(newPlaylistData).select().single();
     if (error) {
         console.error("Supabase insert failed for 'playlists':", error);
         throw error;
@@ -1353,7 +1353,7 @@ export const updatePlaylist = async (playlistId: string, { name, artworkUrl }: {
 
     const { data, error } = await supabase
         .from('playlists')
-        .update(updateData as never)
+        .update(updateData)
         .eq('id', playlistId)
         .select()
         .single();
@@ -1384,7 +1384,7 @@ export const addTrackToPlaylist = async (playlistId: string, trackId: string) =>
     const { error } = await supabase.from('playlist_tracks').insert({
         playlist_id: playlistId,
         track_id: trackId,
-    } as never);
+    });
 
     if (error) {
         console.error("Supabase insert failed for 'playlist_tracks':", error);
@@ -1412,6 +1412,9 @@ export const updateUserProfile = async (userId: string, data: Partial<DJ> | Part
 
     const updatePayload: { [key: string]: any } = {};
     Object.keys(data).forEach(key => {
+        // We shouldn't be trying to update tracks/mixes this way.
+        if (key === 'tracks' || key === 'mixes') return;
+        
         const value = data[key as keyof typeof data];
         if (value !== undefined) {
             if (key === 'socials' && typeof value === 'object' && value !== null) {
@@ -1427,13 +1430,25 @@ export const updateUserProfile = async (userId: string, data: Partial<DJ> | Part
             }
         }
     });
+    
+    let result;
+    if (tableName === 'djs') {
+        result = await supabase
+            .from('djs')
+            .update(updatePayload)
+            .eq('id', userId)
+            .select()
+            .single();
+    } else {
+        result = await supabase
+            .from('businesses')
+            .update(updatePayload)
+            .eq('id', userId)
+            .select()
+            .single();
+    }
 
-    const { data: updatedData, error } = await supabase
-        .from(tableName)
-        .update(updatePayload as never)
-        .eq('id', userId)
-        .select()
-        .single();
+    const { data: updatedData, error } = result;
 
     if (error) {
         console.error(`Supabase update failed for '${tableName}':`, error);
@@ -1457,10 +1472,20 @@ export const updateUserSettings = async (userId: string, newSettings: Partial<Us
     
     const tableName = userProfile.role === Role.DJ ? 'djs' : 'businesses';
 
-    const { error } = await supabase
-        .from(tableName)
-        .update({ settings: newSettings } as never)
-        .eq('id', userId);
+    let result;
+    if (tableName === 'djs') {
+        result = await supabase
+            .from('djs')
+            .update({ settings: newSettings })
+            .eq('id', userId);
+    } else {
+        result = await supabase
+            .from('businesses')
+            .update({ settings: newSettings })
+            .eq('id', userId);
+    }
+
+    const { error } = result;
 
     if (error) {
         console.error(`Supabase update failed for '${tableName}' settings:`, error);
@@ -1568,7 +1593,7 @@ interface DjProfile {
   rating: number;
   reviewsCount: number;
   tier: string;
-  socials: Record<string, string>;
+  socials?: Record<string, string>;
 }
 
 interface BusinessProfile {
@@ -1584,7 +1609,7 @@ interface BusinessProfile {
   description: string;
   rating: number;
   reviewsCount: number;
-  socials: Record<string, string>;
+  socials?: Record<string, string>;
 }
 
 interface SeedTrack {
@@ -1619,7 +1644,7 @@ interface SeedPayload {
 
 // Main orchestrator function for seeding, called by the UI.
 export const seedDatabase = async () => {
-    console.log("Starting full database seed process via fetch to edge function...");
+    console.log("Starting full database seed process via Supabase function invoke...");
     
     // Prepare payload from mock data
     const djsToInsert = djs.map(({ tracks, mixes, ...dj }) => dj);
@@ -1637,27 +1662,16 @@ export const seedDatabase = async () => {
     };
 
     try {
-        // Using fetch to invoke Supabase Edge Function as requested.
-        const response = await fetch(
-          `${supabaseUrl}/functions/v1/seed-database`, 
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': supabaseAnonKey,
-              // Supabase Edge Functions can be authenticated with the anon key as a bearer token.
-              'Authorization': `Bearer ${supabaseAnonKey}`
-            },
-            body: JSON.stringify(payload)
-          }
-        );
-        
-        if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(`Function returned an error: ${response.status} ${response.statusText}. Body: ${errorBody}`);
-        }
+        // Use supabase.functions.invoke to correctly handle auth and avoid CORS issues.
+        const { data: result, error } = await supabase.functions.invoke('seed-database', {
+            body: payload,
+        });
 
-        const result = await response.json();
+        if (error) {
+            // The error from invoke can be a FunctionsHttpError, FunctionsRelayError, or FunctionsFetchError
+            // It has a helpful context property.
+            throw error;
+        }
         
         console.log("Database seeding completed successfully!", result);
         persistenceService.markSeeded();
@@ -1666,7 +1680,8 @@ export const seedDatabase = async () => {
         console.error('Comprehensive Seeding Error:', {
             message: error.message,
             name: error.name,
-            stack: error.stack
+            stack: error.stack,
+            context: error.context // Supabase invoke errors often have more context
         });
         throw error;
     }

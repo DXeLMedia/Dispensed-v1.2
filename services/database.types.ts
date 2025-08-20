@@ -1,5 +1,11 @@
 
-export type Json = any;
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
 
 // Inlined from ../types to avoid potential type resolution issues with Supabase.
 export type UserSettings = {
@@ -23,7 +29,7 @@ export interface DjRow {
   location: string;
   rating: number;
   reviewsCount: number;
-  tier: string;
+  tier: 'Bronze' | 'Silver' | 'Gold Groove' | 'Neon Legend';
   socials?: {
     instagram?: string;
     soundcloud?: string;
