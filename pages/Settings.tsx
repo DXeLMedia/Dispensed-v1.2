@@ -1,7 +1,9 @@
+
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
-import { IconArrowLeft, IconPalette, IconLogOut, IconChevronRight, IconProfile, IconDownload, IconBriefcase } from '../constants';
+import { IconArrowLeft, IconPalette, IconLogOut, IconChevronRight, IconProfile, IconDownload, IconBriefcase, IconMusic, IconBuilding } from '../constants';
 import * as api from '../services/mockApi';
 import { Spinner } from '../components/Spinner';
 import { usePersistence } from '../hooks/usePersistence';
@@ -16,6 +18,60 @@ const SettingRow = ({ icon, title, subtitle, onClick, disabled = false }: { icon
         <IconChevronRight className="text-[var(--text-muted)]" size={20}/>
     </button>
 )
+
+const downloadCSV = (data: any[], filename: string) => {
+    if (data.length === 0) {
+        alert('No data to export.');
+        return;
+    }
+
+    // Collect all unique headers from all objects in the data array
+    const allKeys = data.reduce((keys, item) => {
+        Object.keys(item).forEach(key => {
+            if (!keys.includes(key)) {
+                keys.push(key);
+            }
+        });
+        return keys;
+    }, [] as string[]);
+    
+    const headers = allKeys; // Use the collected keys as headers
+
+    const csvRows = [
+        headers.join(','),
+        ...data.map(row =>
+            headers
+                .map(header => {
+                    let cell = row[header];
+                    if (cell === null || cell === undefined) {
+                        return '';
+                    }
+                    // Stringify objects and arrays, escaping quotes
+                    if (typeof cell === 'object') {
+                        cell = JSON.stringify(cell).replace(/"/g, '""');
+                    }
+                    const str = String(cell);
+                    // Quote the cell if it contains commas, quotes, or newlines
+                    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                        return `"${str.replace(/"/g, '""')}"`;
+                    }
+                    return str;
+                })
+                .join(',')
+        ),
+    ].join('\n');
+
+    const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
 
 export const Settings = () => {
     const { logout, user, theme, updateTheme } = useAuth();
@@ -33,34 +89,43 @@ export const Settings = () => {
     }
 
     const handleDownloadUsers = () => {
-        const userList = api.userList;
-        const headers = ['id', 'name', 'email', 'role'];
-        const csvRows = [
-            headers.join(','), 
-            ...userList.map(user => 
-                [user.id, `"${user.name.replace(/"/g, '""')}"`, user.email, user.role].join(',')
-            )
-        ];
-        
-        const csvContent = csvRows.join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'user_list.csv');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        downloadCSV(api.userList, 'user_list.csv');
     };
 
+    const handleDownloadDJs = () => {
+        const dataToExport = api.djs.map(({ tracks, mixes, ...dj }) => dj);
+        downloadCSV(dataToExport, 'djs.csv');
+    };
+
+    const handleDownloadVenues = () => {
+        downloadCSV(api.businesses, 'venues.csv');
+    };
+
+    const handleDownloadGigs = () => {
+        downloadCSV(api.gigs, 'gigs.csv');
+    };
+
+
     const handleSeedDatabase = async () => {
-        if (window.confirm("Are you sure you want to seed the database? This will delete all existing data in the 'djs', 'businesses', 'tracks', and 'playlists' tables and replace it with mock data.")) {
+        if (window.confirm("Are you sure you want to seed the database? This will reset all in-memory data and download it as a single CSV file.")) {
             setIsSeeding(true);
             try {
-                await api.seedDatabase();
-                showToast('Database seeded! Your data is now published.');
+                const seededData = await api.seedDatabase();
+                
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `seed_${timestamp}.csv`;
+
+                const combinedData = [
+                    ...seededData.djs.map(item => ({ dataType: 'dj', ...item })),
+                    ...seededData.businesses.map(item => ({ dataType: 'business', ...item })),
+                    ...seededData.gigs.map(item => ({ dataType: 'gig', ...item })),
+                    ...seededData.tracks.map(item => ({ dataType: 'track', ...item })),
+                    ...seededData.playlists.map(item => ({ dataType: 'playlist', ...item })),
+                ];
+
+                downloadCSV(combinedData, filename);
+
+                showToast('Database seeded and data exported!');
             } catch (error) {
                 console.error("Seeding failed:", error);
                 showToast(`Seeding failed: ${(error as Error).message}`, 'error');
@@ -118,8 +183,8 @@ export const Settings = () => {
                     <h2 className="text-sm font-bold text-[var(--text-muted)] uppercase px-2">Developer</h2>
                     <SettingRow
                         icon={isSeeding ? <Spinner /> : <IconBriefcase size={24} />}
-                        title={isSeeding ? "Seeding Database..." : "Seed Database"}
-                        subtitle="Populate DB with mock data. Deletes existing data."
+                        title={isSeeding ? "Seeding Database..." : "Seed Database & Export"}
+                        subtitle="Populate with mock data and download as CSV."
                         onClick={handleSeedDatabase}
                         disabled={isSeeding}
                     />
@@ -128,6 +193,24 @@ export const Settings = () => {
                         title="Export User List"
                         subtitle="Download a CSV of all 400+ mock users with their login emails for easy testing."
                         onClick={handleDownloadUsers}
+                    />
+                    <SettingRow 
+                        icon={<IconMusic size={24} />}
+                        title="Export DJ Profiles"
+                        subtitle="Download a CSV of all DJ profiles."
+                        onClick={handleDownloadDJs}
+                    />
+                    <SettingRow 
+                        icon={<IconBuilding size={24} />}
+                        title="Export Venue Profiles"
+                        subtitle="Download a CSV of all venue/business profiles."
+                        onClick={handleDownloadVenues}
+                    />
+                    <SettingRow 
+                        icon={<IconBriefcase size={24} />}
+                        title="Export Gigs List"
+                        subtitle="Download a CSV of all mock gigs."
+                        onClick={handleDownloadGigs}
                     />
                 </div>
 
