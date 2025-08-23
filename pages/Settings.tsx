@@ -32,29 +32,6 @@ export const Settings = () => {
         navigate('/profile/me?edit=true');
     }
 
-    const handleDownloadUsers = () => {
-        const userList = api.userList;
-        const headers = ['id', 'name', 'email', 'role'];
-        const csvRows = [
-            headers.join(','), 
-            ...userList.map(user => 
-                [user.id, `"${user.name.replace(/"/g, '""')}"`, user.email, user.role].join(',')
-            )
-        ];
-        
-        const csvContent = csvRows.join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'user_list.csv');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
     const handleSeedDatabase = async () => {
         if (window.confirm("Are you sure you want to seed the database? This will delete all existing data in the 'djs', 'businesses', 'tracks', and 'playlists' tables and replace it with mock data.")) {
             setIsSeeding(true);
@@ -122,12 +99,6 @@ export const Settings = () => {
                         subtitle="Populate DB with mock data. Deletes existing data."
                         onClick={handleSeedDatabase}
                         disabled={isSeeding}
-                    />
-                     <SettingRow 
-                        icon={<IconDownload size={24} />}
-                        title="Export User List"
-                        subtitle="Download a CSV of all 400+ mock users with their login emails for easy testing."
-                        onClick={handleDownloadUsers}
                     />
                 </div>
 

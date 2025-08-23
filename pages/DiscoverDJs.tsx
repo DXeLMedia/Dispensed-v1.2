@@ -1,8 +1,8 @@
 
 
 import React, { useEffect, useState } from 'react';
-import { DJ } from '../types';
-import * as api from '../services/mockApi';
+import { DJ, UserProfile } from '../types';
+import { getDJs } from '../services/mockApi';
 import { Spinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
 import { IconStar, IconMapPin, IconMusic, IconX, IconSearch, IconNotifications, IconSparkles } from '../constants';
@@ -15,25 +15,17 @@ interface DJCardProps {
 }
 
 const DJCard: React.FC<DJCardProps> = ({ dj }) => (
-  <Link to={`/profile/${dj.id}`} className="block bg-[var(--surface-1)] border border-[var(--border)] rounded-lg p-4 hover:border-[var(--accent)] transition-colors duration-200">
+  <Link to={`/profile/${dj.user_id}`} className="block bg-[var(--surface-1)] border border-[var(--border)] rounded-lg p-4 hover:border-[var(--accent)] transition-colors duration-200">
     <div className="flex items-center gap-4">
-      <Avatar src={dj.avatarUrl} alt={dj.name} size="lg" />
+      <Avatar src={dj.avatar_url} alt={dj.display_name} size="lg" />
       <div className="flex-1 min-w-0">
-        <h3 className="font-orbitron text-lg font-bold text-[var(--text-primary)] truncate">{dj.name}</h3>
-        <p className="text-sm text-[var(--text-secondary)] truncate">{dj.genres.join(', ')}</p>
+        <h3 className="font-orbitron text-lg font-bold text-[var(--text-primary)] truncate">{dj.display_name}</h3>
+        <p className="text-sm text-[var(--text-secondary)] truncate">{(dj.djProfile.genres || []).join(', ')}</p>
         <div className="flex items-center gap-1 mt-1 text-sm text-[var(--text-muted)]">
           <IconMapPin size={14} />
           <span className="truncate">{dj.location}</span>
         </div>
-        <div className="flex items-center gap-2 mt-2">
-          <IconStar className="text-lime-400" size={16} fill="currentColor" />
-          <span className="text-[var(--text-primary)] font-bold">{dj.rating.toFixed(1)}</span>
-          <span className="text-[var(--text-muted)]">({dj.reviewsCount} reviews)</span>
-        </div>
-      </div>
-      <div className="flex flex-col items-center justify-center p-2 bg-[var(--surface-2)] rounded-md">
-        <span className="font-bold text-lime-400 text-sm">{dj.tier}</span>
-        <span className="text-xs text-[var(--text-secondary)]">Tier</span>
+        {/* Rating and Tier are no longer available in the new schema */}
       </div>
     </div>
   </Link>
@@ -89,12 +81,12 @@ interface FilterModalProps {
 const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilter, availableGenres, availableLocations, currentFilters, onApply }) => {
     const [tempGenres, setTempGenres] = useState(currentFilters.genres);
     const [tempLocation, setTempLocation] = useState(currentFilters.location);
-    const [tempRating, setTempRating] = useState(currentFilters.rating);
+    // const [tempRating, setTempRating] = useState(currentFilters.rating);
 
     useEffect(() => {
         setTempGenres(currentFilters.genres);
         setTempLocation(currentFilters.location);
-        setTempRating(currentFilters.rating);
+        // setTempRating(currentFilters.rating);
     }, [isOpen, currentFilters]);
 
     if (!isOpen || !activeFilter) return null;
@@ -104,23 +96,21 @@ const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilter
     };
     
     const handleApply = () => {
-        onApply({ genres: tempGenres, location: tempLocation, rating: tempRating });
+        onApply({ genres: tempGenres, location: tempLocation, rating: 0 }); // rating is now unused
         onClose();
     };
     
     const handleClear = () => {
         if(activeFilter === 'genre') setTempGenres([]);
         if(activeFilter === 'location') setTempLocation(null);
-        if(activeFilter === 'rating') setTempRating(0);
+        // if(activeFilter === 'rating') setTempRating(0); // Rating removed
     };
 
     const titles: Record<FilterType, string> = {
         genre: 'Filter by Genre',
         location: 'Filter by Location',
-        rating: 'Filter by Rating'
+        rating: 'Filter by Rating' // This is now unused but kept to avoid breaking types
     };
-    
-    const ratingOptions = [{label: '4.5+ stars', value: 4.5}, {label: '4.0+ stars', value: 4.0}, {label: '3.0+ stars', value: 3.0}];
 
     return (
         <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-end" onClick={onClose}>
@@ -143,12 +133,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilter
                             <span className="text-[var(--text-primary)] font-medium">{loc}</span>
                         </label>
                     ))}
-                    {activeFilter === 'rating' && ratingOptions.map(opt => (
-                         <label key={opt.value} className="flex items-center gap-3 p-3 bg-[var(--surface-2)] rounded-lg cursor-pointer">
-                            <input type="radio" name="rating" checked={tempRating === opt.value} onChange={() => setTempRating(opt.value)} className="h-5 w-5 bg-zinc-700 border-zinc-600 text-[var(--accent)] focus:ring-[var(--accent)]" />
-                            <span className="text-[var(--text-primary)] font-medium">{opt.label}</span>
-                        </label>
-                    ))}
+                    {/* Rating filter content removed */}
                 </main>
                 
                 <footer className="p-4 border-t border-[var(--border)] flex gap-4">
@@ -168,9 +153,7 @@ const FilterBar = ({ onFilterClick, activeFilters }: { onFilterClick: (type: Fil
         <button onClick={() => onFilterClick('location')} className={`px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-colors ${activeFilters.location ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'bg-[var(--surface-2)] text-[var(--text-primary)]'}`}>
             <IconMapPin size={16} /> Location
         </button>
-        <button onClick={() => onFilterClick('rating')} className={`px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-colors ${activeFilters.rating ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'bg-[var(--surface-2)] text-[var(--text-primary)]'}`}>
-            <IconStar size={16} /> Rating
-        </button>
+        {/* Rating filter removed */}
     </div>
 );
 
@@ -185,7 +168,7 @@ export const DiscoverDJs = () => {
 
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
-  const [minRating, setMinRating] = useState(0);
+  // const [minRating, setMinRating] = useState(0);
 
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
   const [availableLocations, setAvailableLocations] = useState<string[]>([]);
@@ -194,11 +177,11 @@ export const DiscoverDJs = () => {
 
   useEffect(() => {
     setLoading(true);
-    api.getDJs().then(data => {
+    getDJs().then(data => {
       setAllDJs(data);
       setFilteredDJs(data);
-      const allGenres = [...new Set(data.flatMap(dj => dj.genres))].sort();
-      const allLocations = [...new Set(data.map(dj => dj.location))].sort();
+      const allGenres = [...new Set(data.flatMap(dj => dj.djProfile.genres || []))].sort();
+      const allLocations = [...new Set(data.map(dj => dj.location).filter(Boolean) as string[])].sort();
       setAvailableGenres(allGenres);
       setAvailableLocations(allLocations);
       setLoading(false);
@@ -208,16 +191,14 @@ export const DiscoverDJs = () => {
   useEffect(() => {
     let tempDJs = [...allDJs];
     if (selectedGenres.length > 0) {
-        tempDJs = tempDJs.filter(dj => selectedGenres.every(genre => dj.genres.includes(genre)));
+        tempDJs = tempDJs.filter(dj => selectedGenres.every(genre => (dj.djProfile.genres || []).includes(genre)));
     }
     if (selectedLocation) {
         tempDJs = tempDJs.filter(dj => dj.location === selectedLocation);
     }
-    if (minRating > 0) {
-        tempDJs = tempDJs.filter(dj => dj.rating >= minRating);
-    }
+    // Rating filter is removed
     setFilteredDJs(tempDJs);
-  }, [selectedGenres, selectedLocation, minRating, allDJs]);
+  }, [selectedGenres, selectedLocation, allDJs]);
 
 
   const openFilterModal = (type: FilterType) => {
@@ -228,13 +209,13 @@ export const DiscoverDJs = () => {
   const handleApplyFilters = (newFilters: { genres: string[]; location: string | null; rating: number; }) => {
     setSelectedGenres(newFilters.genres);
     setSelectedLocation(newFilters.location);
-    setMinRating(newFilters.rating);
+    // setMinRating(newFilters.rating);
   };
   
   const activeFilters = {
     genre: selectedGenres.length > 0,
     location: !!selectedLocation,
-    rating: minRating > 0
+    rating: false // Rating filter removed
   };
 
   const handleOpenScout = () => setIsScoutOpen(true);
