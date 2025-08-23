@@ -88,24 +88,6 @@ export const Settings = () => {
         navigate('/profile/me?edit=true');
     }
 
-    const handleDownloadUsers = () => {
-        downloadCSV(api.userList, 'user_list.csv');
-    };
-
-    const handleDownloadDJs = () => {
-        const dataToExport = api.djs.map(({ tracks, mixes, ...dj }) => dj);
-        downloadCSV(dataToExport, 'djs.csv');
-    };
-
-    const handleDownloadVenues = () => {
-        downloadCSV(api.businesses, 'venues.csv');
-    };
-
-    const handleDownloadGigs = () => {
-        downloadCSV(api.gigs, 'gigs.csv');
-    };
-
-
     const handleSeedDatabase = async () => {
         if (window.confirm("Are you sure you want to seed the database? This will reset all in-memory data and download it as a single CSV file.")) {
             setIsSeeding(true);
@@ -188,30 +170,7 @@ export const Settings = () => {
                         onClick={handleSeedDatabase}
                         disabled={isSeeding}
                     />
-                     <SettingRow 
-                        icon={<IconDownload size={24} />}
-                        title="Export User List"
-                        subtitle="Download a CSV of all 400+ mock users with their login emails for easy testing."
-                        onClick={handleDownloadUsers}
-                    />
-                    <SettingRow 
-                        icon={<IconMusic size={24} />}
-                        title="Export DJ Profiles"
-                        subtitle="Download a CSV of all DJ profiles."
-                        onClick={handleDownloadDJs}
-                    />
-                    <SettingRow 
-                        icon={<IconBuilding size={24} />}
-                        title="Export Venue Profiles"
-                        subtitle="Download a CSV of all venue/business profiles."
-                        onClick={handleDownloadVenues}
-                    />
-                    <SettingRow 
-                        icon={<IconBriefcase size={24} />}
-                        title="Export Gigs List"
-                        subtitle="Download a CSV of all mock gigs."
-                        onClick={handleDownloadGigs}
-                    />
+
                 </div>
 
                 <div className="space-y-2">

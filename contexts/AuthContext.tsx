@@ -1,9 +1,10 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { User, Role, DJ, Business, Notification, UserSettings, Listener } from '../types';
+import { UserProfile, Role, DJ, Business, Notification, Message, Review, Post } from '../types';
 import * as api from '../services/mockApi';
 import { useMediaPlayer } from './MediaPlayerContext';
 
-type FullUser = User | DJ | Business | Listener;
+type FullUser = UserProfile; // Simplified for now
+type Theme = 'electric_blue' | 'cyber_glow';
 
 interface AuthContextType {
   user: FullUser | null;
@@ -17,8 +18,8 @@ interface AuthContextType {
   unreadCount: number;
   refreshNotifications: () => Promise<void>;
   markNotificationsAsRead: () => Promise<void>;
-  theme: UserSettings['theme'];
-  updateTheme: (newTheme: UserSettings['theme']) => Promise<void>;
+  theme: Theme;
+  updateTheme: (newTheme: Theme) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,13 +34,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const { closePlayer } = useMediaPlayer();
-  const [theme, setTheme] = useState<UserSettings['theme']>('electric_blue');
+  const [theme, setTheme] = useState<Theme>('electric_blue');
 
   const refreshNotifications = useCallback(async () => {
     if (user) {
-        const notifs = await api.getNotifications(user.id);
+        const notifs = await api.getNotifications(user.user_id);
         setNotifications(notifs);
-        setUnreadCount(notifs.filter(n => !n.read).length);
+        setUnreadCount(notifs.filter(n => !n.is_read).length);
     } else {
         setNotifications([]);
         setUnreadCount(0);
@@ -47,16 +48,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user]);
 
   useEffect(() => {
-    // In a real app with session persistence, you'd check for a session token here.
-    // For this mock-based app, we just start fresh on every load.
+    // In a real app, you would check for a session here.
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    const currentTheme = user?.settings?.theme || 'electric_blue';
-    setTheme(currentTheme);
-    document.documentElement.className = currentTheme === 'cyber_glow' ? 'theme-light' : 'theme-dark';
-  }, [user]);
+    // Theme is now a UI-only feature
+    document.documentElement.className = theme === 'cyber_glow' ? 'theme-light' : 'theme-dark';
+  }, [theme]);
 
   useEffect(() => {
     refreshNotifications();
@@ -72,28 +71,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    closePlayer(); // Reset media player state
+    closePlayer();
     setUser(null);
     setNotifications([]);
     setUnreadCount(0);
-    document.documentElement.className = 'theme-dark'; // Reset to default on logout
+    document.documentElement.className = 'theme-dark';
   };
   
   const updateUser = (updatedUser: FullUser) => {
     setUser(updatedUser);
   };
 
-  const updateTheme = async (newTheme: UserSettings['theme']) => {
-    if (user) {
-        setTheme(newTheme);
-        document.documentElement.className = newTheme === 'cyber_glow' ? 'theme-light' : 'theme-dark';
-        await api.updateUserSettings(user.id, { theme: newTheme });
-        const updatedUser = { 
-            ...user, 
-            settings: { ...user.settings, theme: newTheme } as UserSettings
-        };
-        updateUser(updatedUser);
-    }
+  const updateTheme = async (newTheme: Theme) => {
+    // This is now a UI-only feature as the backend does not support user settings.
+    setTheme(newTheme);
   };
   
   const markNotificationsAsRead = async () => {
