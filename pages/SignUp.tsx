@@ -1,26 +1,30 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
+import { Role } from '../types';
 
-export const Login = () => {
+export const SignUp = () => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<Role>(Role.Listener);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { signup, googleSignIn } = useAuth();
   const navigate = useNavigate();
 
-  const { login, googleSignIn } = useAuth();
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      // onAuthStateChange will handle navigation
+      await signup(name, email, password, role);
+      // After signup, show a message to check email for verification link.
+      // The actual navigation/user state change will be handled by the onAuthStateChange listener.
+      alert("Sign-up successful! Please check your email for a verification link.");
+      navigate('/login');
     } catch (err: any) {
-      setError(err.message || 'Failed to log in. Please check your credentials.');
+      setError(err.message || 'Failed to sign up.');
     } finally {
       setLoading(false);
     }
@@ -30,14 +34,10 @@ export const Login = () => {
     setError('');
     try {
       await googleSignIn();
+      // onAuthStateChange will handle navigation
     } catch (err: any) {
       setError(err.message || 'Google login failed.');
     }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleLogin(e);
   };
 
   return (
@@ -45,14 +45,24 @@ export const Login = () => {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
             <h1 className="font-orbitron text-4xl font-bold text-white mb-2">DISPENSED</h1>
-            <p className="text-lime-400 font-semibold">CAPE TOWN</p>
+            <p className="text-lime-400 font-semibold">CREATE ACCOUNT</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-zinc-400">
-              Email
-            </label>
+            <label htmlFor="name" className="block text-sm font-medium text-zinc-400">Name</label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your Name"
+              className="mt-1 block w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-md text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-lime-400"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-zinc-400">Email</label>
             <input
               id="email"
               type="email"
@@ -64,9 +74,7 @@ export const Login = () => {
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-zinc-400">
-                Password
-            </label>
+            <label htmlFor="password" className="block text-sm font-medium text-zinc-400">Password</label>
             <input
               id="password"
               type="password"
@@ -76,16 +84,31 @@ export const Login = () => {
               required
             />
           </div>
+          <div>
+            <label htmlFor="role" className="block text-sm font-medium text-zinc-400">I am a...</label>
+            <select
+              id="role"
+              value={role}
+              onChange={(e) => setRole(e.target.value as Role)}
+              className="mt-1 block w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-lime-400"
+            >
+              <option value={Role.Listener}>Listener</option>
+              <option value={Role.DJ}>DJ</option>
+              <option value={Role.Business}>Venue/Event Brand</option>
+            </select>
+          </div>
+
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
           <button
             type="submit"
-            disabled={loading || !email || !password}
+            disabled={loading}
             className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-black bg-lime-400 hover:bg-lime-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-lime-500 disabled:bg-zinc-600 disabled:cursor-not-allowed"
           >
-            {loading ? 'Logging in...' : 'Log In'}
+            {loading ? 'Creating Account...' : 'Sign Up'}
           </button>
         </form>
-        
+
         <div className="mt-6">
             <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -110,18 +133,18 @@ export const Login = () => {
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     <path d="M1 1h22v22H1z" fill="none"/>
                   </svg>
-                  Sign in with Google
+                  Sign up with Google
                 </button>
             </div>
+        </div>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-zinc-400">
-                  Don't have an account?{' '}
-                  <Link to="/signup" className="font-medium text-lime-400 hover:text-lime-300">
-                      Sign Up
-                  </Link>
-              </p>
-            </div>
+        <div className="mt-6 text-center">
+            <p className="text-sm text-zinc-400">
+                Already have an account?{' '}
+                <Link to="/login" className="font-medium text-lime-400 hover:text-lime-300">
+                    Log In
+                </Link>
+            </p>
         </div>
       </div>
     </div>

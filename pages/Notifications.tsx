@@ -1,50 +1,42 @@
 
-
 import React, { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Notification as NotificationType } from '../types';
+import { Notification as NotificationType, NotificationType as ENotificationType } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { Spinner } from '../components/Spinner';
-import { IconArrowLeft, IconBookOpen, IconMessages, IconUserPlus, IconCalendar, IconCheckCircle2, IconXCircle, IconComment, IconRepeat } from '../constants';
+import { IconArrowLeft, IconBookOpen, IconMessages, IconUserPlus, IconCalendar, IconCheckCircle2, IconXCircle } from '../constants';
 
-const NotificationIcon = ({ type }: { type: string }) => {
+const NotificationIcon = ({ type }: { type: ENotificationType }) => {
     switch (type) {
-        case 'booking_request':
+        case ENotificationType.BookingRequest:
             return <IconBookOpen className="text-lime-400 mt-1" size={20}/>;
-        case 'message':
+        case ENotificationType.Message:
             return <IconMessages className="text-blue-400 mt-1" size={20}/>;
-        case 'new_follower':
+        case ENotificationType.NewFollower:
             return <IconUserPlus className="text-pink-400 mt-1" size={20}/>;
-        case 'event_update':
+        case ENotificationType.EventUpdate:
              return <IconCalendar className="text-purple-400 mt-1" size={20}/>;
-        case 'booking_confirmed':
+        case ENotificationType.BookingConfirmed:
              return <IconCheckCircle2 className="text-green-400 mt-1" size={20}/>;
-        case 'gig_filled':
+        case ENotificationType.GigFilled:
              return <IconXCircle className="text-red-400 mt-1" size={20}/>;
-        case 'new_comment':
-             return <IconComment className="text-teal-400 mt-1" size={20}/>;
-        case 'repost':
-            return <IconRepeat className="text-green-400 mt-1" size={20}/>;
         default:
             return <IconBookOpen className="text-gray-400 mt-1" size={20}/>;
     }
 }
 
 const getLinkForNotification = (notif: NotificationType): string => {
-    switch(notif.notification_type) {
-        case 'message':
-            return notif.related_id ? `/messages/${notif.related_id}` : '/messages';
-        case 'new_follower':
-             return notif.related_id ? `/profile/${notif.related_id}` : '/feed';
-        case 'booking_request': // For Venues
-             return notif.related_id ? `/venue/gigs/${notif.related_id}/applicants` : '/venue/gigs';
-        case 'booking_confirmed': // For DJs
-            return notif.related_id ? `/gigs?highlight=${notif.related_id}` : '/gigs';
-        case 'gig_filled': // For DJs
+    switch(notif.type) {
+        case ENotificationType.Message:
+            return notif.relatedId ? `/messages/${notif.relatedId}` : '/messages';
+        case ENotificationType.NewFollower:
+             return notif.relatedId ? `/profile/${notif.relatedId}` : '/feed';
+        case ENotificationType.BookingRequest: // For Venues
+             return notif.relatedId ? `/venue/gigs/${notif.relatedId}/applicants` : '/venue/gigs';
+        case ENotificationType.BookingConfirmed: // For DJs
+            return notif.relatedId ? `/gigs?highlight=${notif.relatedId}` : '/gigs';
+        case ENotificationType.GigFilled: // For DJs
             return '/discover'; // Go back to finding gigs
-        case 'new_comment':
-        case 'repost':
-            return notif.related_id ? `/post/${notif.related_id}` : '/feed';
         default:
             return '#';
     }

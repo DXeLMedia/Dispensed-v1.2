@@ -7,7 +7,10 @@ if (!process.env.API_KEY) {
   console.warn("API_KEY environment variable not set for Gemini. AI features will be disabled.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+let ai: GoogleGenAI | null = null;
+if (process.env.API_KEY) {
+  ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+}
 
 export const generateGigDescription = async (
   title: string,
@@ -29,6 +32,10 @@ export const generateGigDescription = async (
     
     Make it sound like an unmissable underground event. Do not use hashtags. Keep it to 2-3 sentences.
   `;
+
+  if (!ai) {
+    return Promise.resolve(`Get ready for ${title} at ${venueName}! Featuring the best of ${genres.join(', ')}. It's going to be an epic night!`);
+  }
 
   try {
     const response = await ai.models.generateContent({

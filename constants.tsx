@@ -1,12 +1,10 @@
 
-
 import {
   Home,
   Search,
   User as UserIcon,
   Bell,
   MessageSquare,
-  MessageCircle,
   Music,
   Calendar,
   Settings,
@@ -18,9 +16,6 @@ import {
   Clock,
   Star,
   Play,
-  Pause,
-  SkipBack,
-  SkipForward,
   Share2,
   Heart,
   Repeat,
@@ -46,15 +41,6 @@ import {
   Palette,
   LogOut,
   StickyNote,
-  Image,
-  FileMusic,
-  Volume2,
-  VolumeX,
-  Pencil,
-  Instagram,
-  Globe,
-  Download,
-  Building,
 } from 'lucide-react';
 import React from 'react';
 
@@ -63,7 +49,6 @@ export const IconSearch = (props: React.ComponentProps<typeof Search>) => <Searc
 export const IconProfile = (props: React.ComponentProps<typeof UserIcon>) => <UserIcon {...props} />;
 export const IconNotifications = (props: React.ComponentProps<typeof Bell>) => <Bell {...props} />;
 export const IconMessages = (props: React.ComponentProps<typeof MessageSquare>) => <MessageSquare {...props} />;
-export const IconComment = (props: React.ComponentProps<typeof MessageCircle>) => <MessageCircle {...props} />;
 export const IconMusic = (props: React.ComponentProps<typeof Music>) => <Music {...props} />;
 export const IconCalendar = (props: React.ComponentProps<typeof Calendar>) => <Calendar {...props} />;
 export const IconSettings = (props: React.ComponentProps<typeof Settings>) => <Settings {...props} />;
@@ -75,9 +60,6 @@ export const IconMapPin = (props: React.ComponentProps<typeof MapPin>) => <MapPi
 export const IconClock = (props: React.ComponentProps<typeof Clock>) => <Clock {...props} />;
 export const IconStar = (props: React.ComponentProps<typeof Star>) => <Star {...props} />;
 export const IconPlay = (props: React.ComponentProps<typeof Play>) => <Play {...props} />;
-export const IconPause = (props: React.ComponentProps<typeof Pause>) => <Pause {...props} />;
-export const IconSkipBack = (props: React.ComponentProps<typeof SkipBack>) => <SkipBack {...props} />;
-export const IconSkipForward = (props: React.ComponentProps<typeof SkipForward>) => <SkipForward {...props} />;
 export const IconShare = (props: React.ComponentProps<typeof Share2>) => <Share2 {...props} />;
 export const IconHeart = (props: React.ComponentProps<typeof Heart>) => <Heart {...props} />;
 export const IconRepeat = (props: React.ComponentProps<typeof Repeat>) => <Repeat {...props} />;
@@ -103,12 +85,3 @@ export const IconGripVertical = (props: React.ComponentProps<typeof GripVertical
 export const IconPalette = (props: React.ComponentProps<typeof Palette>) => <Palette {...props} />;
 export const IconLogOut = (props: React.ComponentProps<typeof LogOut>) => <LogOut {...props} />;
 export const IconStickyNote = (props: React.ComponentProps<typeof StickyNote>) => <StickyNote {...props} />;
-export const IconPhoto = (props: React.ComponentProps<typeof Image>) => <Image {...props} />;
-export const IconFileMusic = (props: React.ComponentProps<typeof FileMusic>) => <FileMusic {...props} />;
-export const IconVolume2 = (props: React.ComponentProps<typeof Volume2>) => <Volume2 {...props} />;
-export const IconVolumeX = (props: React.ComponentProps<typeof VolumeX>) => <VolumeX {...props} />;
-export const IconPencil = (props: React.ComponentProps<typeof Pencil>) => <Pencil {...props} />;
-export const IconInstagram = (props: React.ComponentProps<typeof Instagram>) => <Instagram {...props} />;
-export const IconWebsite = (props: React.ComponentProps<typeof Globe>) => <Globe {...props} />;
-export const IconDownload = (props: React.ComponentProps<typeof Download>) => <Download {...props} />;
-export const IconBuilding = (props: React.ComponentProps<typeof Building>) => <Building {...props} />;
