@@ -62,7 +62,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
         { id: `notif-${dj.id}-2`, userId: dj.id, type: NotificationType.BookingConfirmed, text: 'Your booking for Modular is confirmed!', timestamp: '3 hours ago', read: false, relatedId: gigs[0].id },
         { id: `notif-${dj.id}-3`, userId: dj.id, type: NotificationType.NewComment, text: 'A-Muse commented on your post.', timestamp: '1 day ago', read: true, relatedId: feedItems[0].id },
     ]);
-};)
+});
 createInitialData();
 
 // --- API Functions ---
