@@ -1,56 +1,45 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
   const navigate = useNavigate();
 
-  const { login, googleSignIn } = useAuth();
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) return;
+  const handleLogin = async (loginEmail: string, loginPassword: string) => {
+    if (!loginEmail) return;
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      // onAuthStateChange will handle navigation
-    } catch (err: any) {
-      setError(err.message || 'Failed to log in. Please check your credentials.');
+      await login(loginEmail, loginPassword);
+      navigate('/');
+    } catch (err) {
+      setError('Failed to log in. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setError('');
-    try {
-      await googleSignIn();
-    } catch (err: any) {
-      setError(err.message || 'Google login failed.');
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleLogin(e);
+    handleLogin(email, password);
   };
 
   return (
-    <div className="bg-black text-white min-h-screen flex flex-col items-center justify-center p-4">
+    <div className="bg-[var(--background)] text-[var(--text-primary)] min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-            <h1 className="font-orbitron text-4xl font-bold text-white mb-2">DISPENSED</h1>
-            <p className="text-lime-400 font-semibold">CAPE TOWN</p>
+            <h1 className="font-orbitron text-4xl font-bold text-[var(--text-primary)] mb-2">DISk_onnctd</h1>
+            <p className="text-[var(--accent)] font-semibold">CAPE TOWN</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-zinc-400">
+            <label htmlFor="email" className="block text-sm font-medium text-[var(--text-secondary)]">
               Email
             </label>
             <input
@@ -58,29 +47,31 @@ export const Login = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@email.com"
-              className="mt-1 block w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-md text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-lime-400"
+              placeholder="user@email.com or use demo"
+              className="mt-1 block w-full px-3 py-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-md text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               required
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-zinc-400">
-                Password
-            </label>
+            <div className="flex justify-between">
+                <label htmlFor="password" className="block text-sm font-medium text-[var(--text-secondary)]">
+                    Password
+                </label>
+                <span className="text-xs text-[var(--text-muted)]">(any password)</span>
+            </div>
             <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-md text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-lime-400"
-              required
+              className="mt-1 block w-full px-3 py-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-md text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             />
           </div>
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
           <button
             type="submit"
             disabled={loading || !email || !password}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-black bg-lime-400 hover:bg-lime-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-lime-500 disabled:bg-zinc-600 disabled:cursor-not-allowed"
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-[var(--accent-text)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-[var(--accent)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted)] disabled:cursor-not-allowed"
           >
             {loading ? 'Logging in...' : 'Log In'}
           </button>
@@ -89,38 +80,17 @@ export const Login = () => {
         <div className="mt-6">
             <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-zinc-700" />
+                    <div className="w-full border-t border-[var(--border)]" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-black text-zinc-400">Or continue with</span>
+                    <span className="px-2 bg-[var(--background)] text-[var(--text-secondary)]">Or use a demo account</span>
                 </div>
             </div>
 
-            <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={loading}
-                  className="w-full flex items-center justify-center px-4 py-2 border border-zinc-700 rounded-md shadow-sm text-sm font-medium text-white bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                    <path d="M1 1h22v22H1z" fill="none"/>
-                  </svg>
-                  Sign in with Google
-                </button>
-            </div>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-zinc-400">
-                  Don't have an account?{' '}
-                  <Link to="/signup" className="font-medium text-lime-400 hover:text-lime-300">
-                      Sign Up
-                  </Link>
-              </p>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <button onClick={() => handleLogin('doublex@test.com', 'password')} disabled={loading} className="w-full bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-2 px-4 rounded-md hover:bg-[var(--border)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">Log in as DJ</button>
+                <button onClick={() => handleLogin('modular@test.com', 'password')} disabled={loading} className="w-full bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-2 px-4 rounded-md hover:bg-[var(--border)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">Log in as Venue/Event Brand</button>
+                 <button onClick={() => handleLogin('listener@test.com', 'password')} disabled={loading} className="w-full bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-2 px-4 rounded-md hover:bg-[var(--border)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">Log in as Listener</button>
             </div>
         </div>
       </div>

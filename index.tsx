@@ -1,8 +1,9 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
+import { MediaPlayerProvider } from './contexts/MediaPlayerContext';
+import { PersistenceProvider } from './contexts/PersistenceContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -12,8 +13,12 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <AuthProvider>
-        <App />
-    </AuthProvider>
+    <PersistenceProvider>
+      <MediaPlayerProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </MediaPlayerProvider>
+    </PersistenceProvider>
   </React.StrictMode>
 );

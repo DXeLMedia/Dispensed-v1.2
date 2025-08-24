@@ -15,25 +15,25 @@ interface DJCardProps {
 }
 
 const DJCard: React.FC<DJCardProps> = ({ dj }) => (
-  <Link to={`/profile/${dj.id}`} className="block bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:border-lime-400 transition-colors duration-200">
+  <Link to={`/profile/${dj.id}`} className="block bg-[var(--surface-1)] border border-[var(--border)] rounded-lg p-4 hover:border-[var(--accent)] transition-colors duration-200">
     <div className="flex items-center gap-4">
       <Avatar src={dj.avatarUrl} alt={dj.name} size="lg" />
       <div className="flex-1 min-w-0">
-        <h3 className="font-orbitron text-lg font-bold text-white truncate">{dj.name}</h3>
-        <p className="text-sm text-zinc-400 truncate">{dj.genres.join(', ')}</p>
-        <div className="flex items-center gap-1 mt-1 text-sm text-zinc-500">
+        <h3 className="font-orbitron text-lg font-bold text-[var(--text-primary)] truncate">{dj.name}</h3>
+        <p className="text-sm text-[var(--text-secondary)] truncate">{dj.genres.join(', ')}</p>
+        <div className="flex items-center gap-1 mt-1 text-sm text-[var(--text-muted)]">
           <IconMapPin size={14} />
           <span className="truncate">{dj.location}</span>
         </div>
         <div className="flex items-center gap-2 mt-2">
           <IconStar className="text-lime-400" size={16} fill="currentColor" />
-          <span className="text-white font-bold">{dj.rating}</span>
-          <span className="text-zinc-500">({dj.reviewsCount} reviews)</span>
+          <span className="text-[var(--text-primary)] font-bold">{dj.rating.toFixed(1)}</span>
+          <span className="text-[var(--text-muted)]">({dj.reviewsCount} reviews)</span>
         </div>
       </div>
-      <div className="flex flex-col items-center justify-center p-2 bg-zinc-800 rounded-md">
+      <div className="flex flex-col items-center justify-center p-2 bg-[var(--surface-2)] rounded-md">
         <span className="font-bold text-lime-400 text-sm">{dj.tier}</span>
-        <span className="text-xs text-zinc-400">Tier</span>
+        <span className="text-xs text-[var(--text-secondary)]">Tier</span>
       </div>
     </div>
   </Link>
@@ -53,15 +53,15 @@ const AIScoutTrigger = ({ onClick }: { onClick: () => void }) => (
 
 
 const DiscoverHeader = ({ unreadCount }: { unreadCount: number }) => (
-    <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm">
-        <div className="flex justify-between items-center p-4 border-b border-zinc-800">
-            <h1 className="font-orbitron text-xl font-bold text-white">Find DJs</h1>
+    <div className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-sm">
+        <div className="flex justify-between items-center p-4 border-b border-[var(--border)]">
+            <h1 className="font-orbitron text-xl font-bold text-[var(--text-primary)]">Find DJs</h1>
             <div className="flex items-center gap-4">
                 <Link to="/search">
-                    <IconSearch size={22} className="text-gray-300" />
+                    <IconSearch size={22} className="text-[var(--text-secondary)]" />
                 </Link>
                 <Link to="/notifications" className="relative">
-                    <IconNotifications size={22} className="text-gray-300" />
+                    <IconNotifications size={22} className="text-[var(--text-secondary)]" />
                     {unreadCount > 0 && (
                         <span className="absolute -top-1 -right-1 flex h-3 w-3">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
@@ -119,41 +119,41 @@ const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilter
         location: 'Filter by Location',
         rating: 'Filter by Rating'
     };
-
+    
     const ratingOptions = [{label: '4.5+ stars', value: 4.5}, {label: '4.0+ stars', value: 4.0}, {label: '3.0+ stars', value: 3.0}];
 
     return (
         <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-end" onClick={onClose}>
-            <div className="bg-zinc-900 w-full max-w-md rounded-t-2xl border-t-2 border-lime-400 shadow-2xl shadow-lime-500/20 flex flex-col max-h-[75%]" onClick={e => e.stopPropagation()}>
-                <header className="flex justify-between items-center p-4 border-b border-zinc-800">
-                    <h2 className="font-orbitron text-lg text-white">{titles[activeFilter]}</h2>
-                    <button onClick={onClose} className="p-1 text-zinc-400 hover:text-white"><IconX size={24}/></button>
+            <div className="bg-[var(--surface-1)] w-full max-w-md rounded-t-2xl border-t-2 border-[var(--accent)] shadow-2xl shadow-lime-500/20 flex flex-col max-h-[75%]" onClick={e => e.stopPropagation()}>
+                <header className="flex justify-between items-center p-4 border-b border-[var(--border)]">
+                    <h2 className="font-orbitron text-lg text-[var(--text-primary)]">{titles[activeFilter]}</h2>
+                    <button onClick={onClose} className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"><IconX size={24}/></button>
                 </header>
 
                 <main className="p-4 overflow-y-auto space-y-2">
                     {activeFilter === 'genre' && availableGenres.map(genre => (
-                        <label key={genre} className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg cursor-pointer">
-                            <input type="checkbox" checked={tempGenres.includes(genre)} onChange={() => handleGenreToggle(genre)} className="h-5 w-5 rounded bg-zinc-700 border-zinc-600 text-lime-500 focus:ring-lime-500" />
-                            <span className="text-white font-medium">{genre}</span>
+                        <label key={genre} className="flex items-center gap-3 p-3 bg-[var(--surface-2)] rounded-lg cursor-pointer">
+                            <input type="checkbox" checked={tempGenres.includes(genre)} onChange={() => handleGenreToggle(genre)} className="h-5 w-5 rounded bg-zinc-700 border-zinc-600 text-[var(--accent)] focus:ring-[var(--accent)]" />
+                            <span className="text-[var(--text-primary)] font-medium">{genre}</span>
                         </label>
                     ))}
                     {activeFilter === 'location' && availableLocations.map(loc => (
-                         <label key={loc} className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg cursor-pointer">
-                            <input type="radio" name="location" checked={tempLocation === loc} onChange={() => setTempLocation(loc)} className="h-5 w-5 bg-zinc-700 border-zinc-600 text-lime-500 focus:ring-lime-500" />
-                            <span className="text-white font-medium">{loc}</span>
+                         <label key={loc} className="flex items-center gap-3 p-3 bg-[var(--surface-2)] rounded-lg cursor-pointer">
+                            <input type="radio" name="location" checked={tempLocation === loc} onChange={() => setTempLocation(loc)} className="h-5 w-5 bg-zinc-700 border-zinc-600 text-[var(--accent)] focus:ring-[var(--accent)]" />
+                            <span className="text-[var(--text-primary)] font-medium">{loc}</span>
                         </label>
                     ))}
                     {activeFilter === 'rating' && ratingOptions.map(opt => (
-                         <label key={opt.value} className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg cursor-pointer">
-                            <input type="radio" name="rating" checked={tempRating === opt.value} onChange={() => setTempRating(opt.value)} className="h-5 w-5 bg-zinc-700 border-zinc-600 text-lime-500 focus:ring-lime-500" />
-                            <span className="text-white font-medium">{opt.label}</span>
+                         <label key={opt.value} className="flex items-center gap-3 p-3 bg-[var(--surface-2)] rounded-lg cursor-pointer">
+                            <input type="radio" name="rating" checked={tempRating === opt.value} onChange={() => setTempRating(opt.value)} className="h-5 w-5 bg-zinc-700 border-zinc-600 text-[var(--accent)] focus:ring-[var(--accent)]" />
+                            <span className="text-[var(--text-primary)] font-medium">{opt.label}</span>
                         </label>
                     ))}
                 </main>
                 
-                <footer className="p-4 border-t border-zinc-800 flex gap-4">
-                     <button onClick={handleClear} className="flex-1 py-3 px-4 rounded-lg bg-zinc-800 text-white font-bold hover:bg-zinc-700 transition-colors">Clear</button>
-                    <button onClick={handleApply} className="flex-1 py-3 px-4 rounded-lg bg-lime-400 text-black font-bold hover:bg-lime-300 transition-colors">Apply Filters</button>
+                <footer className="p-4 border-t border-[var(--border)] flex gap-4">
+                     <button onClick={handleClear} className="flex-1 py-3 px-4 rounded-lg bg-[var(--surface-2)] text-[var(--text-primary)] font-bold hover:bg-[var(--border)] transition-colors">Clear</button>
+                    <button onClick={handleApply} className="flex-1 py-3 px-4 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] font-bold hover:bg-[var(--accent-hover)] transition-colors">Apply Filters</button>
                 </footer>
             </div>
         </div>
@@ -161,14 +161,14 @@ const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilter
 };
 
 const FilterBar = ({ onFilterClick, activeFilters }: { onFilterClick: (type: FilterType) => void, activeFilters: Record<FilterType, boolean> }) => (
-    <div className="p-4 flex items-center justify-center gap-2 flex-wrap bg-black border-y border-zinc-800">
-        <button onClick={() => onFilterClick('genre')} className={`px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-colors ${activeFilters.genre ? 'bg-lime-400 text-black' : 'bg-zinc-800 text-white'}`}>
+    <div className="p-4 flex items-center justify-center gap-2 flex-wrap bg-[var(--background)] border-y border-[var(--border)]">
+        <button onClick={() => onFilterClick('genre')} className={`px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-colors ${activeFilters.genre ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'bg-[var(--surface-2)] text-[var(--text-primary)]'}`}>
             <IconMusic size={16} /> Genre
         </button>
-        <button onClick={() => onFilterClick('location')} className={`px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-colors ${activeFilters.location ? 'bg-lime-400 text-black' : 'bg-zinc-800 text-white'}`}>
+        <button onClick={() => onFilterClick('location')} className={`px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-colors ${activeFilters.location ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'bg-[var(--surface-2)] text-[var(--text-primary)]'}`}>
             <IconMapPin size={16} /> Location
         </button>
-        <button onClick={() => onFilterClick('rating')} className={`px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-colors ${activeFilters.rating ? 'bg-lime-400 text-black' : 'bg-zinc-800 text-white'}`}>
+        <button onClick={() => onFilterClick('rating')} className={`px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-colors ${activeFilters.rating ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'bg-[var(--surface-2)] text-[var(--text-primary)]'}`}>
             <IconStar size={16} /> Rating
         </button>
     </div>
@@ -241,7 +241,7 @@ export const DiscoverDJs = () => {
   const handleCloseScout = () => setIsScoutOpen(false);
 
   return (
-    <div className="text-white min-h-full">
+    <div className="text-[var(--text-primary)] min-h-full">
       <DiscoverHeader unreadCount={unreadCount} />
       <AIScoutTrigger onClick={handleOpenScout} />
       <FilterBar onFilterClick={openFilterModal} activeFilters={activeFilters}/>
@@ -254,8 +254,8 @@ export const DiscoverDJs = () => {
           {filteredDJs.length > 0 ? filteredDJs.map(dj => (
             <DJCard key={dj.id} dj={dj} />
           )) : (
-            <div className="col-span-1 md:col-span-2 text-center pt-20 text-zinc-400">
-                <h3 className="text-lg font-bold text-white">No DJs Found</h3>
+            <div className="col-span-1 md:col-span-2 text-center pt-20 text-[var(--text-secondary)]">
+                <h3 className="text-lg font-bold text-[var(--text-primary)]">No DJs Found</h3>
                 <p>Try adjusting your filters.</p>
             </div>
           )}
