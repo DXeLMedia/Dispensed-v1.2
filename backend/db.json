@@ -1,0 +1,68 @@
+{
+  "users": [
+    {
+      "id": "dj-1",
+      "name": "K-DOLLA",
+      "email": "k-dolla@test.com",
+      "role": "dj",
+      "password": "password123",
+      "verified": true
+    },
+    {
+      "id": "dj-2",
+      "name": "FKA Mash",
+      "email": "fka@test.com",
+      "role": "dj",
+      "password": "password123",
+      "verified": true
+    },
+    {
+      "id": "dj-3",
+      "name": "Desiree",
+      "email": "desiree@test.com",
+      "role": "dj",
+      "password": "password123",
+      "verified": true
+    },
+    {
+      "id": "dj-4",
+      "name": "Sides",
+      "email": "sides@test.com",
+      "role": "dj",
+      "password": "password123",
+      "verified": true
+    },
+    {
+      "id": "dj-5",
+      "name": "DJ Loyd",
+      "email": "loyd@test.com",
+      "role": "dj",
+      "password": "password123",
+      "verified": true
+    },
+    {
+      "id": "biz-1",
+      "name": "Mødular.",
+      "email": "modular@test.com",
+      "role": "business",
+      "password": "password123",
+      "verified": true
+    },
+    {
+      "id": "biz-2",
+      "name": "The Waiting Room",
+      "email": "waitingroom@test.com",
+      "role": "business",
+      "password": "password123",
+      "verified": true
+    },
+    {
+      "id": "listener-1",
+      "name": "Cape Town Raver",
+      "email": "listener@test.com",
+      "role": "listener",
+      "password": "password123",
+      "verified": true
+    }
+  ]
+}
