@@ -53,10 +53,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user]);
 
   useEffect(() => {
+    const getInitialSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+             const { data: profile } = await supabase
+                .from('user_profile_view')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+            setUser(profile as FullUser);
+        }
+        setIsLoading(false);
+    };
+
+    getInitialSession();
+
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
         const currentUser = session?.user ?? null;
         if (currentUser) {
-            // Get the full profile from the view
             const { data: profile } = await supabase
                 .from('user_profile_view')
                 .select('*')
@@ -66,7 +80,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else {
             setUser(null);
         }
-        setIsLoading(false);
+        setIsLoading(false); // Also keep here for live updates
     });
 
     return () => {
