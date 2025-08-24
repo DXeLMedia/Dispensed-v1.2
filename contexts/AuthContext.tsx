@@ -18,7 +18,7 @@ interface AuthContextType {
   role: Role | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signup: (name: string, email: string, password: string, role: Role) => Promise<void>;
   googleSignIn: () => Promise<void>;
@@ -107,18 +107,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     alert('Sign up successful! Please check your email to verify your account.');
   };
 
-  const login = async (email: string, password?: string) => {
-      // Allow demo login without password (legacy)
-      if (!password) {
-          const authenticatedUser = await api.authenticate(email);
-          if (authenticatedUser) {
-              setUser(authenticatedUser);
-          } else {
-              throw new Error('User not found');
-          }
-          return;
-      }
-
+  const login = async (email: string, password: string) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw new Error(error.message);
       // Auth state change will handle setting the user.
