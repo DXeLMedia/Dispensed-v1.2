@@ -92,7 +92,7 @@ export const getDJById = async (userId: string): Promise<DJ | undefined> => {
         location: djProfile.location,
         rating: djProfile.rating,
         reviewsCount: djProfile.reviews_count,
-        tier: djProfile.tier,
+        tier: djProfile.tier as Tier,
         socials: djProfile.socials as any,
         // Mocked properties not in DB
         following: [],
@@ -144,7 +144,7 @@ export const getDJs = async (): Promise<DJ[]> => {
             bio: djProfile.bio,
             location: djProfile.location,
             rating: djProfile.rating,
-            tier: djProfile.tier,
+            tier: djProfile.tier as Tier,
             socials: djProfile.socials as any,
             // Mocked properties
             following: [],
@@ -361,8 +361,8 @@ export const addPost = async (postData: Omit<Post, 'id' | 'created_at' | 'update
         media_type: postData.mediaType
     };
     
-    const { data, error } = await supabase
-        .from('app_e255c3cdb5_posts')
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_posts') as any)
         .insert([newPost])
         .select()
         .single();
@@ -403,9 +403,9 @@ export const getPlaylistById = async (id: string): Promise<Playlist | null> => {
 };
 
 export const markAllAsRead = async (userId: string): Promise<boolean> => {
-    const { error } = await supabase
-        .from('app_e255c3cdb5_notifications')
-        .update({ is_read: true } as any)
+    const { error } = await (supabase
+        .from('app_e255c3cdb5_notifications') as any)
+        .update({ is_read: true })
         .eq('user_id', userId)
         .eq('is_read', false);
 
@@ -475,8 +475,8 @@ export const sendMessage = async (senderId: string, recipientId: string, content
         content: content 
     };
 
-    const { data, error } = await supabase
-        .from('app_e255c3cdb5_messages')
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_messages') as any)
         .insert([message])
         .select()
         .single();
@@ -511,7 +511,7 @@ export const signInWithGoogle = async (role?: Role) => {
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            data: role ? { role } : {},
+            data: role ? { user_type: role } : undefined,
         } as any,
     });
     return { error };
@@ -558,8 +558,8 @@ export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig |
         ...gigData,
         status: 'Open'
     };
-    const { data, error } = await supabase
-        .from('app_e255c3cdb5_gigs')
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_gigs') as any)
         .insert([newGig])
         .select()
         .single();
@@ -572,9 +572,9 @@ export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig |
 };
 
 export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promise<Gig | null> => {
-    const { data, error } = await supabase
-        .from('app_e255c3cdb5_gigs')
-        .update(updatedData as any)
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_gigs') as any)
+        .update(updatedData)
         .eq('id', gigId)
         .select()
         .single();
@@ -592,8 +592,8 @@ export const expressInterestInGig = async (gigId: string, djUserId: string): Pro
         dj_user_id: djUserId, 
         status: 'pending' 
     };
-    const { error } = await supabase
-        .from('app_e255c3cdb5_gig_applications')
+    const { error } = await (supabase
+        .from('app_e255c3cdb5_gig_applications') as any)
         .insert([application]);
 
     if (error) {
@@ -623,9 +623,9 @@ export const getInterestedDJsForGig = async (gigId: string): Promise<DJ[]> => {
 };
 
 export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: number): Promise<boolean> => {
-    const { error: gigError } = await supabase
-        .from('app_e255c3cdb5_gigs')
-        .update({ status: 'Booked', booked_dj_id: djUserId } as any)
+    const { error: gigError } = await (supabase
+        .from('app_e255c3cdb5_gigs') as any)
+        .update({ status: 'Booked', booked_dj_id: djUserId })
         .eq('id', gigId);
 
     if (gigError) {
@@ -642,8 +642,8 @@ export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: 
         business_user_id: gig.business_user_id, 
         agreed_rate: agreedRate 
     };
-    const { error: bookingError } = await supabase
-        .from('app_e255c3cdb5_bookings')
+    const { error: bookingError } = await (supabase
+        .from('app_e255c3cdb5_bookings') as any)
         .insert([booking]);
 
     if (bookingError) {
@@ -685,7 +685,7 @@ export const getTopDJs = async (): Promise<DJ[]> => {
             bio: djProfile.bio,
             location: djProfile.location,
             rating: djProfile.rating,
-            tier: djProfile.tier,
+            tier: djProfile.tier as Tier,
             socials: djProfile.socials as any,
             reviewsCount: djProfile.reviews_count,
             following: [],
@@ -760,8 +760,8 @@ export const getFollowingForUser = async (userId: string): Promise<UserProfile[]
 }
 
 export const getTracksForDj = async (djUserId: string): Promise<Track[]> => {
-    const { data, error } = await supabase
-        .from('app_e255c3cdb5_dj_profiles')
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_dj_profiles') as any)
         .select('portfolio_tracks')
         .eq('user_id', djUserId)
         .single();
@@ -787,10 +787,10 @@ export const getPlaylistsForDj = async (djUserId: string): Promise<Playlist[]> =
 };
 
 export const addTrackToPortfolio = async (djUserId: string, track: Track): Promise<boolean> => {
-    const { error } = await supabase.rpc('add_track_to_portfolio' as any, {
+    const { error } = await (supabase as any).rpc('add_track_to_portfolio', {
         dj_user_id_param: djUserId,
         new_track: track
-    } as any);
+    });
 
     if (error) {
         console.error('Error adding track to portfolio:', error);
@@ -806,8 +806,8 @@ export const createPlaylist = async (playlistData: Omit<Playlist, 'id' | 'tracks
         artwork_url: playlistData.artworkUrl, 
         tracks: [] 
     };
-    const { data, error } = await supabase
-        .from('app_e255c3cdb5_playlists')
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_playlists') as any)
         .insert([newPlaylist])
         .select()
         .single();
@@ -820,9 +820,9 @@ export const createPlaylist = async (playlistData: Omit<Playlist, 'id' | 'tracks
 };
 
 export const updatePlaylist = async (playlistId: string, playlistData: Partial<Omit<Playlist, 'id' | 'dj_user_id' | 'tracks'>>): Promise<Playlist | null> => {
-    const { data, error } = await supabase
-        .from('app_e255c3cdb5_playlists')
-        .update({ name: playlistData.name, artwork_url: playlistData.artworkUrl } as any)
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_playlists') as any)
+        .update({ name: playlistData.name, artwork_url: playlistData.artworkUrl })
         .eq('id', playlistId)
         .select()
         .single();
@@ -835,10 +835,10 @@ export const updatePlaylist = async (playlistId: string, playlistData: Partial<O
 };
 
 export const addTrackToPlaylist = async (playlistId: string, track: Track): Promise<boolean> => {
-    const { error } = await supabase.rpc('add_track_to_playlist' as any, {
+    const { error } = await (supabase as any).rpc('add_track_to_playlist', {
         playlist_id_param: playlistId,
         new_track: track
-    } as any);
+    });
 
     if (error) {
         console.error('Error adding track to playlist:', error);
@@ -907,8 +907,8 @@ export const submitReview = async (reviewData: Omit<Review, 'id' | 'created_at' 
         comment: reviewData.comment,
         gig_id: reviewData.gigId
     };
-    const { data, error } = await supabase
-        .from('app_e255c3cdb5_reviews')
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_reviews') as any)
         .insert([dbReview])
         .select()
         .single();
@@ -963,8 +963,8 @@ export const addCommentToPost = async (postId: string, userId: string, content: 
         user_id: userId, 
         content: content 
     };
-    const { data, error } = await supabase
-        .from('app_e255c3cdb5_post_comments')
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_post_comments') as any)
         .insert([newComment])
         .select()
         .single();
@@ -998,9 +998,9 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     
 
     if (Object.keys(dbUserProfile).length > 0) {
-        const { error } = await supabase
-            .from('app_e255c3cdb5_user_profiles')
-            .update(dbUserProfile as any)
+        const { error } = await (supabase
+            .from('app_e255c3cdb5_user_profiles') as any)
+            .update(dbUserProfile)
             .eq('user_id', userId);
         if (error) {
             console.error('Error updating user profile:', error);
@@ -1009,9 +1009,9 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     }
 
     if (djProfile && Object.keys(djProfile).length > 0) {
-        const { error } = await supabase
-            .from('app_e255c3cdb5_dj_profiles')
-            .update(djProfile as any)
+        const { error } = await (supabase
+            .from('app_e255c3cdb5_dj_profiles') as any)
+            .update(djProfile)
             .eq('user_id', userId);
         if (error) {
             console.error('Error updating DJ profile:', error);
@@ -1022,9 +1022,9 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     if (businessProfile && Object.keys(businessProfile).length > 0) {
         const {name: venue_name, description, ...rest} = businessProfile as any;
         const dbBusinessProfile = {venue_name, description, ...rest};
-        const { error } = await supabase
-            .from('app_e255c3cdb5_business_profiles')
-            .update(dbBusinessProfile as any)
+        const { error } = await (supabase
+            .from('app_e255c3cdb5_business_profiles') as any)
+            .update(dbBusinessProfile)
             .eq('user_id', userId);
         if (error) {
             console.error('Error updating business profile:', error);
@@ -1063,8 +1063,8 @@ export const toggleLikePost = async (postId: string, userId: string): Promise<bo
             post_id: postId, 
             user_id: userId 
         };
-        const { error: insertError } = await supabase
-            .from('app_e255c3cdb5_post_likes')
+        const { error: insertError } = await (supabase
+            .from('app_e255c3cdb5_post_likes') as any)
             .insert([newLike]);
 
         if (insertError) {
@@ -1177,6 +1177,6 @@ export const getChatById = async (chatId: string): Promise<Chat | null> => {
 }
 
 export const updateUserSettings = async(userId: string, settings: Partial<UserSettings>): Promise<boolean> => {
-    const { error } = await supabase.from('app_e255c3cdb5_user_profiles').update({ settings: settings as any } as any).eq('user_id', userId);
+    const { error } = await (supabase.from('app_e255c3cdb5_user_profiles') as any).update({ settings: settings }).eq('user_id', userId);
     return !error;
 }
