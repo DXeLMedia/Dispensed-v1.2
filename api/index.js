@@ -1,43 +1,24 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const fs = require('fs').promises;
-const path = require('path');
-const bcrypt = require('bcrypt');
-const { v4: uuidv4 } = require('uuid');
+import express from 'express';
+import bodyParser from 'body-parser';
+import cors from 'cors';
+import bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
+import { createClient } from '@supabase/supabase-js';
+
+// --- Supabase Initialization ---
+const supabaseUrl = 'https://lkxebvjbbskdbhkfgdip.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxreGVidmpiYnNrZGJoa2ZnZGlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5NTE3NjIsImV4cCI6MjA2OTUyNzc2Mn0.GBZ3yCa17dTAT-yDMgKfLuIQEtbB8qYENab9ppN4224';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const app = express();
-const PORT = 3001;
-const DB_PATH = path.join(__dirname, 'db.json');
-
 app.use(cors());
 app.use(bodyParser.json());
 
-// --- Database Helper Functions ---
-
-const readDb = async () => {
-  try {
-    const data = await fs.readFile(DB_PATH, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error("Error reading database:", error);
-    // If the file doesn't exist or is corrupted, return a default structure
-    return { users: [] };
-  }
-};
-
-const writeDb = async (db) => {
-  try {
-    await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2), 'utf8');
-  } catch (error) {
-    console.error("Error writing to database:", error);
-  }
-};
 
 // --- API Endpoints ---
 
-app.get('/', (req, res) => {
-    res.send('Backend server is running');
+app.get('/api', (req, res) => {
+    res.send('Backend server is running with Supabase');
 });
 
 // Check if email exists
@@ -47,141 +28,150 @@ app.get('/api/users/check-email', async (req, res) => {
         return res.status(400).json({ message: 'Email query parameter is required' });
     }
 
-    const db = await readDb();
-    const userExists = db.users.some(user => user.email.toLowerCase() === email.toLowerCase());
+    const { data, error } = await supabase
+        .from('users')
+        .select('email')
+        .eq('email', email.toLowerCase())
+        .single();
 
-    res.json({ exists: userExists });
+    if (error && error.code !== 'PGRST116') { // PGRST116: "exact one row not found"
+        console.error('Error checking email:', error);
+        return res.status(500).json({ message: 'Database error' });
+    }
+
+    res.json({ exists: !!data });
 });
 
 // User Sign Up
 app.post('/api/signup', async (req, res) => {
     const { name, email, password, role } = req.body;
-
     if (!name || !email || !password || !role) {
         return res.status(400).json({ message: 'Name, email, password, and role are required' });
     }
 
-    const db = await readDb();
+    const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('email', email.toLowerCase())
+        .single();
 
-    const existingUser = db.users.find(user => user.email.toLowerCase() === email.toLowerCase());
+    if (checkError && checkError.code !== 'PGRST116') {
+        return res.status(500).json({ message: 'Database error on user check' });
+    }
     if (existingUser) {
         return res.status(409).json({ message: 'An account with that email already exists' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const newUser = {
         id: uuidv4(),
         name,
-        email,
+        email: email.toLowerCase(),
         password: hashedPassword,
         role,
-        verified: false, // Email not verified on sign-up
+        verified: false,
         needsRoleSelection: false,
     };
 
-    db.users.push(newUser);
-    await writeDb(db);
+    const { data, error } = await supabase.from('users').insert(newUser).select().single();
 
-    // For simplicity, returning the new user. In a real app, you'd likely return a token.
-    res.status(201).json(newUser);
+    if (error) {
+        console.error('Error signing up:', error);
+        return res.status(500).json({ message: 'Could not create user' });
+    }
+
+    res.status(201).json(data);
 });
 
 // User Login
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
-
     if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const db = await readDb();
-    const user = db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email.toLowerCase())
+        .single();
 
-    if (!user) {
+    if (error || !user) {
         return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
-
     if (!isPasswordCorrect) {
         return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // In a real app, you would generate and return a JWT (JSON Web Token) here.
-    // For this mock implementation, we'll return the full user object, excluding the password.
     const { password: _, ...userWithoutPassword } = user;
     res.json(userWithoutPassword);
 });
 
 // Mock Google Sign Up
 app.post('/api/google-signup', async (req, res) => {
-    const { name, email } = req.body; // In a real scenario, this would come from the Google token
+    const { name, email } = req.body;
     if (!name || !email) {
         return res.status(400).json({ message: 'Name and email are required' });
     }
 
-    const db = await readDb();
-    let user = db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-    // If user doesn't exist, create a new one
-    if (!user) {
-        user = {
-            id: uuidv4(),
+    const { data, error } = await supabase
+        .from('users')
+        .upsert({
+            email: email.toLowerCase(),
             name,
-            email,
-            password: '', // No password for OAuth users
-            role: null, // Role to be selected later
-            verified: true, // Google accounts are considered verified
+            verified: true,
             needsRoleSelection: true,
-        };
-        db.users.push(user);
-        await writeDb(db);
+        }, { onConflict: 'email' })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Google signup error:', error);
+        return res.status(500).json({ message: 'Could not sign up with Google' });
     }
 
-    res.status(200).json(user);
+    res.status(200).json(data);
 });
 
 // Set user role
 app.post('/api/users/:id/select-role', async (req, res) => {
     const { id } = req.params;
     const { role } = req.body;
-
     if (!role) {
         return res.status(400).json({ message: 'Role is required' });
     }
 
-    const db = await readDb();
-    const userIndex = db.users.findIndex(u => u.id === id);
+    const { data, error } = await supabase
+        .from('users')
+        .update({ role, needsRoleSelection: false })
+        .eq('id', id)
+        .select()
+        .single();
 
-    if (userIndex === -1) {
-        return res.status(404).json({ message: 'User not found' });
+    if (error) {
+        return res.status(404).json({ message: 'User not found or could not update' });
     }
-
-    db.users[userIndex].role = role;
-    db.users[userIndex].needsRoleSelection = false;
-    await writeDb(db);
-
-    res.json(db.users[userIndex]);
+    res.json(data);
 });
 
 // Mock Email Verification
 app.post('/api/users/:id/verify', async (req, res) => {
     const { id } = req.params;
-    const db = await readDb();
-    const userIndex = db.users.findIndex(u => u.id === id);
 
-    if (userIndex === -1) {
-        return res.status(404).json({ message: 'User not found' });
+    const { data, error } = await supabase
+        .from('users')
+        .update({ verified: true })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) {
+        return res.status(404).json({ message: 'User not found or could not verify' });
     }
 
-    db.users[userIndex].verified = true;
-    await writeDb(db);
-
-    res.json({ message: 'Email verified successfully', user: db.users[userIndex] });
+    res.json({ message: 'Email verified successfully', user: data });
 });
 
-
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+export default app;
