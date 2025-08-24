@@ -21,7 +21,7 @@ app.get('/api', (req, res) => {
 
 // User Sign Up
 app.post('/api/signup', async (req, res) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, redirectTo } = req.body;
     if (!name || !email || !password || !role) {
         return res.status(400).json({ message: 'Name, email, password, and role are required' });
     }
@@ -33,7 +33,8 @@ app.post('/api/signup', async (req, res) => {
         options: {
             data: {
                 display_name: name,
-            }
+            },
+            emailRedirectTo: redirectTo,
         }
     });
 

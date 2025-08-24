@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const response = await fetch(`${API_URL}/api/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ name, email, password, role, redirectTo: window.location.origin }),
     });
 
     if (!response.ok) {
@@ -113,6 +113,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const googleSignIn = async () => {
       const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
+          options: {
+              redirectTo: window.location.origin,
+          },
       });
       if (error) throw new Error('Could not sign in with Google');
   };
