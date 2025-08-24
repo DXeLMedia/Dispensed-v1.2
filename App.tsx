@@ -1,8 +1,10 @@
+
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { Role } from './types';
 import { Login } from './pages/Login';
+import { SignUp } from './pages/SignUp';
 import { Feed } from './pages/Feed';
 import { DiscoverDJs } from './pages/DiscoverDJs';
 import { Gigs } from './pages/Gigs';
@@ -91,22 +93,26 @@ const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
     if (isLoading) {
         return <PageSpinner />;
     }
-
+    
     if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/login" />;
     }
     
-    if(!role || !roles.includes(role)) {
-        return <Navigate to="/login" replace />;
+    if (!role || !roles.includes(role)) {
+        return <Navigate to="/login" />; // Or a 'Not Authorized' page
     }
-
+    
     return <>{children}</>;
 };
 
 const AuthenticatedRoute = ({ children } : { children: React.ReactNode }) => {
     const { isAuthenticated, isLoading } = useAuth();
     if (isLoading) return <PageSpinner />;
-    if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+    if (!isAuthenticated) {
+        return <Navigate to="/login" />;
+    }
+    
     return <>{children}</>;
 }
 
@@ -137,6 +143,7 @@ const AppRoutes = () => {
     return (
         <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
             
             {/* Role Specific Routes */}
             <Route path="/feed" element={<ProtectedRoute roles={[Role.DJ, Role.Listener, Role.Business]}><Feed /></ProtectedRoute>} />
@@ -166,7 +173,7 @@ const AppRoutes = () => {
             {/* Default redirect */}
             <Route
                 path="*"
-                element={<Navigate to={getDefaultPath()} replace />}
+                element={<Navigate to={getDefaultPath()} />}
             />
         </Routes>
     );

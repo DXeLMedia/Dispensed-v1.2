@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Gig, Role, Business } from '../types';
 import * as api from '../services/mockApi';

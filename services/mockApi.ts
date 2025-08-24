@@ -1,5 +1,4 @@
 
-
 import { supabase } from './supabaseClient';
 import { 
     DJ, 
@@ -22,8 +21,16 @@ import {
     StreamSession,
     UserSettings,
     EnrichedChat,
+    Chat,
+    Tier,
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { Database } from './database.types';
+
+type UserProfileRow = Database['public']['Tables']['app_e255c3cdb5_user_profiles']['Row'];
+type DjProfileRow = Database['public']['Tables']['app_e255c3cdb5_dj_profiles']['Row'];
+type BusinessProfileRow = Database['public']['Tables']['app_e255c3cdb5_business_profiles']['Row'];
+
 
 /**
  * A helper function to process user profile data from Supabase.
@@ -64,11 +71,13 @@ export const getDJById = async (userId: string): Promise<DJ | undefined> => {
         return undefined; // Not a DJ
     }
 
-    const { data: djProfile, error: djError } = await supabase
+    const { data, error: djError } = await supabase
         .from('app_e255c3cdb5_dj_profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
+
+    const djProfile = data as DjProfileRow | null;
 
     if (djError || !djProfile) {
         console.error("Error fetching DJ profile:", djError);
@@ -77,22 +86,30 @@ export const getDJById = async (userId: string): Promise<DJ | undefined> => {
 
     const result: DJ = {
         ...(userProfile as User),
-        ...(djProfile as DjProfile),
+        role: Role.DJ,
+        genres: djProfile.genres,
+        bio: djProfile.bio,
+        location: djProfile.location,
+        rating: djProfile.rating,
+        reviewsCount: djProfile.reviews_count,
+        tier: djProfile.tier,
+        socials: djProfile.socials as any,
         // Mocked properties not in DB
         following: [],
         followers: Math.floor(Math.random() * 2000),
         tracks: [],
         mixes: [],
-        reviewsCount: djProfile.reviews_count,
     };
 
     return result;
 };
 
 export const getDJs = async (): Promise<DJ[]> => {
-    const { data: djProfiles, error: djError } = await supabase
+    const { data, error: djError } = await supabase
         .from('app_e255c3cdb5_dj_profiles')
         .select('*');
+
+    const djProfiles = data as DjProfileRow[];
 
     if (djError) {
         console.error("Error fetching DJ profiles:", djError);
@@ -103,10 +120,12 @@ export const getDJs = async (): Promise<DJ[]> => {
     const userIds = djProfiles.map(p => p.user_id);
     if (userIds.length === 0) return [];
 
-    const { data: userProfiles, error: userError } = await supabase
+    const { data: userProfilesData, error: userError } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select('*')
         .in('user_id', userIds);
+    
+    const userProfiles = userProfilesData as UserProfileRow[];
 
     if (userError) {
         console.error("Error fetching user profiles for DJs:", userError);
@@ -119,25 +138,33 @@ export const getDJs = async (): Promise<DJ[]> => {
         if (!userProfileData) return null;
         const userProfile = processUserProfile(userProfileData);
         return { 
-            ...userProfile, 
-            ...djProfile,
+            ...(userProfile as User), 
+            role: Role.DJ,
+            genres: djProfile.genres,
+            bio: djProfile.bio,
+            location: djProfile.location,
+            rating: djProfile.rating,
+            tier: djProfile.tier,
+            socials: djProfile.socials as any,
             // Mocked properties
             following: [],
             followers: Math.floor(Math.random() * 2000),
             tracks: [],
             mixes: [],
             reviewsCount: djProfile.reviews_count,
-        };
-    }).filter(Boolean);
+        } as DJ;
+    }).filter((dj): dj is DJ => Boolean(dj));
 
-    return djsData as DJ[];
+    return djsData;
 };
 
 
 export const getBusinesses = async (): Promise<Business[]> => {
-    const { data: businessProfiles, error: bizError } = await supabase
+    const { data, error: bizError } = await supabase
         .from('app_e255c3cdb5_business_profiles')
         .select('*');
+
+    const businessProfiles = data as BusinessProfileRow[];
 
     if (bizError) {
         console.error("Error fetching business profiles:", bizError);
@@ -148,10 +175,12 @@ export const getBusinesses = async (): Promise<Business[]> => {
     const userIds = businessProfiles.map(p => p.user_id);
     if (userIds.length === 0) return [];
 
-    const { data: userProfiles, error: userError } = await supabase
+    const { data: userProfilesData, error: userError } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select('*')
         .in('user_id', userIds);
+        
+    const userProfiles = userProfilesData as UserProfileRow[];
 
     if (userError) {
         console.error("Error fetching user profiles for businesses:", userError);
@@ -164,18 +193,21 @@ export const getBusinesses = async (): Promise<Business[]> => {
         if (!userProfileData) return null;
         const userProfile = processUserProfile(userProfileData);
         return { 
-            ...userProfile, 
-            ...businessProfile,
+            ...(userProfile as User), 
+            role: Role.Business,
             name: businessProfile.venue_name,
+            location: businessProfile.location,
             description: businessProfile.description,
+            rating: businessProfile.rating,
             reviewsCount: businessProfile.reviews_count,
+            socials: businessProfile.socials as any,
              // Mocked properties
             following: [],
             followers: Math.floor(Math.random() * 5000),
-        };
-    }).filter(Boolean);
+        } as Business;
+    }).filter((biz): biz is Business => Boolean(biz));
 
-    return businessesData as Business[];
+    return businessesData;
 };
 
 export const getBusinessById = async (userId: string): Promise<Business | undefined> => {
@@ -198,11 +230,13 @@ export const getBusinessById = async (userId: string): Promise<Business | undefi
         return undefined; // Not a business
     }
 
-    const { data: businessProfile, error: bizError } = await supabase
+    const { data, error: bizError } = await supabase
         .from('app_e255c3cdb5_business_profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
+        
+    const businessProfile = data as BusinessProfileRow;
 
     if (bizError || !businessProfile) {
         console.error("Error fetching business profile:", bizError);
@@ -211,10 +245,13 @@ export const getBusinessById = async (userId: string): Promise<Business | undefi
 
     const result: Business = {
         ...(userProfile as User),
-        ...(businessProfile as BusinessProfile),
+        role: Role.Business,
         name: businessProfile.venue_name,
+        location: businessProfile.location,
         description: businessProfile.description,
+        rating: businessProfile.rating,
         reviewsCount: businessProfile.reviews_count,
+        socials: businessProfile.socials as any,
         // Mocked properties
         following: [],
         followers: Math.floor(Math.random() * 5000),
@@ -317,11 +354,16 @@ export const getPostById = async (id: string): Promise<Post | undefined> => {
 };
 
 export const addPost = async (postData: Omit<Post, 'id' | 'created_at' | 'updated_at' | 'likes_count' | 'comments_count' | 'timestamp' | 'likes' | 'likedBy' | 'comments' | 'reposts'>): Promise<Post | null> => {
+    const newPost: Database['public']['Tables']['app_e255c3cdb5_posts']['Insert'] = {
+        user_id: postData.userId,
+        content: postData.description,
+        media_url: postData.mediaUrl,
+        media_type: postData.mediaType
+    };
+    
     const { data, error } = await supabase
         .from('app_e255c3cdb5_posts')
-        .insert([
-            { ...postData, user_id: postData.userId, content: postData.description } as any
-        ])
+        .insert([newPost])
         .select()
         .single();
 
@@ -375,12 +417,14 @@ export const markAllAsRead = async (userId: string): Promise<boolean> => {
 };
 
 export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedChat[]> => { // TODO: Define EnrichedChat type
-    const { data: messages, error } = await supabase
+    const { data, error } = await supabase
         .from('app_e255c3cdb5_messages')
         .select('*')
         .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
         .order('created_at', { ascending: true });
 
+    const messages = data as Database['public']['Tables']['app_e255c3cdb5_messages']['Row'][];
+    
     if (error) {
         console.error('Error fetching messages:', error);
         return [];
@@ -389,10 +433,12 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
 
     const otherUserIds = [...new Set(messages.map(m => m.sender_id === userId ? m.recipient_id : m.sender_id))];
     
-    const { data: profiles, error: profileError } = await supabase
+    const { data: profilesData, error: profileError } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select('*')
         .in('user_id', otherUserIds);
+
+    const profiles = profilesData as UserProfileRow[];
 
     if (profileError) {
         console.error('Error fetching participant profiles:', profileError);
@@ -414,7 +460,7 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
     messages.forEach(message => {
         const otherUserId = message.sender_id === userId ? message.recipient_id : message.sender_id;
         if (chatsMap.has(otherUserId)) {
-            const chatMsg = { id: message.id, senderId: message.sender_id, text: message.content, timestamp: message.created_at };
+            const chatMsg: Message = { id: message.id, senderId: message.sender_id, text: message.content, timestamp: message.created_at };
             chatsMap.get(otherUserId).messages.push(chatMsg);
         }
     });
@@ -423,9 +469,15 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
 };
 
 export const sendMessage = async (senderId: string, recipientId: string, content: string): Promise<Message | null> => {
+    const message: Database['public']['Tables']['app_e255c3cdb5_messages']['Insert'] = { 
+        sender_id: senderId, 
+        recipient_id: recipientId, 
+        content: content 
+    };
+
     const { data, error } = await supabase
         .from('app_e255c3cdb5_messages')
-        .insert([{ sender_id: senderId, recipient_id: recipientId, content: content }] as any)
+        .insert([message])
         .select()
         .single();
 
@@ -433,46 +485,82 @@ export const sendMessage = async (senderId: string, recipientId: string, content
         console.error('Error sending message:', error);
         return null;
     }
-    return { id: data.id, senderId: data.sender_id, text: data.content, timestamp: data.created_at };
+    const result = data as Database['public']['Tables']['app_e255c3cdb5_messages']['Row'];
+    return { id: result.id, senderId: result.sender_id, text: result.content, timestamp: result.created_at };
+};
+
+export const signUpWithEmail = async (email: string, password: string, name: string, role: Role) => {
+    // The `data` option passes metadata that can be used in a database trigger
+    // to create the corresponding user profile upon signup.
+    const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            data: {
+                display_name: name,
+                user_type: role,
+                avatar_url: `https://source.unsplash.com/random/200x200/?abstract,${role}`
+            },
+        },
+    });
+    // A trigger on the auth.users table should handle creating the public profile.
+    return { user: data.user, error };
+};
+
+export const signInWithGoogle = async (role?: Role) => {
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            data: role ? { role } : {},
+        } as any,
+    });
+    return { error };
 };
 
 export const authenticate = async (email: string, password: string): Promise<UserProfile | undefined> => {
-    // This is a mock/demo auth flow that finds a user by email and ignores the password.
-    // This avoids the "Invalid login credentials" error for the demo accounts.
-    const { data: userProfile, error } = await supabase
-        .from('app_e255c3cdb5_user_profiles')
-        .select('user_id, user_type')
-        .eq('email', email)
-        .single();
+    const { data: { user }, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+    });
 
-    if (error || !userProfile) {
-        console.error(`Demo login failed: Could not find user for ${email}.`, error?.message);
-        // Fallback to original method for non-demo users.
-        const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-        if (authError || !user) {
-            console.error('Original Supabase sign-in also failed:', authError?.message);
-            return undefined;
-        }
-        return getUserById(user.id);
+    if (error) {
+        console.error('Error signing in:', error.message);
+        throw error;
     }
 
-    // Now call the existing functions to get the full profile object.
-    // These functions have been updated to map `user_type` to `role`.
-    if (userProfile.user_type === 'dj') {
-        return getDJById(userProfile.user_id);
-    }
-    if (userProfile.user_type === 'business') {
-        return getBusinessById(userProfile.user_id);
+    if (!user) {
+        return undefined;
     }
     
-    // For listener, call getUserById to get the full profile.
-    return getUserById(userProfile.user_id);
+    // After login, fetch the full profile to get role-specific data
+    let profile: UserProfile | DJ | Business | undefined = await getUserById(user.id);
+    if (!profile) {
+        console.error("User logged in but profile not found:", user.id);
+        throw new Error("User profile not found after login.");
+    }
+    
+    if (profile.role === Role.DJ) {
+        profile = await getDJById(user.id);
+    }
+    if (profile.role === Role.Business) {
+        profile = await getBusinessById(user.id);
+    }
+    
+    if (profile) {
+        profile.email = user.email!;
+    }
+    
+    return profile;
 };
 
 export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig | null> => {
+     const newGig: Omit<Database['public']['Tables']['app_e255c3cdb5_gigs']['Insert'], 'id'> = {
+        ...gigData,
+        status: 'Open'
+    };
     const { data, error } = await supabase
         .from('app_e255c3cdb5_gigs')
-        .insert([{ ...gigData, status: 'Open' }] as any)
+        .insert([newGig])
         .select()
         .single();
 
@@ -499,9 +587,14 @@ export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promi
 };
 
 export const expressInterestInGig = async (gigId: string, djUserId: string): Promise<boolean> => {
+    const application: Database['public']['Tables']['app_e255c3cdb5_gig_applications']['Insert'] = { 
+        gig_id: gigId, 
+        dj_user_id: djUserId, 
+        status: 'pending' 
+    };
     const { error } = await supabase
         .from('app_e255c3cdb5_gig_applications')
-        .insert([{ gig_id: gigId, dj_user_id: djUserId, status: 'pending' }] as any);
+        .insert([application]);
 
     if (error) {
         console.error('Error expressing interest in gig:', error);
@@ -522,7 +615,7 @@ export const getInterestedDJsForGig = async (gigId: string): Promise<DJ[]> => {
     }
     if (!applications) return [];
 
-    const djUserIds = applications.map(app => app.dj_user_id);
+    const djUserIds = (applications as any[]).map(app => app.dj_user_id);
     if (djUserIds.length === 0) return [];
 
     const allDjs = await getDJs();
@@ -532,7 +625,7 @@ export const getInterestedDJsForGig = async (gigId: string): Promise<DJ[]> => {
 export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: number): Promise<boolean> => {
     const { error: gigError } = await supabase
         .from('app_e255c3cdb5_gigs')
-        .update({ status: 'Booked' } as any)
+        .update({ status: 'Booked', booked_dj_id: djUserId } as any)
         .eq('id', gigId);
 
     if (gigError) {
@@ -543,9 +636,15 @@ export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: 
     const gig = await getGigById(gigId);
     if (!gig) return false;
 
+    const booking: Database['public']['Tables']['app_e255c3cdb5_bookings']['Insert'] = { 
+        gig_id: gigId, 
+        dj_user_id: djUserId, 
+        business_user_id: gig.business_user_id, 
+        agreed_rate: agreedRate 
+    };
     const { error: bookingError } = await supabase
         .from('app_e255c3cdb5_bookings')
-        .insert([{ gig_id: gigId, dj_user_id: djUserId, business_user_id: gig.business_user_id, agreed_rate: agreedRate }] as any);
+        .insert([booking]);
 
     if (bookingError) {
         console.error('Error creating booking:', bookingError);
@@ -556,19 +655,21 @@ export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: 
 };
 
 export const getTopDJs = async (): Promise<DJ[]> => {
-    const { data: djProfiles, error: djError } = await supabase
+    const { data, error: djError } = await supabase
         .from('app_e255c3cdb5_dj_profiles')
         .select('*')
         .limit(50);
+    const djProfiles = data as DjProfileRow[];
     
     if (djError) { console.error(djError); return []; }
     if (!djProfiles) return [];
 
     const userIds = djProfiles.map(p => p.user_id);
-    const { data: userProfiles, error: userError } = await supabase
+    const { data: userProfilesData, error: userError } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select('*')
         .in('user_id', userIds);
+    const userProfiles = userProfilesData as UserProfileRow[];
 
     if (userError) { console.error(userError); return []; }
     if (!userProfiles) return [];
@@ -578,33 +679,41 @@ export const getTopDJs = async (): Promise<DJ[]> => {
         if (!userProfileData) return null;
         const userProfile = processUserProfile(userProfileData);
         return { 
-            ...userProfile, 
-            ...djProfile,
+            ...(userProfile as User), 
+            role: Role.DJ,
+            genres: djProfile.genres,
+            bio: djProfile.bio,
+            location: djProfile.location,
+            rating: djProfile.rating,
+            tier: djProfile.tier,
+            socials: djProfile.socials as any,
             reviewsCount: djProfile.reviews_count,
             following: [],
             followers: 0,
             tracks: [],
             mixes: [],
-         };
-    }).filter(Boolean) as DJ[];
+         } as DJ;
+    }).filter((dj): dj is DJ => Boolean(dj));
 
     return djs;
 };
 
 export const getTopVenues = async (): Promise<Business[]> => {
-    const { data: businessProfiles, error: bizError } = await supabase
+    const { data, error: bizError } = await supabase
         .from('app_e255c3cdb5_business_profiles')
         .select('*')
         .limit(50);
+    const businessProfiles = data as BusinessProfileRow[];
     
     if (bizError) { console.error(bizError); return []; }
     if (!businessProfiles) return [];
 
     const userIds = businessProfiles.map(p => p.user_id);
-    const { data: userProfiles, error: userError } = await supabase
+    const { data: userProfilesData, error: userError } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select('*')
         .in('user_id', userIds);
+    const userProfiles = userProfilesData as UserProfileRow[];
 
     if (userError) { console.error(userError); return []; }
     if (!userProfiles) return [];
@@ -614,15 +723,18 @@ export const getTopVenues = async (): Promise<Business[]> => {
         if (!userProfileData) return null;
         const userProfile = processUserProfile(userProfileData);
         return { 
-            ...userProfile, 
-            ...businessProfile,
+            ...(userProfile as User), 
+            role: Role.Business,
             name: businessProfile.venue_name,
+            location: businessProfile.location,
             description: businessProfile.description,
+            rating: businessProfile.rating,
+            socials: businessProfile.socials as any,
             reviewsCount: businessProfile.reviews_count,
             following: [],
             followers: 0,
-         };
-    }).filter(Boolean) as Business[];
+         } as Business;
+    }).filter((biz): biz is Business => Boolean(biz));
 
     return businesses;
 };
@@ -658,7 +770,7 @@ export const getTracksForDj = async (djUserId: string): Promise<Track[]> => {
         console.error('Error fetching tracks for DJ:', error);
         return [];
     }
-    return data?.portfolio_tracks as Track[] || [];
+    return data ? (data.portfolio_tracks as Track[] | null) || [] : [];
 };
 
 export const getPlaylistsForDj = async (djUserId: string): Promise<Playlist[]> => {
@@ -678,7 +790,7 @@ export const addTrackToPortfolio = async (djUserId: string, track: Track): Promi
     const { error } = await supabase.rpc('add_track_to_portfolio' as any, {
         dj_user_id_param: djUserId,
         new_track: track
-    });
+    } as any);
 
     if (error) {
         console.error('Error adding track to portfolio:', error);
@@ -688,9 +800,15 @@ export const addTrackToPortfolio = async (djUserId: string, track: Track): Promi
 };
 
 export const createPlaylist = async (playlistData: Omit<Playlist, 'id' | 'tracks'>): Promise<Playlist | null> => {
+    const newPlaylist: Database['public']['Tables']['app_e255c3cdb5_playlists']['Insert'] = { 
+        dj_user_id: playlistData.creatorId, 
+        name: playlistData.name, 
+        artwork_url: playlistData.artworkUrl, 
+        tracks: [] 
+    };
     const { data, error } = await supabase
         .from('app_e255c3cdb5_playlists')
-        .insert([{ dj_user_id: playlistData.creatorId, name: playlistData.name, artwork_url: playlistData.artworkUrl, tracks: [] }] as any)
+        .insert([newPlaylist])
         .select()
         .single();
 
@@ -720,7 +838,7 @@ export const addTrackToPlaylist = async (playlistId: string, track: Track): Prom
     const { error } = await supabase.rpc('add_track_to_playlist' as any, {
         playlist_id_param: playlistId,
         new_track: track
-    });
+    } as any);
 
     if (error) {
         console.error('Error adding track to playlist:', error);
@@ -734,29 +852,42 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
         .from('app_e255c3cdb5_reviews')
         .select('*')
         .eq('reviewee_id', revieweeId);
+    
+    const reviews = data as Database['public']['Tables']['app_e255c3cdb5_reviews']['Row'][];
 
     if (error) {
         console.error('Error fetching reviews:', error);
         return [];
     }
-    if(!data) return [];
+    if(!reviews) return [];
 
-    const authorIds = [...new Set(data.map(r => r.reviewer_id))];
-    if (authorIds.length === 0) return [];
+    const authorIds = [...new Set(reviews.map(r => r.reviewer_id))];
+    if (authorIds.length === 0) return reviews.map(review => ({
+        id: review.id,
+        authorId: review.reviewer_id,
+        targetId: review.reviewee_id,
+        rating: review.rating,
+        comment: review.comment,
+        timestamp: review.created_at,
+        gigId: review.gig_id,
+        author: null as any, // Should not happen if authorIds logic is correct
+    }));
 
-    const { data: authors, error: authorError } = await supabase
+    const { data: authorsData, error: authorError } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select('*')
         .in('user_id', authorIds);
+    
+    const authors = authorsData as UserProfileRow[];
 
     if (authorError) {
         console.error('Error fetching review authors:', authorError);
-        return [];
+        return []; // Or return reviews without authors
     }
 
     const authorMap = new Map(authors?.map(a => [a.user_id, processUserProfile(a)]));
 
-    return data.map(review => ({
+    return reviews.map(review => ({
         id: review.id,
         authorId: review.reviewer_id,
         targetId: review.reviewee_id,
@@ -768,8 +899,8 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
     }));
 };
 
-export const submitReview = async (reviewData: Omit<Review, 'id' | 'created_at'>): Promise<Review | null> => {
-    const dbReview = {
+export const submitReview = async (reviewData: Omit<Review, 'id' | 'created_at' | 'timestamp'>): Promise<Review | null> => {
+    const dbReview: Database['public']['Tables']['app_e255c3cdb5_reviews']['Insert'] = {
         reviewer_id: reviewData.authorId,
         reviewee_id: reviewData.targetId,
         rating: reviewData.rating,
@@ -778,7 +909,7 @@ export const submitReview = async (reviewData: Omit<Review, 'id' | 'created_at'>
     };
     const { data, error } = await supabase
         .from('app_e255c3cdb5_reviews')
-        .insert([dbReview] as any)
+        .insert([dbReview])
         .select()
         .single();
 
@@ -795,24 +926,28 @@ export const getCommentsForPost = async (postId: string): Promise<EnrichedCommen
         .select('*')
         .eq('post_id', postId)
         .order('created_at', { ascending: true });
+    
+    const comments = data as Database['public']['Tables']['app_e255c3cdb5_post_comments']['Row'][];
 
     if (error) {
         console.error('Error fetching comments:', error);
         return [];
     }
-    if(!data) return [];
+    if(!comments) return [];
     
-    const authorIds = [...new Set(data.map(c => c.user_id))];
+    const authorIds = [...new Set(comments.map(c => c.user_id))];
     if (authorIds.length === 0) return [];
-    const { data: authors, error: authorError } = await supabase
+    const { data: authorsData, error: authorError } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select('*')
         .in('user_id', authorIds);
+    
+    const authors = authorsData as UserProfileRow[];
     if(authorError) return [];
     
     const authorMap = new Map(authors?.map(a => [a.user_id, processUserProfile(a)]));
 
-    return data.map(comment => ({
+    return comments.map(comment => ({
         id: comment.id,
         authorId: comment.user_id,
         postId: comment.post_id,
@@ -823,9 +958,14 @@ export const getCommentsForPost = async (postId: string): Promise<EnrichedCommen
 };
 
 export const addCommentToPost = async (postId: string, userId: string, content: string): Promise<EnrichedComment | null> => {
+    const newComment: Database['public']['Tables']['app_e255c3cdb5_post_comments']['Insert'] = { 
+        post_id: postId, 
+        user_id: userId, 
+        content: content 
+    };
     const { data, error } = await supabase
         .from('app_e255c3cdb5_post_comments')
-        .insert([{ post_id: postId, user_id: userId, content: content }] as any)
+        .insert([newComment])
         .select()
         .single();
 
@@ -836,12 +976,14 @@ export const addCommentToPost = async (postId: string, userId: string, content: 
     const author = await getUserById(userId);
     if (!author) return null;
 
+    const result = data as Database['public']['Tables']['app_e255c3cdb5_post_comments']['Row'];
+
     return {
-        id: data.id,
+        id: result.id,
         postId,
         authorId: userId,
-        text: content,
-        timestamp: data.created_at,
+        text: result.content,
+        timestamp: result.created_at,
         author,
     };
 };
@@ -849,8 +991,11 @@ export const addCommentToPost = async (postId: string, userId: string, content: 
 export const updateUserProfile = async (userId: string, data: Partial<UserProfile & { djProfile?: Partial<DjProfile>, businessProfile?: Partial<BusinessProfile> }>): Promise<boolean> => {
     const { djProfile, businessProfile, ...userProfileData } = data;
     const { name, avatarUrl, ...restUser } = userProfileData;
-    const dbUserProfile = { display_name: name, avatar_url: avatarUrl, ...restUser };
-
+    
+    const dbUserProfile: Database['public']['Tables']['app_e255c3cdb5_user_profiles']['Update'] = {};
+    if (name) dbUserProfile.display_name = name;
+    if (avatarUrl) dbUserProfile.avatar_url = avatarUrl;
+    
 
     if (Object.keys(dbUserProfile).length > 0) {
         const { error } = await supabase
@@ -907,16 +1052,20 @@ export const toggleLikePost = async (postId: string, userId: string): Promise<bo
         const { error: deleteError } = await supabase
             .from('app_e255c3cdb5_post_likes')
             .delete()
-            .eq('id', like.id);
+            .eq('id', (like as any).id);
         
         if (deleteError) {
             console.error('Error unliking post:', deleteError);
             return false;
         }
     } else {
+        const newLike: Database['public']['Tables']['app_e255c3cdb5_post_likes']['Insert'] = { 
+            post_id: postId, 
+            user_id: userId 
+        };
         const { error: insertError } = await supabase
             .from('app_e255c3cdb5_post_likes')
-            .insert([{ post_id: postId, user_id: userId }] as any);
+            .insert([newLike]);
 
         if (insertError) {
             console.error('Error liking post:', insertError);
@@ -975,7 +1124,7 @@ export const createChat = async (userId1: string, userId2: string): Promise<Chat
 export const getInterestedGigsForDj = async (djId: string): Promise<Gig[]> => {
   const { data, error } = await supabase.from('app_e255c3cdb5_gig_applications').select('gig_id').eq('dj_user_id', djId);
   if (error || !data) return [];
-  const gigIds = data.map(d => d.gig_id);
+  const gigIds = (data as any[]).map(d => d.gig_id);
   const { data: gigs, error: gigError } = await supabase.from('app_e255c3cdb5_gigs').select('*').in('id', gigIds);
   return (gigs as Gig[]) || [];
 }
@@ -983,7 +1132,7 @@ export const getInterestedGigsForDj = async (djId: string): Promise<Gig[]> => {
 export const getBookedGigsForDj = async (djId: string): Promise<Gig[]> => {
     const { data, error } = await supabase.from('app_e255c3cdb5_bookings').select('gig_id').eq('dj_user_id', djId);
     if(error || !data) return [];
-    const gigIds = data.map(d => d.gig_id);
+    const gigIds = (data as any[]).map(d => d.gig_id);
     const { data: gigs, error: gigError } = await supabase.from('app_e255c3cdb5_gigs').select('*').in('id', gigIds).eq('status', 'Booked');
     return (gigs as Gig[]) || [];
 }
@@ -991,7 +1140,7 @@ export const getBookedGigsForDj = async (djId: string): Promise<Gig[]> => {
 export const getCompletedGigsForDj = async (djId: string): Promise<Gig[]> => {
     const { data, error } = await supabase.from('app_e255c3cdb5_bookings').select('gig_id').eq('dj_user_id', djId);
     if(error || !data) return [];
-    const gigIds = data.map(d => d.gig_id);
+    const gigIds = (data as any[]).map(d => d.gig_id);
     const { data: gigs, error: gigError } = await supabase.from('app_e255c3cdb5_gigs').select('*').in('id', gigIds).eq('status', 'Completed');
     return (gigs as Gig[]) || [];
 }
@@ -1028,6 +1177,6 @@ export const getChatById = async (chatId: string): Promise<Chat | null> => {
 }
 
 export const updateUserSettings = async(userId: string, settings: Partial<UserSettings>): Promise<boolean> => {
-    const { error } = await supabase.from('app_e255c3cdb5_user_profiles').update({ settings: settings as any }).eq('user_id', userId);
+    const { error } = await supabase.from('app_e255c3cdb5_user_profiles').update({ settings: settings as any } as any).eq('user_id', userId);
     return !error;
 }

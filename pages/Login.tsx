@@ -1,32 +1,46 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+
+const GoogleIcon = () => (
+    <svg className="w-5 h-5" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+        <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-72.2 72.2C327 113.7 290.5 96 248 96c-88.8 0-160.1 71.9-160.1 160.1s71.3 160.1 160.1 160.1c98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
+    </svg>
+);
 
 export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = async (loginEmail: string, loginPassword: string) => {
-    if (!loginEmail) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await login(loginEmail, loginPassword);
+      await login(email, password);
       navigate('/');
-    } catch (err) {
-      setError('Failed to log in. Please check your credentials.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to log in. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleLogin(email, password);
+  
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await signInWithGoogle(); // No role needed on login
+      // User will be redirected by Supabase
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign in with Google.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -39,59 +53,33 @@ export const Login = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-[var(--text-secondary)]">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@email.com or use demo"
-              className="mt-1 block w-full px-3 py-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-md text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-              required
-            />
+            <label htmlFor="email" className="block text-sm font-medium text-[var(--text-secondary)]">Email</label>
+            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@email.com" required className="mt-1 block w-full px-3 py-2 bg-[var(--surface-1)] border border-[var(--border)] rounded-md placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]" />
           </div>
           <div>
-            <div className="flex justify-between">
-                <label htmlFor="password" className="block text-sm font-medium text-[var(--text-secondary)]">
-                    Password
-                </label>
-                <span className="text-xs text-[var(--text-muted)]">(any password)</span>
-            </div>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-md text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-            />
+            <label htmlFor="password" className="block text-sm font-medium text-[var(--text-secondary)]">Password</label>
+            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1 block w-full px-3 py-2 bg-[var(--surface-1)] border border-[var(--border)] rounded-md placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]" />
           </div>
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading || !email || !password}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-[var(--accent-text)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-[var(--accent)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted)] disabled:cursor-not-allowed"
-          >
+          <button type="submit" disabled={loading} className="w-full flex justify-center py-3 px-4 rounded-md shadow-sm text-sm font-bold bg-[var(--surface-2)] text-[var(--text-primary)] hover:bg-[var(--border)] disabled:opacity-50">
             {loading ? 'Logging in...' : 'Log In'}
           </button>
         </form>
         
         <div className="mt-6">
-            <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[var(--border)]" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-[var(--background)] text-[var(--text-secondary)]">Or use a demo account</span>
-                </div>
+            <div className="relative"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[var(--border)]" /></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-[var(--background)] text-[var(--text-secondary)]">Or continue with</span></div></div>
+            <div className="mt-4">
+                <button onClick={handleGoogleSignIn} disabled={loading} className="w-full inline-flex justify-center items-center gap-3 py-2.5 px-4 text-sm font-medium bg-[var(--surface-2)] text-[var(--text-primary)] rounded-md hover:bg-[var(--border)] transition-colors">
+                    <GoogleIcon /> Sign in with Google
+                </button>
             </div>
+        </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <button onClick={() => handleLogin('doublex@test.com', 'password')} disabled={loading} className="w-full bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-2 px-4 rounded-md hover:bg-[var(--border)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">Log in as DJ</button>
-                <button onClick={() => handleLogin('modular@test.com', 'password')} disabled={loading} className="w-full bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-2 px-4 rounded-md hover:bg-[var(--border)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">Log in as Venue/Event Brand</button>
-                 <button onClick={() => handleLogin('listener@test.com', 'password')} disabled={loading} className="w-full bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-2 px-4 rounded-md hover:bg-[var(--border)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">Log in as Listener</button>
-            </div>
+        <div className="mt-8 text-center text-sm">
+            <p className="text-[var(--text-secondary)]">
+                Don't have an account?{' '}
+                <Link to="/signup" className="font-medium text-[var(--accent)] hover:text-[var(--accent-hover)]">Sign Up</Link>
+            </p>
         </div>
       </div>
     </div>

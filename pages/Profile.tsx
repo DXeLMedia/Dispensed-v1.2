@@ -1,5 +1,4 @@
 
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { DJ, Business, Role, Track, Gig, Listener, Playlist, EnrichedReview } from '../types';
@@ -136,7 +135,7 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitt
     
     const handleSubmitReview = async (rating: number, comment: string) => {
         if (!currentUser) return;
-        await api.submitReview({ authorId: currentUser.id, targetId: dj.id, rating, comment, timestamp: new Date().toISOString() });
+        await api.submitReview({ authorId: currentUser.id, targetId: dj.id, rating, comment });
         await fetchReviews();
         onReviewSubmitted(); // To refetch profile data
     };
@@ -344,7 +343,7 @@ const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfil
     
     const handleSubmitReview = async (rating: number, comment: string) => {
         if (!currentUser) return;
-        await api.submitReview({ authorId: currentUser.id, targetId: business.id, rating, comment, timestamp: new Date().toISOString() });
+        await api.submitReview({ authorId: currentUser.id, targetId: business.id, rating, comment });
         await fetchReviews();
         onReviewSubmitted(); // To refetch profile data
     };

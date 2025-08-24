@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as api from '../services/mockApi';
@@ -65,101 +66,100 @@ export const LiveStream = () => {
         const newReaction: EmojiReaction = {
             id: reactionIdCounter++,
             emoji,
-            x: Math.random() * 80 + 10, // Horizontal position (10% to 90%)
+            x: Math.random() * 90 + 5, // Random horizontal position from 5% to 95%
         };
         setReactions(prev => [...prev, newReaction]);
-
-        // Remove the reaction from the DOM after animation
         setTimeout(() => {
             setReactions(prev => prev.filter(r => r.id !== newReaction.id));
-        }, 3000);
+        }, 3000); // Remove reaction after 3 seconds
     };
-    
+
     const handleEndStream = async () => {
         if (!sessionId) return;
         setIsEnding(true);
-        try {
-            await api.endStreamSession(sessionId);
-            navigate('/feed');
-        } catch (error) {
-            console.error("Failed to end stream:", error);
-            alert("Could not end the stream. Please try again.");
-        } finally {
-            setIsEnding(false);
-        }
+        await api.endStreamSession(sessionId);
+        alert("Stream has ended.");
+        navigate('/feed');
     };
+
 
     if (loading) return <PageSpinner />;
     if (!session || !dj) {
         return (
-            <div className="text-white min-h-full flex flex-col items-center justify-center">
-                <p className="text-red-500">Live stream not found or has ended.</p>
-                <button onClick={() => navigate('/feed')} className="mt-4 text-lime-400">Back to Feed</button>
+            <div className="flex flex-col items-center justify-center h-screen bg-black text-white">
+                <h2 className="text-2xl font-bold">Stream Not Found</h2>
+                <p className="text-zinc-400">This stream has ended or does not exist.</p>
+                <button onClick={() => navigate('/feed')} className="mt-4 px-4 py-2 bg-lime-400 text-black font-bold rounded-lg">
+                    Back to Feed
+                </button>
             </div>
         );
     }
     
-    const emojiChoices = ['🔥', '❤️', '🤯', '🙌', '💯'];
     const isOwnStream = currentUser?.id === dj.id;
 
     return (
-        <div className="text-white h-full flex flex-col bg-zinc-900 relative overflow-hidden">
-            {/* Header */}
-            <header className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-center bg-gradient-to-b from-black/70 to-transparent">
-                <button onClick={() => navigate(-1)} className="bg-black/30 p-2 rounded-full"><IconArrowLeft size={22} /></button>
-                <div className="flex items-center gap-2 bg-black/30 px-3 py-1.5 rounded-full animate-pulse">
-                    <IconConnections size={16} className="text-lime-300" />
-                    <span className="font-bold text-white">{session.listenerCount.toLocaleString()}</span>
-                </div>
-                 {isOwnStream ? (
-                    <button onClick={handleEndStream} disabled={isEnding} className="bg-red-600/80 text-white font-bold px-4 py-1.5 rounded-full text-sm hover:bg-red-500 transition-colors disabled:bg-zinc-600 w-28 text-center">
-                        {isEnding ? 'Ending...' : 'End Stream'}
-                    </button>
-                 ) : (
-                    <button onClick={() => alert('Sharing stream!')} className="bg-black/30 p-2 rounded-full"><IconShare size={22} /></button>
-                 )}
-            </header>
+        <div className="text-white h-full flex flex-col bg-black">
+            {/* Visualizer/Video Placeholder */}
+            <div className="relative flex-1 bg-zinc-900 flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent z-10" />
+                <img src={dj.avatarUrl} alt="DJ" className="w-full h-full object-cover opacity-30 blur-md scale-110" />
+                <p className="z-10 text-zinc-600 font-bold text-2xl">AUDIO VISUALIZER</p>
 
-            {/* Reaction Canvas */}
-            <div className="absolute inset-0 z-10 pointer-events-none">
-                {reactions.map(r => (
-                    <div
-                        key={r.id}
-                        className="absolute bottom-20 text-3xl animate-float-up"
-                        style={{ left: `${r.x}%` }}
-                    >
-                        {r.emoji}
+                {/* Header */}
+                <header className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-20">
+                    <button onClick={() => navigate(-1)} className="p-2 bg-black/30 rounded-full"><IconArrowLeft size={22} /></button>
+                    <div className="text-right">
+                         <div className="flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full text-sm font-bold">
+                            <span>LIVE</span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-black/30 px-3 py-1 rounded-full text-sm mt-2">
+                            <IconConnections size={16} />
+                            <span>{session.listenerCount}</span>
+                        </div>
                     </div>
-                ))}
-            </div>
+                </header>
 
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col items-center justify-center p-4 z-10">
-                <div className="relative mb-6">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-48 h-48 bg-lime-400/10 rounded-full visualizer-pulse"></div>
+                {/* Reactions */}
+                 <div className="absolute bottom-20 left-0 right-0 h-40 pointer-events-none z-20">
+                    {reactions.map(r => (
+                        <span key={r.id} className="absolute text-3xl animate-float-up" style={{ left: `${r.x}%`, bottom: '0%' }}>
+                            {r.emoji}
+                        </span>
+                    ))}
+                </div>
+
+                {/* Footer */}
+                <footer className="absolute bottom-0 left-0 right-0 p-4 z-20">
+                     <div className="flex items-end justify-between">
+                        <div className="flex items-center gap-3">
+                             <Avatar src={dj.avatarUrl} alt={dj.name} size="md" />
+                             <div>
+                                <h1 className="font-orbitron text-xl font-bold">{dj.name}</h1>
+                                <p className="text-zinc-300 text-sm">{session.title}</p>
+                             </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <button className="p-3 bg-white/10 rounded-full hover:bg-white/20"><IconShare size={20}/></button>
+                           {!isOwnStream && <button onClick={() => handleReaction('❤️')} className="p-3 bg-white/10 rounded-full hover:bg-white/20"><IconHeart size={20}/></button>}
+                        </div>
                     </div>
-                    <Avatar src={dj.avatarUrl} alt={dj.name} size="xl" className="border-4 border-black" />
-                </div>
-                <h1 className="font-orbitron text-2xl font-bold text-white">{dj.name}</h1>
-                <p className="text-zinc-300 mt-1">{session.title}</p>
-                <div className="mt-2 px-3 py-1 bg-red-600 text-white rounded-md font-bold text-sm tracking-widest animate-pulse">
-                    LIVE
-                </div>
-            </div>
 
-            {/* Footer Controls */}
-            <footer className="z-20 p-4 flex justify-center items-center gap-3 bg-gradient-to-t from-black/70 to-transparent">
-                {emojiChoices.map(emoji => (
-                     <button
-                        key={emoji}
-                        onClick={() => handleReaction(emoji)}
-                        className="p-3 bg-white/10 rounded-full text-2xl hover:bg-white/20 hover:scale-110 transition-transform duration-200 backdrop-blur-sm"
-                    >
-                        {emoji}
-                    </button>
-                ))}
-            </footer>
+                    {!isOwnStream && (
+                         <div className="mt-4 flex justify-around items-center bg-black/30 p-2 rounded-full">
+                            {['🔥', '🙌', '😎', '💯'].map(emoji => (
+                                <button key={emoji} onClick={() => handleReaction(emoji)} className="text-2xl p-2 transform hover:scale-125 transition-transform">{emoji}</button>
+                            ))}
+                        </div>
+                    )}
+                    
+                    {isOwnStream && (
+                         <button onClick={handleEndStream} disabled={isEnding} className="w-full mt-4 p-3 bg-red-600 font-bold rounded-lg hover:bg-red-700 disabled:bg-zinc-700">
+                             {isEnding ? 'Ending Stream...' : 'End Stream'}
+                         </button>
+                    )}
+                </footer>
+            </div>
         </div>
     );
 };

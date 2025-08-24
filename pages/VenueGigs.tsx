@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { Gig, DJ } from '../types';
 import * as api from '../services/mockApi';
@@ -142,7 +141,6 @@ export const VenueGigs = () => {
             rating,
             comment,
             gigId: gigToRate.id,
-            timestamp: new Date().toISOString()
         });
         alert("Review submitted!");
         // Optionally refetch gigs or update state to hide the button

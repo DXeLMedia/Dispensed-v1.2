@@ -19,7 +19,6 @@ export interface Database {
           user_id: string;
           user_type: "dj" | "business" | "listener";
           display_name: string;
-          email: string;
           avatar_url: string;
           settings: Json | null;
         };
@@ -27,7 +26,6 @@ export interface Database {
           user_id: string;
           user_type: "dj" | "business" | "listener";
           display_name: string;
-          email: string;
           avatar_url: string;
           settings?: Json | null;
         };
@@ -35,7 +33,6 @@ export interface Database {
           user_id: string;
           user_type: "dj" | "business" | "listener";
           display_name: string;
-          email: string;
           avatar_url: string;
           settings: Json | null;
         }>;

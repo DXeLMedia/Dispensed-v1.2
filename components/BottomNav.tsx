@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useMatch, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Role } from '../types';
 import {
@@ -18,19 +19,19 @@ import { Avatar } from './Avatar';
 
 // --- Mobile Bottom Navigation ---
 
-const MobileNavItem = ({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) => (
-  <NavLink
-    to={to}
-    className={({ isActive }) =>
-      `flex flex-col items-center justify-center gap-1 w-full h-full transition-colors duration-200 ${
-        isActive ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-      }`
-    }
-  >
-    {icon}
-    <span className="text-xs font-medium">{label}</span>
-  </NavLink>
-);
+const MobileNavItem = ({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) => {
+    const match = useMatch({ path: to, end: true });
+    const className = `flex flex-col items-center justify-center gap-1 w-full h-full transition-colors duration-200 ${
+        match ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+    }`;
+    
+    return (
+        <Link to={to} className={className}>
+            {icon}
+            <span className="text-xs font-medium">{label}</span>
+        </Link>
+    );
+};
 
 const DJNavMobile = () => (
   <>
@@ -88,9 +89,10 @@ export const BottomNav = () => {
 const DesktopNavItem = ({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) => (
     <NavLink
         to={to}
-        className={({ isActive }) =>
-            `flex items-center gap-4 px-4 py-3 rounded-lg transition-colors duration-200 ${
-            isActive ? 'bg-[var(--accent)] text-[var(--accent-text)] font-bold' : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
+        end
+        className={({ isActive }) => 
+            `flex items-center gap-4 px-4 py-3 rounded-lg transition-colors duration-200 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] ${
+                isActive ? 'bg-[var(--accent)] text-[var(--accent-text)] font-bold' : ''
             }`
         }
     >

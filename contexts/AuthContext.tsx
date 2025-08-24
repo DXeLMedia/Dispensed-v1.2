@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, Role, DJ, Business, Notification, UserSettings, Listener } from '../types';
 import * as api from '../services/mockApi';
@@ -12,6 +13,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  signUp: (email: string, password: string, name: string, role: Role) => Promise<void>;
+  signInWithGoogle: (role?: Role) => Promise<void>;
   updateUser: (updatedUser: FullUser) => void;
   notifications: Notification[];
   unreadCount: number;
@@ -78,6 +81,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUnreadCount(0);
     document.documentElement.className = 'theme-dark'; // Reset to default on logout
   };
+
+  const signUp = async (email: string, password: string, name: string, role: Role) => {
+    const { error } = await api.signUpWithEmail(email, password, name, role);
+    if (error) {
+        throw error;
+    }
+    // Don't log in automatically; user needs to confirm email.
+  };
+
+  const signInWithGoogle = async (role?: Role) => {
+    const { error } = await api.signInWithGoogle(role);
+    if (error) {
+        throw error;
+    }
+    // Supabase handles the redirect from here.
+  };
   
   const updateUser = (updatedUser: FullUser) => {
     setUser(updatedUser);
@@ -110,6 +129,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     logout,
+    signUp,
+    signInWithGoogle,
     updateUser,
     notifications,
     unreadCount,
