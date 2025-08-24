@@ -1,8 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
 import { createClient } from '@supabase/supabase-js';
 
 // --- Supabase Initialization ---
@@ -18,28 +16,7 @@ app.use(bodyParser.json());
 // --- API Endpoints ---
 
 app.get('/api', (req, res) => {
-    res.send('Backend server is running with Supabase');
-});
-
-// Check if email exists
-app.get('/api/users/check-email', async (req, res) => {
-    const { email } = req.query;
-    if (!email) {
-        return res.status(400).json({ message: 'Email query parameter is required' });
-    }
-
-    const { data, error } = await supabase
-        .from('users')
-        .select('email')
-        .eq('email', email.toLowerCase())
-        .single();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116: "exact one row not found"
-        console.error('Error checking email:', error);
-        return res.status(500).json({ message: 'Database error' });
-    }
-
-    res.json({ exists: !!data });
+    res.send('Backend server is running with Supabase Auth');
 });
 
 // User Sign Up
@@ -49,38 +26,44 @@ app.post('/api/signup', async (req, res) => {
         return res.status(400).json({ message: 'Name, email, password, and role are required' });
     }
 
-    const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('email')
-        .eq('email', email.toLowerCase())
-        .single();
+    // Step 1: Sign up the user with Supabase Auth
+    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+            data: {
+                display_name: name,
+            }
+        }
+    });
 
-    if (checkError && checkError.code !== 'PGRST116') {
-        return res.status(500).json({ message: 'Database error on user check' });
-    }
-    if (existingUser) {
-        return res.status(409).json({ message: 'An account with that email already exists' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = {
-        id: uuidv4(),
-        name,
-        email: email.toLowerCase(),
-        password: hashedPassword,
-        role,
-        verified: false,
-        needsRoleSelection: false,
-    };
-
-    const { data, error } = await supabase.from('users').insert(newUser).select().single();
-
-    if (error) {
-        console.error('Error signing up:', error);
-        return res.status(500).json({ message: 'Could not create user' });
+    if (signUpError) {
+        console.error('Supabase sign-up error:', signUpError);
+        return res.status(400).json({ message: signUpError.message });
     }
 
-    res.status(201).json(data);
+    if (!authData.user) {
+        // This case happens when email confirmation is required.
+        // The user is created but not logged in.
+        return res.status(200).json({ message: "Sign up successful, please check your email for verification." });
+    }
+
+    // The trigger `create_default_user_profile` will have already run.
+    // Now, we need to update the profile with the correct role and display name.
+    const { error: profileError } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .update({
+            user_type: role,
+            display_name: name
+        })
+        .eq('user_id', authData.user.id);
+
+    if (profileError) {
+        console.error('Error updating user profile:', profileError);
+        return res.status(500).json({ message: 'User created, but failed to update profile role.' });
+    }
+
+    res.status(200).json({ message: "Sign up successful!" });
 });
 
 // User Login
@@ -90,88 +73,31 @@ app.post('/api/login', async (req, res) => {
         return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const { data: user, error } = await supabase
-        .from('users')
+    const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+    });
+
+    if (signInError) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    if (!authData.user) {
+         return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Get the user profile information
+    const { data: profileData, error: profileError } = await supabase
+        .from('user_profile_view') // Use the view to get combined data
         .select('*')
-        .eq('email', email.toLowerCase())
+        .eq('id', authData.user.id)
         .single();
 
-    if (error || !user) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+    if (profileError) {
+        return res.status(500).json({ message: 'Could not retrieve user profile.' });
     }
 
-    const isPasswordCorrect = await bcrypt.compare(password, user.password);
-    if (!isPasswordCorrect) {
-        return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    const { password: _, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
-});
-
-// Mock Google Sign Up
-app.post('/api/google-signup', async (req, res) => {
-    const { name, email } = req.body;
-    if (!name || !email) {
-        return res.status(400).json({ message: 'Name and email are required' });
-    }
-
-    const { data, error } = await supabase
-        .from('users')
-        .upsert({
-            email: email.toLowerCase(),
-            name,
-            verified: true,
-            needsRoleSelection: true,
-        }, { onConflict: 'email' })
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Google signup error:', error);
-        return res.status(500).json({ message: 'Could not sign up with Google' });
-    }
-
-    res.status(200).json(data);
-});
-
-// Set user role
-app.post('/api/users/:id/select-role', async (req, res) => {
-    const { id } = req.params;
-    const { role } = req.body;
-    if (!role) {
-        return res.status(400).json({ message: 'Role is required' });
-    }
-
-    const { data, error } = await supabase
-        .from('users')
-        .update({ role, needsRoleSelection: false })
-        .eq('id', id)
-        .select()
-        .single();
-
-    if (error) {
-        return res.status(404).json({ message: 'User not found or could not update' });
-    }
-    res.json(data);
-});
-
-// Mock Email Verification
-app.post('/api/users/:id/verify', async (req, res) => {
-    const { id } = req.params;
-
-    const { data, error } = await supabase
-        .from('users')
-        .update({ verified: true })
-        .eq('id', id)
-        .select()
-        .single();
-
-    if (error) {
-        return res.status(404).json({ message: 'User not found or could not verify' });
-    }
-
-    res.json({ message: 'Email verified successfully', user: data });
+    res.json(profileData);
 });
 
 export default app;

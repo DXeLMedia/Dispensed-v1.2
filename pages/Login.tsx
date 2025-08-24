@@ -9,7 +9,7 @@ export const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const { login, googleLogin } = useAuth();
+  const { login, googleSignIn } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,7 +18,7 @@ export const Login = () => {
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/');
+      // onAuthStateChange will handle navigation
     } catch (err: any) {
       setError(err.message || 'Failed to log in. Please check your credentials.');
     } finally {
@@ -28,18 +28,10 @@ export const Login = () => {
 
   const handleGoogleLogin = async () => {
     setError('');
-    setLoading(true);
     try {
-      // In a real app, you would use the Google SDK to get user info.
-      // Here we just mock it.
-      const mockGoogleName = 'Google User';
-      const mockGoogleEmail = `user-${Math.floor(Math.random() * 10000)}@google.com`;
-      await googleLogin(mockGoogleName, mockGoogleEmail);
-      navigate('/'); // AuthContext will handle redirecting to /select-role if needed
+      await googleSignIn();
     } catch (err: any) {
       setError(err.message || 'Google login failed.');
-    } finally {
-      setLoading(false);
     }
   };
 

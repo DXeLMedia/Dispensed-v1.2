@@ -27,8 +27,6 @@ import { StreamSetup } from './pages/StreamSetup';
 import { MediaManager } from './pages/MediaManager';
 import { Settings } from './pages/Settings';
 import { SignUp } from './pages/SignUp';
-import { VerifyEmail } from './pages/VerifyEmail';
-import { SelectRole } from './pages/SelectRole';
 
 
 interface AppContainerProps {
@@ -128,8 +126,6 @@ const AppRoutes = () => {
         <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/select-role" element={<AuthenticatedRoute><SelectRole /></AuthenticatedRoute>} />
             
             {/* Role Specific Routes */}
             <Route path="/feed" element={<ProtectedRoute roles={[Role.DJ, Role.Listener, Role.Business]}><Feed /></ProtectedRoute>} />

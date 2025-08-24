@@ -1,10 +1,17 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, Role, DJ, Business, Notification } from '../types';
 import * as api from '../services/mockApi'; // Keep for non-auth features like notifications
+import { createClient } from '@supabase/supabase-js';
 
-type FullUser = (User | DJ | Business) & { needsRoleSelection?: boolean };
+// --- Supabase Initialization ---
+const supabaseUrl = 'https://lkxebvjbbskdbhkfgdip.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxreGVidmpiYnNrZGJoa2ZnZGlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5NTE3NjIsImV4cCI6MjA2OTUyNzc2Mn0.GBZ3yCa17dTAT-yDMgKfLuIQEtbB8qYENab9ppN4224';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-const API_URL = '';
+
+type FullUser = (User | DJ | Business) & { user_type?: Role, needsRoleSelection?: boolean };
+
+const API_URL = ''; // Use relative paths for Vercel deployment
 
 interface AuthContextType {
   user: FullUser | null;
@@ -12,11 +19,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password?: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   signup: (name: string, email: string, password: string, role: Role) => Promise<void>;
-  googleLogin: (name: string, email: string) => Promise<void>;
-  selectRole: (userId: string, role: Role) => Promise<void>;
-  verifyUser: (userId: string) => Promise<void>;
+  googleSignIn: () => Promise<void>;
   updateUser: (updatedUser: FullUser) => void;
   notifications: Notification[];
   unreadCount: number;
@@ -48,29 +53,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user]);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('dispensed-dj-user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        if (parsedUser) {
-          setUser(parsedUser);
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        const currentUser = session?.user ?? null;
+        if (currentUser) {
+            // Get the full profile from the view
+            const { data: profile } = await supabase
+                .from('user_profile_view')
+                .select('*')
+                .eq('id', currentUser.id)
+                .single();
+            setUser(profile as FullUser);
+        } else {
+            setUser(null);
         }
-      } catch (error) {
-        console.error("Failed to parse user from localStorage:", error);
-        localStorage.removeItem('dispensed-dj-user');
-      }
-    }
-    setIsLoading(false);
+        setIsLoading(false);
+    });
+
+    return () => {
+        authListener.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
     refreshNotifications();
   }, [user, refreshNotifications]);
-
-  const handleAuthResponse = (authenticatedUser: FullUser) => {
-    setUser(authenticatedUser);
-    localStorage.setItem('dispensed-dj-user', JSON.stringify(authenticatedUser));
-  };
 
   const signup = async (name: string, email: string, password: string, role: Role) => {
     const response = await fetch(`${API_URL}/api/signup`, {
@@ -83,91 +89,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Sign up failed');
     }
-
-    const newUser = await response.json();
-    // Set user in state so VerifyEmail page can access their info
-    setUser(newUser);
+    // Auth state change will handle setting the user.
+    alert('Sign up successful! Please check your email to verify your account.');
   };
 
   const login = async (email: string, password?: string) => {
-      // Allow demo login without password
+      // Allow demo login without password (legacy)
       if (!password) {
           const authenticatedUser = await api.authenticate(email);
           if (authenticatedUser) {
-              handleAuthResponse(authenticatedUser);
-              return;
+              setUser(authenticatedUser);
           } else {
               throw new Error('User not found');
           }
+          return;
       }
 
-      const response = await fetch(`${API_URL}/api/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Login failed');
-      }
-
-      const authenticatedUser = await response.json();
-      handleAuthResponse(authenticatedUser);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw new Error(error.message);
+      // Auth state change will handle setting the user.
   };
 
-  const googleLogin = async (name: string, email: string) => {
-      const response = await fetch(`${API_URL}/api/google-signup`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email }),
+  const googleSignIn = async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
       });
-
-       if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Google Sign-Up failed');
-      }
-
-      const authenticatedUser = await response.json();
-      handleAuthResponse(authenticatedUser);
-  }
-
-  const selectRole = async (userId: string, role: Role) => {
-    const response = await fetch(`${API_URL}/api/users/${userId}/select-role`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role }),
-    });
-
-     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to select role');
-    }
-
-    const updatedUser = await response.json();
-    handleAuthResponse(updatedUser);
+      if (error) throw new Error('Could not sign in with Google');
   };
 
-  const verifyUser = async (userId: string) => {
-      const response = await fetch(`${API_URL}/api/users/${userId}/verify`, {
-          method: 'POST',
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Verification failed');
-      }
-  };
-
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     setNotifications([]);
     setUnreadCount(0);
-    localStorage.removeItem('dispensed-dj-user');
   };
   
   const updateUser = (updatedUser: FullUser) => {
     setUser(updatedUser);
-    localStorage.setItem('dispensed-dj-user', JSON.stringify(updatedUser));
   };
   
   const markNotificationsAsRead = async () => {
@@ -177,18 +135,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-
   const value = {
     user,
-    role: user?.role ?? null,
-    isAuthenticated: !!user && !user.needsRoleSelection,
+    role: user?.user_type ?? null,
+    isAuthenticated: !!user,
     isLoading,
     login,
     logout,
     signup,
-    googleLogin,
-    selectRole,
-    verifyUser,
+    googleSignIn,
     updateUser,
     notifications,
     unreadCount,

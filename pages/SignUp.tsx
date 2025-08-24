@@ -10,7 +10,7 @@ export const SignUp = () => {
   const [role, setRole] = useState<Role>(Role.Listener);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signup, googleLogin } = useAuth();
+  const { signup, googleSignIn } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,7 +19,10 @@ export const SignUp = () => {
     setLoading(true);
     try {
       await signup(name, email, password, role);
-      navigate('/verify-email'); // Redirect to a page that tells them to check their email
+      // After signup, show a message to check email for verification link.
+      // The actual navigation/user state change will be handled by the onAuthStateChange listener.
+      alert("Sign-up successful! Please check your email for a verification link.");
+      navigate('/login');
     } catch (err: any) {
       setError(err.message || 'Failed to sign up.');
     } finally {
@@ -29,16 +32,11 @@ export const SignUp = () => {
 
   const handleGoogleLogin = async () => {
     setError('');
-    setLoading(true);
     try {
-      const mockGoogleName = 'Google User';
-      const mockGoogleEmail = `user-${Math.floor(Math.random() * 10000)}@google.com`;
-      await googleLogin(mockGoogleName, mockGoogleEmail);
-      navigate('/');
+      await googleSignIn();
+      // onAuthStateChange will handle navigation
     } catch (err: any) {
       setError(err.message || 'Google login failed.');
-    } finally {
-      setLoading(false);
     }
   };
 
