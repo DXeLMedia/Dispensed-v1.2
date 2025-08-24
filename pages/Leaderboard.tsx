@@ -8,22 +8,22 @@ import { IconStar, IconTrophy } from '../constants';
 import { Link } from 'react-router-dom';
 
 const LeaderboardHeader = () => (
-  <div className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-sm p-4 border-b border-[var(--border)]">
-    <h1 className="font-orbitron text-xl font-bold text-[var(--text-primary)] text-center">Leaderboard</h1>
+  <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm p-4 border-b border-zinc-800">
+    <h1 className="font-orbitron text-xl font-bold text-white text-center">Leaderboard</h1>
   </div>
 );
 
 const Tabs = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (tab: 'djs' | 'venues') => void }) => (
-  <div className="flex p-1 bg-[var(--surface-2)] rounded-lg mx-4 my-2">
+  <div className="flex p-1 bg-zinc-800 rounded-lg mx-4 my-2">
     <button
       onClick={() => setActiveTab('djs')}
-      className={`w-1/2 p-2 rounded-md font-bold text-sm transition-colors ${activeTab === 'djs' ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'text-[var(--text-secondary)]'}`}
+      className={`w-1/2 p-2 rounded-md font-bold text-sm transition-colors ${activeTab === 'djs' ? 'bg-lime-400 text-black' : 'text-zinc-300'}`}
     >
       Top DJs
     </button>
     <button
       onClick={() => setActiveTab('venues')}
-      className={`w-1/2 p-2 rounded-md font-bold text-sm transition-colors ${activeTab === 'venues' ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'text-[var(--text-secondary)]'}`}
+      className={`w-1/2 p-2 rounded-md font-bold text-sm transition-colors ${activeTab === 'venues' ? 'bg-lime-400 text-black' : 'text-zinc-300'}`}
     >
       Top Venues
     </button>
@@ -41,27 +41,27 @@ const getRankColor = (rank: number) => {
     if (rank === 0) return 'border-yellow-400 shadow-yellow-400/20';
     if (rank === 1) return 'border-gray-400 shadow-gray-400/20';
     if (rank === 2) return 'border-amber-600 shadow-amber-600/20';
-    return 'border-[var(--border)]';
+    return 'border-zinc-800';
 };
 
 const LeaderboardItem = ({ item, rank }: { item: DJ | Business; rank: number }) => {
   const isDJ = item.role === Role.DJ;
-  const linkTo = isDJ ? `/profile/${item.id}` : `/profile/${item.id}`;
+  const linkTo = isDJ ? `/profile/${item.id}` : `/profile/${item.id}`; // Assuming venue profiles are also at /profile/:id
 
   return (
-    <Link to={linkTo} className={`block bg-[var(--surface-1)] border-2 rounded-lg p-3 hover:bg-[var(--surface-2)] transition-all duration-200 shadow-lg ${getRankColor(rank)}`}>
+    <Link to={linkTo} className={`block bg-zinc-900 border-2 rounded-lg p-3 hover:bg-zinc-800 transition-all duration-200 shadow-lg ${getRankColor(rank)}`}>
       <div className="flex items-center gap-4">
-        <div className={`font-orbitron text-2xl font-bold w-10 text-center ${rank < 3 ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>
+        <div className={`font-orbitron text-2xl font-bold w-10 text-center ${rank < 3 ? 'text-white' : 'text-zinc-500'}`}>
           {getRankMedal(rank)}
         </div>
         <Avatar src={item.avatarUrl} alt={item.name} size="md" />
         <div className="flex-1">
-          <h3 className="font-bold text-[var(--text-primary)] truncate">{item.name}</h3>
-          <p className="text-sm text-[var(--text-secondary)]">{isDJ ? (item as DJ).genres.join(', ') : (item as Business).location}</p>
+          <h3 className="font-bold text-white truncate">{isDJ ? item.name : (item as Business).venueName}</h3>
+          <p className="text-sm text-zinc-400">{isDJ ? (item as DJ).genres.join(', ') : (item as Business).location}</p>
         </div>
         <div className="flex items-center gap-1 text-lime-400">
           <IconStar size={16} fill="currentColor" />
-          <span className="font-bold text-[var(--text-primary)]">{item.rating.toFixed(1)}</span>
+          <span className="font-bold text-white">{item.rating.toFixed(2)}</span>
         </div>
       </div>
     </Link>
@@ -89,7 +89,7 @@ export const Leaderboard = () => {
   }, [activeTab]);
 
   return (
-    <div className="text-[var(--text-primary)] min-h-full">
+    <div className="text-white min-h-full">
       <LeaderboardHeader />
       <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
       {loading ? (

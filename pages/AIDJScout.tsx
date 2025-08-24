@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DJ } from '../types';
 import * as gemini from '../services/geminiService';
