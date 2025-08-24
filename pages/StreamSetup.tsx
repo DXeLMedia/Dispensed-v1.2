@@ -27,8 +27,7 @@ export const StreamSetup = () => {
                 userId: user.id,
                 title: `${user.name} is LIVE!`,
                 description: title,
-                mediaUrl: user.avatarUrl,
-                mediaType: 'image',
+                imageUrl: user.avatarUrl,
                 relatedId: newSession.id,
             });
 

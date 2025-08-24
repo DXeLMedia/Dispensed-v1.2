@@ -5,7 +5,6 @@ import { StreamSession, DJ } from '../types';
 import { PageSpinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
 import { IconArrowLeft, IconConnections, IconHeart, IconShare } from '../constants';
-import { useAuth } from '../hooks/useAuth';
 
 interface EmojiReaction {
   id: number;
@@ -16,11 +15,9 @@ interface EmojiReaction {
 export const LiveStream = () => {
     const { sessionId } = useParams<{ sessionId: string }>();
     const navigate = useNavigate();
-    const { user: currentUser } = useAuth();
     const [session, setSession] = useState<StreamSession | null>(null);
     const [dj, setDj] = useState<DJ | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isEnding, setIsEnding] = useState(false);
     const [reactions, setReactions] = useState<EmojiReaction[]>([]);
     let reactionIdCounter = 0;
 
@@ -33,13 +30,10 @@ export const LiveStream = () => {
         const fetchData = async () => {
             setLoading(true);
             const sessionData = await api.getStreamSessionById(sessionId);
-            if (sessionData && sessionData.isLive) {
+            if (sessionData) {
                 setSession(sessionData);
                 const djData = await api.getDJById(sessionData.djId);
                 setDj(djData || null);
-            } else {
-                setSession(null);
-                setDj(null);
             }
             setLoading(false);
         };
@@ -74,20 +68,6 @@ export const LiveStream = () => {
             setReactions(prev => prev.filter(r => r.id !== newReaction.id));
         }, 3000);
     };
-    
-    const handleEndStream = async () => {
-        if (!sessionId) return;
-        setIsEnding(true);
-        try {
-            await api.endStreamSession(sessionId);
-            navigate('/feed');
-        } catch (error) {
-            console.error("Failed to end stream:", error);
-            alert("Could not end the stream. Please try again.");
-        } finally {
-            setIsEnding(false);
-        }
-    };
 
     if (loading) return <PageSpinner />;
     if (!session || !dj) {
@@ -100,7 +80,6 @@ export const LiveStream = () => {
     }
     
     const emojiChoices = ['🔥', '❤️', '🤯', '🙌', '💯'];
-    const isOwnStream = currentUser?.id === dj.id;
 
     return (
         <div className="text-white h-full flex flex-col bg-zinc-900 relative overflow-hidden">
@@ -111,13 +90,7 @@ export const LiveStream = () => {
                     <IconConnections size={16} className="text-lime-300" />
                     <span className="font-bold text-white">{session.listenerCount.toLocaleString()}</span>
                 </div>
-                 {isOwnStream ? (
-                    <button onClick={handleEndStream} disabled={isEnding} className="bg-red-600/80 text-white font-bold px-4 py-1.5 rounded-full text-sm hover:bg-red-500 transition-colors disabled:bg-zinc-600 w-28 text-center">
-                        {isEnding ? 'Ending...' : 'End Stream'}
-                    </button>
-                 ) : (
-                    <button onClick={() => alert('Sharing stream!')} className="bg-black/30 p-2 rounded-full"><IconShare size={22} /></button>
-                 )}
+                 <button onClick={() => alert('Sharing stream!')} className="bg-black/30 p-2 rounded-full"><IconShare size={22} /></button>
             </header>
 
             {/* Reaction Canvas */}

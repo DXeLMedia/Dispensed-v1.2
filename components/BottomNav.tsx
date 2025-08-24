@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -10,8 +11,7 @@ import {
   IconBriefcase,
   IconTrophy,
   IconMusic,
-  IconLogOut,
-  IconList
+  IconLogOut
 } from '../constants';
 import { Avatar } from './Avatar';
 
@@ -23,7 +23,7 @@ const MobileNavItem = ({ to, icon, label }: { to: string; icon: React.ReactNode;
     to={to}
     className={({ isActive }) =>
       `flex flex-col items-center justify-center gap-1 w-full h-full transition-colors duration-200 ${
-        isActive ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+        isActive ? 'text-lime-400' : 'text-gray-400 hover:text-white'
       }`
     }
   >
@@ -76,7 +76,7 @@ export const BottomNav = () => {
   const navItemsCount = role === Role.Listener ? 4 : 5;
 
   return (
-    <nav className={`grid grid-cols-${navItemsCount} h-16 bg-[var(--surface-1)]/80 backdrop-blur-sm border-t border-[var(--border)] z-30 md:hidden`}>
+    <nav className={`grid grid-cols-${navItemsCount} h-16 bg-zinc-900/80 backdrop-blur-sm border-t border-zinc-800 z-30 md:hidden`}>
       {renderNav()}
     </nav>
   );
@@ -90,7 +90,7 @@ const DesktopNavItem = ({ to, icon, label }: { to: string; icon: React.ReactNode
         to={to}
         className={({ isActive }) =>
             `flex items-center gap-4 px-4 py-3 rounded-lg transition-colors duration-200 ${
-            isActive ? 'bg-[var(--accent)] text-[var(--accent-text)] font-bold' : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
+            isActive ? 'bg-lime-400 text-black font-bold' : 'text-gray-300 hover:bg-zinc-700 hover:text-white'
             }`
         }
     >
@@ -103,7 +103,6 @@ const DJNavDesktop = () => (
     <>
         <DesktopNavItem to="/feed" icon={<IconHome size={22} />} label="Feed" />
         <DesktopNavItem to="/gigs" icon={<IconBriefcase size={22} />} label="My Gigs" />
-        <DesktopNavItem to="/media-manager" icon={<IconList size={22} />} label="Media Manager" />
         <DesktopNavItem to="/find-gigs" icon={<IconMusic size={22} />} label="Find Gigs" />
         <DesktopNavItem to="/discover" icon={<IconSearch size={22} />} label="Find DJs" />
         <DesktopNavItem to="/messages" icon={<IconMessages size={22} />} label="Inbox" />
@@ -149,9 +148,9 @@ export const SideNav = () => {
   }
   
   return (
-    <nav className="hidden md:flex flex-col w-64 bg-[var(--surface-1)] p-4 border-r border-[var(--border)] flex-shrink-0">
-      <div className="font-orbitron text-2xl font-bold text-[var(--text-primary)] mb-8 px-2">
-        <span className="text-[var(--accent)]">D</span>ISk_onnctd
+    <nav className="hidden md:flex flex-col w-64 bg-zinc-900 p-4 border-r border-zinc-800 flex-shrink-0">
+      <div className="font-orbitron text-2xl font-bold text-white mb-8 px-2">
+        <span className="text-lime-400">D</span>ISPENSED
       </div>
       <div className="flex flex-col gap-2 flex-grow">
         {renderNav()}
@@ -159,14 +158,14 @@ export const SideNav = () => {
 
       {user && (
          <div className="mt-auto">
-            <div className="p-3 bg-[var(--surface-2)] rounded-lg flex items-center gap-3">
+            <div className="p-3 bg-zinc-800 rounded-lg flex items-center gap-3">
               <Avatar src={user.avatarUrl} alt={user.name} size="sm" />
               <div className="flex-1 overflow-hidden">
-                <NavLink to="/profile/me" className="text-[var(--text-primary)] font-bold text-sm truncate hover:underline">{user.name}</NavLink>
-                <p className="text-[var(--text-secondary)] text-xs truncate capitalize">{user.role}</p>
+                <NavLink to="/profile/me" className="text-white font-bold text-sm truncate hover:underline">{user.name}</NavLink>
+                <p className="text-zinc-400 text-xs truncate capitalize">{user.role}</p>
               </div>
             </div>
-             <button onClick={handleLogout} className="w-full flex items-center gap-4 px-4 py-3 mt-2 rounded-lg text-[var(--text-secondary)] hover:bg-red-500/20 hover:text-red-400 transition-colors">
+             <button onClick={handleLogout} className="w-full flex items-center gap-4 px-4 py-3 mt-2 rounded-lg text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-colors">
                 <IconLogOut size={22} />
                 <span className="text-sm font-medium">Logout</span>
              </button>
