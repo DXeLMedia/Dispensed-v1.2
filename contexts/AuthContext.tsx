@@ -4,7 +4,7 @@ import * as api from '../services/mockApi'; // Keep for non-auth features like n
 
 type FullUser = (User | DJ | Business) & { needsRoleSelection?: boolean };
 
-const API_URL = 'http://localhost:3001';
+const API_URL = '';
 
 interface AuthContextType {
   user: FullUser | null;
