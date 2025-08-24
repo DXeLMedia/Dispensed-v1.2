@@ -12,9 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  signUp: (email: string, password: string, name: string, role: Role) => Promise<void>;
-  signInWithGoogle: (role?: Role) => Promise<void>;
+
   updateUser: (updatedUser: FullUser) => void;
   notifications: Notification[];
   unreadCount: number;
@@ -74,13 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    closePlayer(); // Reset media player state
-    setUser(null);
-    setNotifications([]);
-    setUnreadCount(0);
-    document.documentElement.className = 'theme-dark'; // Reset to default on logout
-  };
+
 
   const signUp = async (email: string, password: string, name: string, role: Role) => {
     const { error } = await api.signUpWithEmail(email, password, name, role);
