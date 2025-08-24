@@ -1,17 +1,12 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { User, Role, DJ, Business, Notification } from '../types';
-import * as api from '../services/mockApi'; // Keep for non-auth features like notifications
 
-type FullUser = (User | DJ | Business) & { needsRoleSelection?: boolean };
-
-const API_URL = 'http://localhost:3001';
 
 interface AuthContextType {
   user: FullUser | null;
   role: Role | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password?: string) => Promise<void>;
+
   logout: () => void;
   signup: (name: string, email: string, password: string, role: Role) => Promise<void>;
   googleLogin: (name: string, email: string) => Promise<void>;
@@ -22,6 +17,8 @@ interface AuthContextType {
   unreadCount: number;
   refreshNotifications: () => Promise<void>;
   markNotificationsAsRead: () => Promise<void>;
+  theme: Theme;
+  updateTheme: (newTheme: Theme) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,12 +32,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { closePlayer } = useMediaPlayer();
+  const [theme, setTheme] = useState<Theme>('electric_blue');
 
   const refreshNotifications = useCallback(async () => {
     if (user) {
-        const notifs = await api.getNotifications(user.id);
+        const notifs = await api.getNotifications(user.user_id);
         setNotifications(notifs);
-        setUnreadCount(notifs.filter(n => !n.read).length);
+        setUnreadCount(notifs.filter(n => !n.is_read).length);
     } else {
         setNotifications([]);
         setUnreadCount(0);
@@ -48,40 +47,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user]);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('dispensed-dj-user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        if (parsedUser) {
-          setUser(parsedUser);
-        }
-      } catch (error) {
-        console.error("Failed to parse user from localStorage:", error);
-        localStorage.removeItem('dispensed-dj-user');
-      }
-    }
+
+    // In a real app, you would check for a session here.
+
     setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    // Theme is now a UI-only feature
+    document.documentElement.className = theme === 'cyber_glow' ? 'theme-light' : 'theme-dark';
+  }, [theme]);
 
   useEffect(() => {
     refreshNotifications();
   }, [user, refreshNotifications]);
 
-  const handleAuthResponse = (authenticatedUser: FullUser) => {
-    setUser(authenticatedUser);
-    localStorage.setItem('dispensed-dj-user', JSON.stringify(authenticatedUser));
-  };
 
-  const signup = async (name: string, email: string, password: string, role: Role) => {
-    const response = await fetch(`${API_URL}/api/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role }),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Sign up failed');
     }
 
     const newUser = await response.json();
@@ -159,15 +140,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    closePlayer();
     setUser(null);
     setNotifications([]);
     setUnreadCount(0);
-    localStorage.removeItem('dispensed-dj-user');
+    document.documentElement.className = 'theme-dark';
   };
   
   const updateUser = (updatedUser: FullUser) => {
     setUser(updatedUser);
-    localStorage.setItem('dispensed-dj-user', JSON.stringify(updatedUser));
+  };
+
+  const updateTheme = async (newTheme: Theme) => {
+    // This is now a UI-only feature as the backend does not support user settings.
+    setTheme(newTheme);
   };
   
   const markNotificationsAsRead = async () => {
@@ -176,7 +162,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await refreshNotifications();
     }
   };
-
 
   const value = {
     user,
@@ -194,6 +179,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     unreadCount,
     refreshNotifications,
     markNotificationsAsRead,
+    theme,
+    updateTheme,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
