@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     // Auth state change will handle setting the user.
     alert('Sign up successful! Please check your email to verify your account.');
-  };
+  
 
 
   const logout = async () => {
