@@ -44,8 +44,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user]);
 
 
-  }, []);
-
 
   useEffect(() => {
     // Run once on mount to get current session
