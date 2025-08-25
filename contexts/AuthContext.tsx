@@ -128,24 +128,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user, refreshNotifications]);
 
   const login = async (email: string, password: string) => {
-    try {
-      const authenticatedUser = await api.authenticate(email, password);
-      if (!authenticatedUser) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+            throw new Error('Invalid email or password. Please try again.');
+        }
+        throw error;
+    }
+
+    if (!data.user) {
         throw new Error("Authentication failed. Please check your credentials.");
-      }
-      setUser(authenticatedUser);
-    } catch (err: any) {
-      if (err.message.includes('Invalid login credentials')) {
-        throw new Error('Invalid email or password. Please try again.');
-      }
-      if (err.message.includes('User profile not found after login')) {
-        // If Supabase auth succeeds but our public profile is missing, it's a critical error.
-        // Sign the user out to prevent a broken state.
-        await supabase.auth.signOut();
-        throw new Error('Login successful, but your profile could not be found. Please contact support.');
-      }
-      // Re-throw other errors
-      throw err;
+    }
+
+    // Use the existing self-healing fetcher. This also handles the fatal error case.
+    const profile = await fetchUserProfile(data.user);
+
+    if (profile) {
+      setUser(profile);
+    } else {
+      // fetchUserProfile will sign the user out, but we need to throw the error
+      // to the login form to display a message.
+      throw new Error('Login successful, but your profile could not be found. Please contact support.');
     }
   };
 
@@ -164,7 +171,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signInWithGoogle = async (role?: Role) => {
-    const { error } = await api.signInWithGoogle(role);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+        data: role ? { user_type: role } : undefined,
+      } as any,
+    });
     if (error) {
         throw error;
     }

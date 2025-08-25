@@ -1,5 +1,4 @@
 
-
 import { supabase } from './supabaseClient';
 import { 
     DJ, 
@@ -106,7 +105,7 @@ export const getDJs = async (): Promise<DJ[]> => {
         .eq('user_type', 'dj');
 
     if (error) {
-        console.error("Error fetching DJs:", error);
+        console.error("Error fetching DJs:", error.message);
         return [];
     }
     if (!data) return [];
@@ -122,7 +121,7 @@ export const getBusinesses = async (): Promise<Business[]> => {
         .eq('user_type', 'business');
 
     if (error) {
-        console.error("Error fetching businesses:", error);
+        console.error("Error fetching businesses:", error.message);
         return [];
     }
     if (!data) return [];
@@ -139,35 +138,22 @@ export const getBusinessById = async (userId: string): Promise<Business | undefi
 }
 
 export const getUserById = async (userId: string): Promise<DJ | Business | UserProfile | undefined> => {
-    // Hardcoded fix for data inconsistency for user 'doublexel.music@gmail.com'.
-    // The auth user ID is '7f765e47-375e-47f4-8536-e7669ad8f254'.
-    // The profile table ID is 'e3c7483f-50c1-4ecf-92d0-0d01f333984a'.
-    const queryUserId = userId === '7f765e47-375e-47f4-8536-e7669ad8f254'
-      ? 'e3c7483f-50c1-4ecf-92d0-0d01f333984a'
-      : userId;
-
     const { data, error } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select(PROFILE_QUERY_STRING)
-        .eq('user_id', queryUserId) // Use the corrected user ID for the query
+        .eq('user_id', userId)
         .single();
     
     if (error) {
+        // Log the full error unless it's the expected "no rows returned" case
         if (!error.message.includes('rows returned')) {
-            console.error('Error fetching user profile from tables:', error);
+            console.error('Error fetching user profile from tables:', error.message);
         }
         return undefined;
     }
 
     if (data) {
-        // After fetching with the correct ID, map the data.
-        const profile = mapJoinedDataToUserProfile(data);
-        // CRITICAL: Ensure the returned profile's ID matches the authenticated user's ID (`userId`)
-        // to maintain consistency throughout the app, as the rest of the app relies on the auth ID.
-        if (profile) {
-            profile.id = userId; 
-        }
-        return profile;
+        return mapJoinedDataToUserProfile(data);
     }
 
     return undefined;
@@ -183,7 +169,7 @@ export const getGigById = async (id: string): Promise<Gig | undefined> => {
 
     if (error) {
         if (!error.message.includes('rows returned')) {
-            console.error('Error fetching gig by id:', error);
+            console.error('Error fetching gig by id:', error.message);
         }
         return undefined;
     }
@@ -196,7 +182,7 @@ export const getGigs = async (): Promise<Gig[]> => {
         .select('*');
 
     if (error) {
-        console.error('Error fetching gigs:', error);
+        console.error('Error fetching gigs:', error.message);
         return [];
     }
     return (data || []) as Gig[];
@@ -208,7 +194,7 @@ export const getGigsForVenue = async (businessUserId: string): Promise<Gig[]> =>
         .eq('business_user_id', businessUserId);
 
     if (error) {
-        console.error('Error fetching gigs for venue:', error);
+        console.error('Error fetching gigs for venue:', error.message);
         return [];
     }
     return (data || []) as Gig[];
@@ -228,7 +214,7 @@ export const getPosts = async (): Promise<Post[]> => {
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching posts:', error);
+        console.error('Error fetching posts:', error.message);
         return [];
     }
     return (data as any[]) || [];
@@ -243,7 +229,7 @@ export const getPostById = async (id: string): Promise<Post | undefined> => {
 
     if (error) {
         if (!error.message.includes('rows returned')) {
-            console.error('Error fetching post by id:', error);
+            console.error('Error fetching post by id:', error.message);
         }
         return undefined;
     }
@@ -265,7 +251,7 @@ export const addPost = async (postData: Omit<Post, 'id' | 'created_at' | 'update
         .single();
 
     if (error) {
-        console.error('Error adding post:', error);
+        console.error('Error adding post:', error.message);
         return null;
     }
     return data as any;
@@ -279,7 +265,7 @@ export const getNotifications = async (userId: string): Promise<Notification[]> 
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching notifications:', error);
+        console.error('Error fetching notifications:', error.message);
         return [];
     }
     return (data as any[] || []).map(n => ({...n, read: n.is_read, relatedId: n.related_id, userId: n.user_id}));
@@ -293,7 +279,7 @@ export const getPlaylistById = async (id: string): Promise<Playlist | null> => {
         .single();
 
     if (error) {
-        console.error('Error fetching playlist:', error);
+        console.error('Error fetching playlist:', error.message);
         return null;
     }
     return data as any as Playlist | null;
@@ -307,7 +293,7 @@ export const markAllAsRead = async (userId: string): Promise<boolean> => {
         .eq('is_read', false);
 
     if (error) {
-        console.error('Error marking notifications as read:', error);
+        console.error('Error marking notifications as read:', error.message);
         return false;
     }
     return true;
@@ -323,7 +309,7 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
     const messages = data as Database['public']['Tables']['app_e255c3cdb5_messages']['Row'][];
     
     if (error) {
-        console.error('Error fetching messages:', error);
+        console.error('Error fetching messages:', error.message);
         return [];
     }
     if (!messages) return [];
@@ -338,7 +324,7 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
     const profiles = profilesData as UserProfileRow[];
 
     if (profileError) {
-        console.error('Error fetching participant profiles:', profileError);
+        console.error('Error fetching participant profiles:', profileError.message);
         return [];
     }
     if (!profiles) return [];
@@ -379,7 +365,7 @@ export const sendMessage = async (senderId: string, recipientId: string, content
         .single();
 
     if (error) {
-        console.error('Error sending message:', error);
+        console.error('Error sending message:', error.message);
         return null;
     }
     const result = data as Database['public']['Tables']['app_e255c3cdb5_messages']['Row'];
@@ -398,7 +384,7 @@ export const createDjProfile = async (userId: string): Promise<boolean> => {
         }, { onConflict: 'user_id' });
 
     if (error) {
-        console.error("Error self-healing DJ profile:", error);
+        console.error("Error self-healing DJ profile:", error.message);
         return false;
     }
     return true;
@@ -415,7 +401,7 @@ export const createBusinessProfile = async (userId: string, displayName: string)
         }, { onConflict: 'user_id' });
     
     if (error) {
-        console.error("Error self-healing business profile:", error);
+        console.error("Error self-healing business profile:", error.message);
         return false;
     }
     return true;
@@ -447,7 +433,7 @@ export const createUserProfile = async (user: any): Promise<UserProfile | null> 
         .single();
     
     if (userProfileError) {
-        console.error("Error upserting base user profile:", userProfileError);
+        console.error("Error upserting base user profile:", userProfileError.message);
         return null;
     }
 
@@ -495,36 +481,6 @@ export const signInWithGoogle = async (role?: Role) => {
     return { error };
 };
 
-export const authenticate = async (email: string, password: string): Promise<UserProfile | DJ | Business | undefined> => {
-    const { data: { user }, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-    });
-
-    if (error) {
-        console.error('Error signing in:', error.message);
-        throw error;
-    }
-
-    if (!user) {
-        return undefined;
-    }
-    
-    // After login, fetch the full profile to get role-specific data
-    let profile = await getUserById(user.id);
-    if (!profile) {
-        console.error("User logged in but profile not found:", user.id);
-        throw new Error("User profile not found after login.");
-    }
-    
-    // The view should provide email, but let's be safe
-    if (profile && !profile.email) {
-        profile.email = user.email!;
-    }
-    
-    return profile;
-};
-
 export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig | null> => {
      const newGig: Omit<Database['public']['Tables']['app_e255c3cdb5_gigs']['Insert'], 'id'> = {
         ...gigData,
@@ -537,7 +493,7 @@ export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig |
         .single();
 
     if (error) {
-        console.error('Error adding gig:', error);
+        console.error('Error adding gig:', error.message);
         return null;
     }
     return data as any;
@@ -552,7 +508,7 @@ export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promi
         .single();
 
     if (error) {
-        console.error('Error updating gig:', error);
+        console.error('Error updating gig:', error.message);
         return null;
     }
     return data as any;
@@ -569,7 +525,7 @@ export const expressInterestInGig = async (gigId: string, djUserId: string): Pro
         .insert([application]);
 
     if (error) {
-        console.error('Error expressing interest in gig:', error);
+        console.error('Error expressing interest in gig:', error.message);
         return false;
     }
     return true;
@@ -582,7 +538,7 @@ export const getInterestedDJsForGig = async (gigId: string): Promise<DJ[]> => {
         .eq('gig_id', gigId);
 
     if (error) {
-        console.error('Error fetching interested DJs:', error);
+        console.error('Error fetching interested DJs:', error.message);
         return [];
     }
     if (!applications) return [];
@@ -596,7 +552,7 @@ export const getInterestedDJsForGig = async (gigId: string): Promise<DJ[]> => {
         .in('user_id', djUserIds);
     
     if (djError) {
-        console.error('Error fetching interested DJ profiles:', djError);
+        console.error('Error fetching interested DJ profiles:', djError.message);
         return [];
     }
 
@@ -610,7 +566,7 @@ export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: 
         .eq('id', gigId);
 
     if (gigError) {
-        console.error('Error updating gig status:', gigError);
+        console.error('Error updating gig status:', gigError.message);
         return false;
     }
 
@@ -628,7 +584,7 @@ export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: 
         .insert([booking]);
 
     if (bookingError) {
-        console.error('Error creating booking:', bookingError);
+        console.error('Error creating booking:', bookingError.message);
         return false;
     }
     
@@ -675,7 +631,7 @@ export const getTracksForDj = async (djUserId: string): Promise<Track[]> => {
         .single();
 
     if (error) {
-        console.error('Error fetching tracks for DJ:', error);
+        console.error('Error fetching tracks for DJ:', error.message);
         return [];
     }
     return data ? (data.portfolio_tracks as Track[] | null) || [] : [];
@@ -688,7 +644,7 @@ export const getPlaylistsForDj = async (djUserId: string): Promise<Playlist[]> =
         .eq('dj_user_id', djUserId);
 
     if (error) {
-        console.error('Error fetching playlists for DJ:', error);
+        console.error('Error fetching playlists for DJ:', error.message);
         return [];
     }
     return (data as any[] || []).map(p => ({...p, creatorId: p.dj_user_id, trackIds: p.tracks?.map((t:any) => t.id) || [] }));
@@ -701,7 +657,7 @@ export const addTrackToPortfolio = async (djUserId: string, track: Track): Promi
     });
 
     if (error) {
-        console.error('Error adding track to portfolio:', error);
+        console.error('Error adding track to portfolio:', error.message);
         return false;
     }
     return true;
@@ -721,7 +677,7 @@ export const createPlaylist = async (playlistData: Omit<Playlist, 'id' | 'tracks
         .single();
 
     if (error) {
-        console.error('Error creating playlist:', error);
+        console.error('Error creating playlist:', error.message);
         return null;
     }
     return data as any;
@@ -736,7 +692,7 @@ export const updatePlaylist = async (playlistId: string, playlistData: Partial<O
         .single();
 
     if (error) {
-        console.error('Error updating playlist:', error);
+        console.error('Error updating playlist:', error.message);
         return null;
     }
     return data as any;
@@ -749,7 +705,7 @@ export const addTrackToPlaylist = async (playlistId: string, track: Track): Prom
     });
 
     if (error) {
-        console.error('Error adding track to playlist:', error);
+        console.error('Error adding track to playlist:', error.message);
         return false;
     }
     return true;
@@ -764,7 +720,7 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
     const reviews = data as Database['public']['Tables']['app_e255c3cdb5_reviews']['Row'][];
 
     if (error) {
-        console.error('Error fetching reviews:', error);
+        console.error('Error fetching reviews:', error.message);
         return [];
     }
     if(!reviews) return [];
@@ -789,7 +745,7 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
     const authors = authorsData as UserProfileRow[];
 
     if (authorError) {
-        console.error('Error fetching review authors:', authorError);
+        console.error('Error fetching review authors:', authorError.message);
         return []; // Or return reviews without authors
     }
 
@@ -822,7 +778,7 @@ export const submitReview = async (reviewData: Omit<Review, 'id' | 'created_at' 
         .single();
 
     if (error) {
-        console.error('Error submitting review:', error);
+        console.error('Error submitting review:', error.message);
         return null;
     }
     return data as any;
@@ -838,7 +794,7 @@ export const getCommentsForPost = async (postId: string): Promise<EnrichedCommen
     const comments = data as Database['public']['Tables']['app_e255c3cdb5_post_comments']['Row'][];
 
     if (error) {
-        console.error('Error fetching comments:', error);
+        console.error('Error fetching comments:', error.message);
         return [];
     }
     if(!comments) return [];
@@ -878,7 +834,7 @@ export const addCommentToPost = async (postId: string, userId: string, content: 
         .single();
 
     if (error) {
-        console.error('Error adding comment:', error);
+        console.error('Error adding comment:', error.message);
         return null;
     }
     const author = await getUserById(userId);
@@ -911,7 +867,7 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
             .update(dbUserProfile)
             .eq('user_id', userId);
         if (error) {
-            console.error('Error updating user profile:', error);
+            console.error('Error updating user profile:', error.message);
             return false;
         }
     }
@@ -922,7 +878,7 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
             .update(djProfile)
             .eq('user_id', userId);
         if (error) {
-            console.error('Error updating DJ profile:', error);
+            console.error('Error updating DJ profile:', error.message);
             return false;
         }
     }
@@ -935,7 +891,7 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
             .update(dbBusinessProfile)
             .eq('user_id', userId);
         if (error) {
-            console.error('Error updating business profile:', error);
+            console.error('Error updating business profile:', error.message);
             return false;
         }
     }
@@ -952,7 +908,7 @@ export const toggleLikePost = async (postId: string, userId: string): Promise<bo
         .single();
 
     if (selectError && !selectError.message.includes('rows returned')) {
-        console.error('Error checking for like:', selectError);
+        console.error('Error checking for like:', selectError.message);
         return false;
     }
 
@@ -963,7 +919,7 @@ export const toggleLikePost = async (postId: string, userId: string): Promise<bo
             .eq('id', (like as any).id);
         
         if (deleteError) {
-            console.error('Error unliking post:', deleteError);
+            console.error('Error unliking post:', deleteError.message);
             return false;
         }
     } else {
@@ -976,7 +932,7 @@ export const toggleLikePost = async (postId: string, userId: string): Promise<bo
             .insert([newLike]);
 
         if (insertError) {
-            console.error('Error liking post:', insertError);
+            console.error('Error liking post:', insertError.message);
             return false;
         }
     }
@@ -994,7 +950,7 @@ export const searchUsers = async (query: string): Promise<UserProfile[]> => {
         .limit(10);
     
     if (error) {
-        console.error('Error searching users:', error);
+        console.error('Error searching users:', error.message);
         return [];
     }
     return (data || []).map(mapJoinedDataToUserProfile) as UserProfile[];
