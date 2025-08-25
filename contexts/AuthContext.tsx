@@ -118,8 +118,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // return 'someValue';
 
     // Correct
-   const getValue() {
+   const value = {
         return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-    }
-    const result = getValue();
+    };
+    
   
