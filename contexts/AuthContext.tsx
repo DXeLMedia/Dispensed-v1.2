@@ -174,6 +174,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
+        // Redirect the user back to the page they were on.
+        // The onAuthStateChange listener will handle the session.
         redirectTo: window.location.origin,
         data: role ? { user_type: role } : undefined,
       } as any,
