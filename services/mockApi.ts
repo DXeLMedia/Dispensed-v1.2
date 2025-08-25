@@ -624,17 +624,18 @@ export const getFollowingForUser = async (userId: string): Promise<UserProfile[]
 }
 
 export const getTracksForDj = async (djUserId: string): Promise<Track[]> => {
-    const { data, error } = await (supabase
-        .from('app_e255c3cdb5_dj_profiles') as any)
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_dj_profiles')
         .select('portfolio_tracks')
-        .eq('user_id', djUserId)
-        .single();
+        .eq('user_id', djUserId);
 
     if (error) {
         console.error('Error fetching tracks for DJ:', error.message);
         return [];
     }
-    return data ? (data.portfolio_tracks as Track[] | null) || [] : [];
+    // The query now returns an array. If a profile exists, it will be the first element.
+    const profile = data?.[0];
+    return profile ? (profile.portfolio_tracks as Track[] | null) || [] : [];
 };
 
 export const getPlaylistsForDj = async (djUserId: string): Promise<Playlist[]> => {
