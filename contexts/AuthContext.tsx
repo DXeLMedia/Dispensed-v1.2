@@ -1,12 +1,4 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { User, Role, DJ, Business, Notification } from '../types';
-import * as api from '../services/mockApi'; // Keep for non-auth features like notifications
-import { createClient } from '@supabase/supabase-js';
-
-// --- Supabase Initialization ---
-const supabaseUrl = 'https://lkxebvjbbskdbhkfgdip.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxreGVidmpiYnNrZGJoa2ZnZGlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5NTE3NjIsImV4cCI6MjA2OTUyNzc2Mn0.GBZ3yCa17dTAT-yDMgKfLuIQEtbB8qYENab9ppN4224';
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 
 type FullUser = (User | DJ | Business) & { user_type?: Role, needsRoleSelection?: boolean };
@@ -20,8 +12,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  signup: (name: string, email: string, password: string, role: Role) => Promise<void>;
-  googleSignIn: () => Promise<void>;
+
   updateUser: (updatedUser: FullUser) => void;
   notifications: Notification[];
   unreadCount: number;
@@ -52,90 +43,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [user]);
 
+
+  }, []);
+
+
   useEffect(() => {
-    const getInitialSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
+    // Run once on mount to get current session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (session) {
-             const { data: profile } = await supabase
-                .from('user_profile_view')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-            setUser(profile as FullUser);
+            const profile = await fetchUserProfile(session.user);
+            setUser(profile);
         }
         setIsLoading(false);
-    };
-
-    getInitialSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-        try {
-            const currentUser = session?.user ?? null;
-            if (currentUser) {
-                const { data: profile, error } = await supabase
-                    .from('user_profile_view')
-                    .select('*')
-                    .eq('id', currentUser.id)
-                    .single();
-
-                if (error) {
-                    console.error("Error fetching user profile:", error);
-                    // Log out the user if their profile is inaccessible
-                    await supabase.auth.signOut();
-                    setUser(null);
-                } else {
-                    setUser(profile as FullUser);
-                }
-            } else {
-                setUser(null);
-            }
-        } catch (e) {
-            console.error("Error in onAuthStateChange:", e);
-            setUser(null);
-        } finally {
-            setIsLoading(false);
-        }
     });
 
-    return () => {
-        authListener.subscription.unsubscribe();
-    };
-  }, []);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+            setUser(null);
+        } else if (session && (!user || user.id !== session.user.id)) {
+            const profile = await fetchUserProfile(session.user);
+            setUser(profile);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [user, fetchUserProfile]);
+
 
   useEffect(() => {
     refreshNotifications();
   }, [user, refreshNotifications]);
 
-  const signup = async (name: string, email: string, password: string, role: Role) => {
-    const response = await fetch(`${API_URL}/api/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role, redirectTo: window.location.origin }),
-    });
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Sign up failed');
     }
     // Auth state change will handle setting the user.
     alert('Sign up successful! Please check your email to verify your account.');
   };
 
-  const login = async (email: string, password: string) => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw new Error(error.message);
-      // Auth state change will handle setting the user.
-  };
-
-  const googleSignIn = async () => {
-      const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-              redirectTo: window.location.origin,
-          },
-      });
-      if (error) throw new Error('Could not sign in with Google');
-  };
 
   const logout = async () => {
     await supabase.auth.signOut();
