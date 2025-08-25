@@ -1,434 +1,1090 @@
-let allUsers = [...djs, ...businesses, ...listeners];
 
 
-// --- GIGS ---
-let gigs: Gig[] = [
-  { id: 'g1', title: 'Deep Tech Invites: K-DOLLA', venueId: 'biz-1', date: '2025-08-15', time: '22:00', budget: 1500, description: 'Prepare for a journey into the deep. K-DOLLA takes over Mødular for a night of relentless techno.', genres: ['Techno', 'Deep-Tech'], status: 'Open' },
-  { id: 'g2', title: 'Rooftop Grooves with DJ Loyd', venueId: 'biz-2', date: '2025-08-17', time: '19:00', budget: 800, description: 'Sunset vibes on the Long Street rooftop. Spinning soulful and deep house.', genres: ['Deep House', 'Soulful House'], status: 'Completed', bookedDjId: 'dj-5' },
-  { id: 'g3', title: 'We House Sundays - August Edition', venueId: 'biz-3', date: '2025-08-18', time: '14:00', budget: 1200, description: 'Join the movement. Seeking a DJ who understands the soulful core of house music.', genres: ['Soulful House', 'Afro House'], status: 'Open'},
-  { id: 'g4', title: 'Minimal Effort with The Fogshow', venueId: 'biz-4', date: '2025-08-22', time: '23:00', budget: 900, description: 'Intricate grooves and minimal soundscapes all night long with The Other Side head honcho.', genres: ['Minimal', 'Deep-Tech'], status: 'Booked', bookedDjId: 'dj-7'},
-  { id: 'g5', title: 'ERA Re-opening Party', venueId: 'biz-5', date: '2025-09-01', time: '21:00', budget: 2000, description: 'The legend is back. We are looking for a headline techno act to celebrate our return.', genres: ['Techno'], status: 'Open'},
-  { id: 'g6', title: 'Wolfkop Weekender - Main Stage', venueId: 'biz-23', date: '2026-01-28', time: '18:00', budget: 3500, description: 'Seeking artists for our annual journey into sound. Melodic and groovy sets preferred.', genres: ['Melodic House', 'Deep House', 'Techno'], status: 'Open'},
-  { id: 'g7', title: 'Stay True Sounds Showcase', venueId: 'biz-42', date: '2025-09-15', time: '20:00', budget: 1800, description: 'A night dedicated to the finest deep house, with Kid Fonque at the helm.', genres: ['Deep House', 'Jazz'], status: 'Completed', bookedDjId: 'dj-20'},
-  { id: 'g8', title: 'Minimal Effort with Pierre Johnson', venueId: 'biz-1', date: '2025-09-05', time: '23:00', budget: 1000, description: 'An intimate night of minimal and deep tech.', genres: ['Minimal', 'Deep-Tech'], status: 'Open'},
-  { id: 'g9', title: 'Afro House Journey with Atmos Blaq', venueId: 'biz-7', date: '2025-09-06', time: '20:00', budget: 1200, description: 'An epic journey through the sounds of afro house and afro tech.', genres: ['Afro House', 'Afro Tech'], status: 'Open'},
-  { id: 'g10', title: 'Dub Techno Special: Sides', venueId: 'biz-49', date: '2025-09-12', time: '22:00', budget: 750, description: 'Deep End presents a night of pure dub techno. Heads down, eyes closed.', genres: ['Dub-Techno', 'Deep House'], status: 'Open'},
-  { id: 'g11', title: 'UNTMD Presents: Rose Bonica', venueId: 'biz-50', date: '2025-09-13', time: '23:00', budget: 900, description: 'Raw, industrial, and experimental techno all night long.', genres: ['Techno', 'Industrial'], status: 'Booked', bookedDjId: 'dj-44'},
-  { id: 'g12', title: 'The Search: Leighton Moody All Night Long', venueId: 'biz-41', date: '2025-09-19', time: '21:00', budget: 1500, description: 'A masterclass in soulful and deep house from a Cape Town legend.', genres: ['Deep House', 'Soulful House'], status: 'Open'},
-  { id: 'g13', title: 'Sexy Groovy Love - Spring Edition', venueId: 'biz-38', date: '2025-09-27', time: '12:00', budget: 2500, description: 'Our first party of the season! Looking for DJs that bring the vibe.', genres: ['House', 'Tech House', 'Deep House'], status: 'Open'},
-  { id: 'g14', title: 'Fiction Fridays: Call for Residents', venueId: 'biz-10', date: '2025-10-01', time: '21:00', budget: 500, description: 'Fiction is looking for new resident DJs to join our family. Send us your mixes!', genres: ['Techno', 'House', 'Break-Dub'], status: 'Open'},
-  { id: 'g15', title: 'It Is What It Is ft. Jullian Gomes', venueId: 'biz-26', date: '2025-09-28', time: '14:00', budget: 2000, description: 'The legendary Jullian Gomes graces the IIWII stage for a magical afternoon set.', genres: ['Deep House', 'Soulful House'], status: 'Booked', bookedDjId: 'dj-13'},
+import { supabase } from './supabaseClient';
+import { 
+    DJ, 
+    Business, 
+    Gig, 
+    Track, 
+    Playlist, 
+    Role, 
+    UserProfile,
+    DjProfile,
+    BusinessProfile,
+    Notification, 
+    Message, 
+    Review, 
+    FeedItem as Post,
+    Comment as PostComment,
+    User,
+    EnrichedReview,
+    EnrichedComment,
+    StreamSession,
+    UserSettings,
+    EnrichedChat,
+    Chat,
+    Tier,
+} from '../types';
+import { v4 as uuidv4 } from 'uuid';
+import { Database } from './database.types';
 
-  // Gigs for dj-46 (Double X eL) to populate MyGigs page
-  { id: 'g16', title: 'Neon Nights Club ft. Double X eL', venueId: 'biz-201', date: '2025-08-15', time: '9:00 PM - 2:00 AM', budget: 450, description: 'Bring extra speakers for outdoor area', genres: ['Techno', 'House'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g17', title: 'Sunset Session', venueId: 'biz-202', date: '2025-08-18', time: '7:00 PM - 11:00 PM', budget: 320, description: 'Prepare a chill sunset vibe set', genres: ['Deep House', 'Melodic House'], status: 'Open' },
-  { id: 'g18', title: 'Late Night Grooves', venueId: 'biz-1', date: '2025-08-29', time: '11:00 PM - 4:00 AM', budget: 500, description: 'Main room closing set', genres: ['Techno'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g19', title: 'Rooftop Day Party', venueId: 'biz-202', date: '2025-08-22', time: '2:00 PM - 8:00 PM', budget: 280, description: 'Day time event, play groovy house.', genres: ['House'], status: 'Open' },
-  { id: 'g20', title: 'The Bassment Opening', venueId: 'biz-203', date: '2025-08-02', time: '10:00 PM - 3:00 AM', budget: 300, description: '', genres: ['Deep-Tech'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g21', title: 'Saturday Social', venueId: 'biz-6', date: '2025-08-09', time: '8:00 PM - 1:00 AM', budget: 250, description: 'Vibey, social atmosphere.', genres: ['House', 'Soulful House'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g22', title: 'Groove Garden Festival', venueId: 'biz-204', date: '2025-08-16', time: '12:00 PM - 10:00 PM', budget: 400, description: 'Main stage, peak time slot.', genres: ['Melodic House', 'Progressive'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g23', title: 'We House Sundays Guest Slot', venueId: 'biz-3', date: '2025-08-24', time: '4:00 PM - 6:00 PM', budget: 350, description: 'Warm up for the headliner.', genres: ['Soulful House'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g24', title: 'Fiction Wednesdays', venueId: 'biz-10', date: '2025-08-27', time: '10:00 PM - 1:00 AM', budget: 200, description: 'Mid-week party, anything goes.', genres: ['Breaks', 'House'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g25', title: 'Reset Closing Set', venueId: 'biz-8', date: '2025-08-30', time: '2:00 AM - 4:00 AM', budget: 250, description: '', genres: ['Techno'], status: 'Booked', bookedDjId: 'dj-46' },
-  { id: 'g26', title: 'Warehouse Rave', venueId: 'biz-44', date: '2025-08-23', time: '11:00 PM - 4:00 AM', budget: 300, description: 'Hard and fast techno.', genres: ['Hard Techno', 'Industrial'], status: 'Open' },
+type UserProfileRow = Database['public']['Tables']['app_e255c3cdb5_user_profiles']['Row'];
+type DjProfileRow = Database['public']['Tables']['app_e255c3cdb5_dj_profiles']['Row'];
+type BusinessProfileRow = Database['public']['Tables']['app_e255c3cdb5_business_profiles']['Row'];
 
-  // Gigs for dj-46 to populate previous months on MyGigs page
-  // July 2025
-  { id: 'g27', title: 'Mid-Month Modular', venueId: 'biz-1', date: '2025-07-15', time: '10:00 PM - 3:00 AM', budget: 400, description: 'Past gig.', genres: ['Techno'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g28', title: 'Winter Warmer at Waiting Room', venueId: 'biz-2', date: '2025-07-22', time: '8:00 PM - 1:00 AM', budget: 250, description: 'Past gig.', genres: ['Deep House'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g29', title: 'Souk Saturday', venueId: 'biz-7', date: '2025-07-12', time: '9:00 PM - 2:00 AM', budget: 300, description: 'Past gig.', genres: ['Melodic House'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g30', title: 'Fiction Flashback', venueId: 'biz-10', date: '2025-07-04', time: '10:00 PM - 2:00 AM', budget: 200, description: 'Past gig.', genres: ['90s House'], status: 'Completed', bookedDjId: 'dj-46' },
+const PROFILE_QUERY_STRING = '*, dj_profiles:app_e255c3cdb5_dj_profiles(*), business_profiles:app_e255c3cdb5_business_profiles(*)';
 
-  // June 2025
-  { id: 'g31', title: 'Deep Tech Night', venueId: 'biz-203', date: '2025-06-20', time: '11:00 PM - 4:00 AM', budget: 350, description: 'Past gig.', genres: ['Deep-Tech'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g32', title: 'House of Machines Social', venueId: 'biz-6', date: '2025-06-13', time: '7:00 PM - 12:00 AM', budget: 200, description: 'Past gig.', genres: ['House', 'Soulful House'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g33', title: 'Colorbox Showcase', venueId: 'biz-9', date: '2025-06-06', time: '9:00 PM - 2:00 AM', budget: 300, description: 'Past gig.', genres: ['Techno', 'Minimal'], status: 'Completed', bookedDjId: 'dj-46' },
+/**
+ * Maps a joined row from Supabase to the application's user types.
+ * @param data The raw data object from the Supabase query with joined profiles.
+ * @returns A processed and typed user profile object (DJ, Business, or UserProfile).
+ */
+function mapJoinedDataToUserProfile(data: any): DJ | Business | UserProfile {
+    const role = data.user_type as Role;
 
-  // May 2025
-  { id: 'g34', title: 'ERA Special Guest', venueId: 'biz-5', date: '2025-05-30', time: '10:00 PM - 4:00 AM', budget: 500, description: 'Past gig.', genres: ['Progressive', 'Techno'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g35', title: 'Rooftop Sundowners', venueId: 'biz-202', date: '2025-05-16', time: '5:00 PM - 10:00 PM', budget: 320, description: 'Past gig.', genres: ['Melodic House'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g36', title: 'Athletic Club Groove', venueId: 'biz-13', date: '2025-05-23', time: '8:00 PM - 1:00 AM', budget: 280, description: 'Past gig.', genres: ['Soulful House'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g37', title: 'The Movemint', venueId: 'biz-32', date: '2025-05-09', time: '9:00 PM - 2:00 AM', budget: 250, description: 'Past gig.', genres: ['Deep House'], status: 'Completed', bookedDjId: 'dj-46' },
-  { id: 'g38', title: 'Kulture Klub Night', venueId: 'biz-33', date: '2025-05-02', time: '10:00 PM - 3:00 AM', budget: 220, description: 'Past gig.', genres: ['Tech House'], status: 'Completed', bookedDjId: 'dj-46' },
-];
-
-let interests: { gigId: string; djId: string; timestamp: string }[] = [
-    { gigId: 'g17', djId: 'dj-46', timestamp: new Date().toISOString() },
-    { gigId: 'g19', djId: 'dj-46', timestamp: new Date().toISOString() },
-    { gigId: 'g26', djId: 'dj-46', timestamp: new Date().toISOString() },
-];
-
-// --- STREAM SESSIONS ---
-const streamSessions: StreamSession[] = [
-    { id: 'stream-1', djId: 'dj-3', title: 'Live from a secret warehouse', isLive: true, listenerCount: 1342 },
-];
-
-// --- FEED ITEMS ---
-let feedItems: FeedItem[] = [
-    { id: 'f1', type: 'live_now', userId: 'dj-3', title: 'Desiree is LIVE from a secret warehouse.', description: 'Tuning in for some heavy techno vibes!', imageUrl: 'https://images.unsplash.com/photo-1594623930335-9491a343a429?q=80&w=800&auto=format&fit=crop', timestamp: '2h ago', likes: 1200, comments: 88, shares: 45, relatedId: 'stream-1' },
-    { id: 'f2', type: 'new_track', userId: 'dj-10', title: 'New Track: City Lights', description: 'My new single "City Lights" is out now. A deep, lo-fi journey for late nights. Hope you enjoy.', imageUrl: 'https://picsum.photos/seed/dwson-track/600/400', timestamp: '18h ago', likes: 1800, comments: 130, shares: 77 },
-    { id: 'f3', type: 'gig_announcement', userId: 'biz-3', title: 'We House Sundays - August Lineup!', description: 'So excited to announce FKA Mash will be headlining our next event! Tickets are flying.', imageUrl: 'https://picsum.photos/seed/whsaug/600/400', timestamp: '1d ago', likes: 950, comments: 45, shares: 30 },
-    { id: 'f4', type: 'new_connection', userId: 'dj-1', title: 'K-DOLLA is now following Desiree', description: 'Two of the city\'s techno titans are now connected. We love to see it!', imageUrl: 'https://picsum.photos/seed/connect1/600/400', timestamp: '2d ago', likes: 450, comments: 23, shares: 12 },
-    { id: 'f5', type: 'new_review', userId: 'dj-39', title: 'Ivan Turanjanin gets a 5-star review!', description: '"An absolutely mind-blowing, raw performance at Mødular. The master at work." The people have spoken!', imageUrl: 'https://picsum.photos/seed/ivan-review/600/400', timestamp: '3d ago', likes: 1500, comments: 99, shares: 60 },
-    { id: 'f6', type: 'new_mix', userId: 'dj-4', title: 'New Mix: Dub Echoes Vol. 5', description: '60 minutes of deep, dubby techno. Perfect for a rainy day in the city.', imageUrl: 'https://picsum.photos/seed/sidesmix/600/400', timestamp: '4d ago', likes: 800, comments: 110, shares: 90, relatedId: 'pl4' },
-    { id: 'f14', type: 'new_mix', userId: 'dj-2', title: 'Afro House Sunset Mix', description: 'Here is my latest mix for all the sunset chasers. Enjoy!', imageUrl: 'https://picsum.photos/seed/pl2/600/400', timestamp: '3d ago', likes: 2100, comments: 250, shares: 150, relatedId: 'pl2' },
-    { id: 'f7', type: 'gig_announcement', userId: 'biz-1', title: 'Open Decks next Wednesday!', description: 'Think you have what it takes? We\'re hosting an open decks night. Come through and show us what you got. Best selector gets a paid gig.', imageUrl: 'https://picsum.photos/seed/opendecks/600/400', timestamp: '5d ago', likes: 800, comments: 150, shares: 50},
-    { id: 'f8', type: 'new_track', userId: 'dj-11', title: 'Out Now: "Langa"', description: 'My new EP just dropped on all platforms. This one is for my home. Big love to everyone supporting.', imageUrl: 'https://picsum.photos/seed/pierrejohnson/600/400', timestamp: '5d ago', likes: 2200, comments: 180, shares: 90},
-    { id: 'f9', type: 'live_now', userId: 'dj-12', title: 'Leighton Moody is live!', description: 'Sunday vinyl session incoming. Deep and soulful vibes only.', imageUrl: 'https://picsum.photos/seed/leightonlive/600/400', timestamp: '6d ago', likes: 980, comments: 75, shares: 40},
-    { id: 'f10', type: 'new_connection', userId: 'biz-23', title: 'Wolfkop Weekender is now following Pierre Johnson', description: 'Looks like a future collaboration might be on the cards!', imageUrl: 'https://picsum.photos/seed/wolfkoppierre/600/400', timestamp: '1w ago', likes: 1100, comments: 40, shares: 20},
-    { id: 'f11', type: 'gig_announcement', userId: 'biz-49', title: 'Deep End returns with Sides', description: 'We\'re back in the warehouse on Sept 12. Limited tickets available for this one.', imageUrl: 'https://picsum.photos/seed/deependg10/600/400', timestamp: '1w ago', likes: 600, comments: 55, shares: 35},
-    { id: 'f12', type: 'new_mix', userId: 'dj-7', title: 'The Other Side Live Recording', description: 'Here\'s my set from last weekend. All minimal, all groovy.', imageUrl: 'https://picsum.photos/seed/fogshowmix/600/400', timestamp: '1w ago', likes: 1300, comments: 95, shares: 65},
-    { id: 'f13', type: 'new_track', userId: 'dj-33', title: 'Chronical Deep - "Karbau"', description: 'New music alert! My track Karbau is officially out. Go stream it and let me know what you think.', imageUrl: 'https://picsum.photos/seed/chronicaldeep/600/400', timestamp: '8d ago', likes: 2500, comments: 250, shares: 120},
-];
-
-// --- NOTIFICATIONS ---
-let notifications: Notification[] = [
-    // For DJ: Double X eL (dj-46)
-    { id: 'n1', userId: 'dj-46', type: NotificationType.Message, text: 'Mødular. wants to discuss your availability for a future gig.', timestamp: '1h ago', read: false, relatedId: 'chat-6' },
-    { id: 'n2', userId: 'dj-46', type: NotificationType.NewFollower, text: 'Leighton Moody started following you.', timestamp: '1d ago', read: true, relatedId: 'dj-12' },
-    { id: 'n3', userId: 'dj-46', type: NotificationType.EventUpdate, text: 'The gig "Dub Techno Special: Sides" has been updated.', timestamp: '3d ago', read: true, relatedId: 'g10' },
-
-    // For Business: Mødular (biz-1)
-    { id: 'n4', userId: 'biz-1', type: NotificationType.BookingRequest, text: 'K-DOLLA expressed interest in your gig: "Deep Tech Invites".', timestamp: '5m ago', read: false, relatedId: 'g1' },
-    { id: 'n5', userId: 'biz-1', type: NotificationType.BookingRequest, text: 'Pierre Johnson expressed interest in your gig: "Minimal Effort".', timestamp: '2h ago', read: false, relatedId: 'g8' },
-    { id: 'n6', userId: 'biz-1', type: NotificationType.NewFollower, text: 'Cape Town Raver started following you.', timestamp: '1d ago', read: true, relatedId: 'listener-1' },
-
-    // For Listener: Cape Town Raver (listener-1)
-    { id: 'n7', userId: 'listener-1', type: NotificationType.EventUpdate, text: 'We House Sundays just announced their August lineup!', timestamp: '4h ago', read: false, relatedId: 'g3' },
-];
-
-// --- CHATS ---
-let nextMessageId = 5;
-const chats: Chat[] = [
-  { id: 'chat-1', participants: ['dj-1', 'biz-1'], messages: [
-      { id: 'm1', senderId: 'biz-1', text: "Hey K-DOLLA, we have an open slot next Friday. Are you available?", timestamp: "1d ago"},
-      { id: 'm2', senderId: 'dj-1', text: "Hey! Sounds good. What are the timings and budget?", timestamp: "22h ago"},
-  ]},
-  { id: 'chat-2', participants: ['dj-1', 'biz-2'], messages: [
-      { id: 'm3', senderId: 'biz-2', text: "Love your latest mix! Let us know when you're free for a rooftop set.", timestamp: "3h ago"},
-  ]},
-  { id: 'chat-3', participants: ['dj-1', 'dj-2'], messages: [
-      { id: 'm4', senderId: 'dj-2', text: "Bro your last set was fire.", timestamp: "2d ago"},
-  ]},
-  { id: 'chat-4', participants: ['dj-11', 'biz-23'], messages: []},
-  { id: 'chat-5', participants: ['dj-10', 'biz-9'], messages: []},
-  { id: 'chat-6', participants: ['dj-46', 'biz-1'], messages: [
-    { id: 'm5', senderId: 'biz-1', text: "Hey Double X, we're big fans of your untitled.deep series. Let's connect about a potential residency.", timestamp: "1h ago"},
-  ]},
-];
-
-// --- API FUNCTIONS ---
-const simulate = <T,>(data: T): Promise<T> => new Promise(res => {
-    setTimeout(() => {
-        if (typeof data === 'undefined') {
-            res(data);
-            return;
-        }
-        // Deep copy to prevent mutation of the mock DB.
-        res(JSON.parse(JSON.stringify(data)));
-    }, 300);
-});
-
-
-export const getDJs = () => simulate(djs);
-export const getDJById = (id: string) => simulate(djs.find(d => d.id === id));
-export const getBusinesses = () => simulate(businesses);
-export const getBusinessById = (id: string) => simulate(businesses.find(b => b.id === id));
-export const getUserById = (id: string) => simulate(allUsers.find(u => u.id === id));
-export const getGigById = (id: string) => {
-    const gig = gigs.find(g => g.id === id);
-    if (!gig) return simulate(undefined);
-
-    const bookedDj = gig.bookedDjId ? djs.find(d => d.id === gig.bookedDjId) : undefined;
-    const enrichedGig = {
-        ...gig,
-        interestCount: interests.filter(i => i.gigId === gig.id).length,
-        bookedDjName: bookedDj?.name,
+    const baseUser = {
+        id: data.user_id,
+        name: data.display_name,
+        avatarUrl: data.avatar_url,
+        email: (data as any).email,
+        role,
+        settings: data.settings as UserSettings,
+        // Mocked as they are not in the view
+        following: [],
+        followers: Math.floor(Math.random() * 2000),
     };
-    return simulate(enrichedGig);
-}
-export const getGigs = () => simulate(gigs);
-export const getGigsForVenue = (venueId: string) => {
-    const venueGigs = gigs.filter(g => g.venueId === venueId);
-    const enrichedGigs = venueGigs.map(gig => {
-        const bookedDj = gig.bookedDjId ? djs.find(d => d.id === gig.bookedDjId) : undefined;
+    
+    if (role === Role.DJ) {
+        const djProfile = Array.isArray(data.dj_profiles) ? data.dj_profiles[0] : data.dj_profiles;
         return {
-            ...gig,
-            interestCount: interests.filter(i => i.gigId === gig.id).length,
-            bookedDjName: bookedDj?.name,
-        }
-    });
-    return simulate(enrichedGigs);
-};
-export const getVenueByGig = (gigId: string) => {
-    const gig = gigs.find(g => g.id === gigId);
-    return simulate(businesses.find(b => b.id === gig?.venueId));
-};
-export const getDJByTrack = (trackId: string) => {
-    const track = tracks.find(t => t.id === trackId);
-    return simulate(djs.find(d => d.id === track?.artistId));
+            ...baseUser,
+            role: Role.DJ,
+            genres: djProfile?.genres || [],
+            bio: djProfile?.bio || '',
+            location: djProfile?.location || '',
+            rating: djProfile?.rating || 0,
+            reviewsCount: djProfile?.reviews_count || 0,
+            tier: (djProfile?.tier as Tier) || Tier.Bronze,
+            socials: djProfile?.socials as any || {},
+            // Mocked in original function
+            tracks: [],
+            mixes: [],
+        } as DJ;
+    } else if (role === Role.Business) {
+        const businessProfile = Array.isArray(data.business_profiles) ? data.business_profiles[0] : data.business_profiles;
+        return {
+            ...baseUser,
+            role: Role.Business,
+            name: businessProfile?.venue_name || data.display_name,
+            location: businessProfile?.location || '',
+            description: businessProfile?.description || '',
+            rating: businessProfile?.rating || 0,
+            reviewsCount: businessProfile?.reviews_count || 0,
+            socials: businessProfile?.socials as any || {},
+        } as Business;
+    } else { // Listener
+        return {
+            ...baseUser,
+            role: Role.Listener,
+        } as UserProfile;
+    }
 }
-export const getFeedItems = () => simulate(feedItems.sort((a,b) => 0.5 - Math.random()));
-
-export const addFeedItem = (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'comments' | 'shares'>) => {
-    const newFeedItem: FeedItem = {
-        ...item,
-        id: `f${feedItems.length + 1}`,
-        timestamp: 'Just now',
-        likes: 0,
-        comments: 0,
-        shares: 0,
-    };
-    feedItems.unshift(newFeedItem);
-    return simulate(newFeedItem);
-}
 
 
-export const getPlaylistById = (id: string) => simulate(playlists.find(p => p.id === id));
-export const getTracksByIds = (ids: string[]) => simulate(tracks.filter(t => ids.includes(t.id)));
-export const getStreamSessionById = (id: string) => simulate(streamSessions.find(s => s.id === id));
-
-
-export const getChatById = (chatId: string) => simulate(chats.find(c => c.id === chatId));
-
-export const findChatByParticipants = (userId1: string, userId2: string) => {
-    const chat = chats.find(c => c.participants.includes(userId1) && c.participants.includes(userId2));
-    return simulate(chat);
+export const getDJById = async (userId: string): Promise<DJ | undefined> => {
+    const profile = await getUserById(userId);
+    if (profile?.role === Role.DJ) {
+        return profile as DJ;
+    }
+    return undefined;
 };
 
-export const createChat = (userId1: string, userId2: string) => {
-    const newChat: Chat = {
-        id: `chat-${chats.length + 1}`,
-        participants: [userId1, userId2],
-        messages: []
-    };
+export const getDJs = async (): Promise<DJ[]> => {
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .select(PROFILE_QUERY_STRING)
+        .eq('user_type', 'dj');
 
-export const sendMessage = (chatId: string, senderId: string, text: string) => {
-    const chat = chats.find(c => c.id === chatId);
-    if (chat) {
-        const newMessage: Message = {
-            id: `m${nextMessageId++}`,
-            senderId,
-            text,
-            timestamp: 'Just now'
-        };
-        chat.messages.push(newMessage);
+    if (error) {
+        console.error("Error fetching DJs:", error);
+        return [];
+    }
+    if (!data) return [];
 
-        const recipientId = chat.participants.find(p => p !== senderId);
-        if (recipientId) {
-             const sender = allUsers.find(u => u.id === senderId);
-             notifications.unshift({
-                id: `n${notifications.length + 1}`,
-                userId: recipientId,
-                type: NotificationType.Message,
-                text: `New message from ${sender?.name}`,
-                timestamp: 'Just now',
-                read: false,
-                relatedId: chatId,
-             });
+    return data.map(d => mapJoinedDataToUserProfile(d) as DJ);
+};
+
+
+export const getBusinesses = async (): Promise<Business[]> => {
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .select(PROFILE_QUERY_STRING)
+        .eq('user_type', 'business');
+
+    if (error) {
+        console.error("Error fetching businesses:", error);
+        return [];
+    }
+    if (!data) return [];
+
+    return data.map(d => mapJoinedDataToUserProfile(d) as Business);
+};
+
+export const getBusinessById = async (userId: string): Promise<Business | undefined> => {
+    const profile = await getUserById(userId);
+    if (profile?.role === Role.Business) {
+        return profile as Business;
+    }
+    return undefined;
+}
+
+export const getUserById = async (userId: string): Promise<DJ | Business | UserProfile | undefined> => {
+    // Hardcoded fix for data inconsistency for user 'doublexel.music@gmail.com'.
+    // The auth user ID is '7f765e47-375e-47f4-8536-e7669ad8f254'.
+    // The profile table ID is 'e3c7483f-50c1-4ecf-92d0-0d01f333984a'.
+    const queryUserId = userId === '7f765e47-375e-47f4-8536-e7669ad8f254'
+      ? 'e3c7483f-50c1-4ecf-92d0-0d01f333984a'
+      : userId;
+
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .select(PROFILE_QUERY_STRING)
+        .eq('user_id', queryUserId) // Use the corrected user ID for the query
+        .single();
+    
+    if (error) {
+        if (!error.message.includes('rows returned')) {
+            console.error('Error fetching user profile from tables:', error);
         }
-
-        return simulate(newMessage);
+        return undefined;
     }
 
+    if (data) {
+        // After fetching with the correct ID, map the data.
+        const profile = mapJoinedDataToUserProfile(data);
+        // CRITICAL: Ensure the returned profile's ID matches the authenticated user's ID (`userId`)
+        // to maintain consistency throughout the app, as the rest of the app relies on the auth ID.
+        if (profile) {
+            profile.id = userId; 
+        }
+        return profile;
+    }
+
+    return undefined;
 };
 
 
-export const authenticate = (email: string): Promise<User | undefined> => {
-  const user = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (!user) return simulate(undefined);
+export const getGigById = async (id: string): Promise<Gig | undefined> => {
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_gigs')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-  // Return the detailed profile based on role
-  if (user.role === Role.DJ) {
-      return getDJById(user.id);
-  }
-  if (user.role === Role.Business) {
-      return getBusinessById(user.id);
-  }
-  if (user.role === Role.Listener) {
-      return simulate(listeners.find(l => l.id === user.id));
-  }
-  return simulate(user);
-}
+    if (error) {
+        if (!error.message.includes('rows returned')) {
+            console.error('Error fetching gig by id:', error);
+        }
+        return undefined;
+    }
+    return data as Gig || undefined;
+};
 
-export const addGig = (newGig: Omit<Gig, 'id' | 'status'>) => {
-    const gig: Gig = {
-        ...newGig,
-        id: `g${gigs.length + 1}`,
+export const getGigs = async (): Promise<Gig[]> => {
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_gigs')
+        .select('*');
+
+    if (error) {
+        console.error('Error fetching gigs:', error);
+        return [];
+    }
+    return (data || []) as Gig[];
+};
+export const getGigsForVenue = async (businessUserId: string): Promise<Gig[]> => {
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_gigs')
+        .select('*')
+        .eq('business_user_id', businessUserId);
+
+    if (error) {
+        console.error('Error fetching gigs for venue:', error);
+        return [];
+    }
+    return (data || []) as Gig[];
+};
+
+export const getVenueByGig = async (gigId: string): Promise<Business | undefined> => {
+    const gig = await getGigById(gigId);
+    if (!gig) return undefined;
+    
+    return getBusinessById(gig.business_user_id);
+};
+
+export const getPosts = async (): Promise<Post[]> => {
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching posts:', error);
+        return [];
+    }
+    return (data as any[]) || [];
+};
+
+export const getPostById = async (id: string): Promise<Post | undefined> => {
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_posts')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    if (error) {
+        if (!error.message.includes('rows returned')) {
+            console.error('Error fetching post by id:', error);
+        }
+        return undefined;
+    }
+    return (data as any) || undefined;
+};
+
+export const addPost = async (postData: Omit<Post, 'id' | 'created_at' | 'updated_at' | 'likes_count' | 'comments_count' | 'timestamp' | 'likes' | 'likedBy' | 'comments' | 'reposts'>): Promise<Post | null> => {
+    const newPost: Database['public']['Tables']['app_e255c3cdb5_posts']['Insert'] = {
+        user_id: postData.userId,
+        content: postData.description,
+        media_url: postData.mediaUrl,
+        media_type: postData.mediaType
+    };
+    
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_posts') as any)
+        .insert([newPost])
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error adding post:', error);
+        return null;
+    }
+    return data as any;
+};
+
+export const getNotifications = async (userId: string): Promise<Notification[]> => {
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching notifications:', error);
+        return [];
+    }
+    return (data as any[] || []).map(n => ({...n, read: n.is_read, relatedId: n.related_id, userId: n.user_id}));
+};
+
+export const getPlaylistById = async (id: string): Promise<Playlist | null> => {
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_playlists')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    if (error) {
+        console.error('Error fetching playlist:', error);
+        return null;
+    }
+    return data as any as Playlist | null;
+};
+
+export const markAllAsRead = async (userId: string): Promise<boolean> => {
+    const { error } = await (supabase
+        .from('app_e255c3cdb5_notifications') as any)
+        .update({ is_read: true })
+        .eq('user_id', userId)
+        .eq('is_read', false);
+
+    if (error) {
+        console.error('Error marking notifications as read:', error);
+        return false;
+    }
+    return true;
+};
+
+export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedChat[]> => { // TODO: Define EnrichedChat type
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_messages')
+        .select('*')
+        .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+        .order('created_at', { ascending: true });
+
+    const messages = data as Database['public']['Tables']['app_e255c3cdb5_messages']['Row'][];
+    
+    if (error) {
+        console.error('Error fetching messages:', error);
+        return [];
+    }
+    if (!messages) return [];
+
+    const otherUserIds = [...new Set(messages.map(m => m.sender_id === userId ? m.recipient_id : m.sender_id))];
+    
+    const { data: profilesData, error: profileError } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .select('user_id, display_name, avatar_url, user_type') // Select only needed fields
+        .in('user_id', otherUserIds);
+
+    const profiles = profilesData as UserProfileRow[];
+
+    if (profileError) {
+        console.error('Error fetching participant profiles:', profileError);
+        return [];
+    }
+    if (!profiles) return [];
+
+    const chatsMap = new Map<string, any>();
+    profiles.forEach(p => {
+        const processedP = { id: p.user_id, name: p.display_name, avatarUrl: p.avatar_url, role: p.user_type as Role };
+        chatsMap.set(p.user_id, {
+            id: p.user_id, // using other user id as chat id for simplicity
+            participants: [userId, p.user_id],
+            messages: [],
+            otherParticipant: processedP,
+        });
+    });
+
+    messages.forEach(message => {
+        const otherUserId = message.sender_id === userId ? message.recipient_id : message.sender_id;
+        if (chatsMap.has(otherUserId)) {
+            const chatMsg: Message = { id: message.id, senderId: message.sender_id, text: message.content, timestamp: message.created_at };
+            chatsMap.get(otherUserId).messages.push(chatMsg);
+        }
+    });
+
+    return Array.from(chatsMap.values());
+};
+
+export const sendMessage = async (senderId: string, recipientId: string, content: string): Promise<Message | null> => {
+    const message: Database['public']['Tables']['app_e255c3cdb5_messages']['Insert'] = { 
+        sender_id: senderId, 
+        recipient_id: recipientId, 
+        content: content 
+    };
+
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_messages') as any)
+        .insert([message])
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error sending message:', error);
+        return null;
+    }
+    const result = data as Database['public']['Tables']['app_e255c3cdb5_messages']['Row'];
+    return { id: result.id, senderId: result.sender_id, text: result.content, timestamp: result.created_at };
+};
+
+export const createDjProfile = async (userId: string): Promise<boolean> => {
+    const { error } = await (supabase
+        .from('app_e255c3cdb5_dj_profiles') as any)
+        .upsert({
+            user_id: userId,
+            genres: ['Electronic'], // Default value
+            bio: 'Newly joined DJ! Please update your bio.',
+            location: 'Cape Town',
+            tier: Tier.Bronze,
+        }, { onConflict: 'user_id' });
+
+    if (error) {
+        console.error("Error self-healing DJ profile:", error);
+        return false;
+    }
+    return true;
+};
+
+export const createBusinessProfile = async (userId: string, displayName: string): Promise<boolean> => {
+    const { error } = await (supabase
+        .from('app_e255c3cdb5_business_profiles') as any)
+        .upsert({
+            user_id: userId,
+            venue_name: displayName,
+            location: 'Cape Town',
+            description: 'A great place for music! Please update your description.'
+        }, { onConflict: 'user_id' });
+    
+    if (error) {
+        console.error("Error self-healing business profile:", error);
+        return false;
+    }
+    return true;
+};
+
+export const createUserProfile = async (user: any): Promise<UserProfile | null> => {
+    const userType = user.user_metadata?.user_type;
+    // For Google OAuth, name is 'full_name'. For email signup, we set 'display_name'.
+    const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name;
+    const avatarUrl = user.user_metadata?.avatar_url;
+
+    if (!userType || !displayName) {
+        console.error("Cannot create/update profile, missing metadata (user_type or display_name/full_name)");
+        console.error("Auth user object:", JSON.stringify(user, null, 2));
+        return null;
+    }
+
+    // 1. Upsert base user profile. This will create it if it doesn't exist,
+    // or update it with the latest metadata from the auth provider if it does.
+    const { data: userProfile, error: userProfileError } = await (supabase
+        .from('app_e255c3cdb5_user_profiles') as any)
+        .upsert({
+            user_id: user.id,
+            user_type: userType,
+            display_name: displayName,
+            avatar_url: avatarUrl || `https://source.unsplash.com/random/200x200/?abstract`,
+        }, { onConflict: 'user_id' })
+        .select()
+        .single();
+    
+    if (userProfileError) {
+        console.error("Error upserting base user profile:", userProfileError);
+        return null;
+    }
+
+    // 2. Create role-specific profile if it doesn't exist.
+    if (userType === 'dj') {
+        await createDjProfile(user.id);
+    } else if (userType === 'business') {
+        await createBusinessProfile(user.id, displayName);
+    }
+
+    // The view might take a moment to update, so we return the constructed profile
+    return {
+        id: userProfile.user_id,
+        name: userProfile.display_name,
+        avatarUrl: userProfile.avatar_url,
+        role: userProfile.user_type,
+    };
+};
+
+export const signUpWithEmail = async (email: string, password: string, name: string, role: Role) => {
+    // The `data` option passes metadata that can be used in a database trigger
+    // to create the corresponding user profile upon signup.
+    const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            data: {
+                display_name: name,
+                user_type: role,
+                avatar_url: `https://source.unsplash.com/random/200x200/?abstract,${role}`
+            },
+        },
+    });
+    // A trigger on the auth.users table should handle creating the public profile.
+    return { user: data.user, error };
+};
+
+export const signInWithGoogle = async (role?: Role) => {
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            data: role ? { user_type: role } : undefined,
+        } as any,
+    });
+    return { error };
+};
+
+export const authenticate = async (email: string, password: string): Promise<UserProfile | DJ | Business | undefined> => {
+    const { data: { user }, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+    });
+
+    if (error) {
+        console.error('Error signing in:', error.message);
+        throw error;
+    }
+
+    if (!user) {
+        return undefined;
+    }
+    
+    // After login, fetch the full profile to get role-specific data
+    let profile = await getUserById(user.id);
+    if (!profile) {
+        console.error("User logged in but profile not found:", user.id);
+        throw new Error("User profile not found after login.");
+    }
+    
+    // The view should provide email, but let's be safe
+    if (profile && !profile.email) {
+        profile.email = user.email!;
+    }
+    
+    return profile;
+};
+
+export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig | null> => {
+     const newGig: Omit<Database['public']['Tables']['app_e255c3cdb5_gigs']['Insert'], 'id'> = {
+        ...gigData,
         status: 'Open'
     };
-    gigs.unshift(gig);
-    return simulate(gig);
-}
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_gigs') as any)
+        .insert([newGig])
+        .select()
+        .single();
 
-export const expressInterestInGig = (gigId: string, djId: string) => {
-    const gig = gigs.find(g => g.id === gigId);
-    const dj = djs.find(d => d.id === djId);
-    const venue = businesses.find(b => b.id === gig?.venueId);
-
-    if (gig && dj && venue) {
-        // Record the interest
-        if (!interests.some(i => i.gigId === gigId && i.djId === djId)) {
-            interests.unshift({ gigId, djId, timestamp: new Date().toISOString() });
-        }
-
-        // Add notification for the venue
-        notifications.unshift({
-            id: `n${notifications.length + 1}`,
-            userId: venue.id,
-            type: NotificationType.BookingRequest,
-            text: `${dj.name} expressed interest in your gig: "${gig.title}"`,
-            timestamp: 'Just now',
-            read: false,
-            relatedId: gig.id,
-        });
-        return simulate(true);
+    if (error) {
+        console.error('Error adding gig:', error);
+        return null;
     }
-    return simulate(false);
-}
-
-export const getInterestedGigsForDj = (djId: string) => {
-    const interestedGigIds = interests.filter(i => i.djId === djId).map(i => i.gigId);
-    const interestedGigs = gigs.filter(g => interestedGigIds.includes(g.id));
-    return simulate(interestedGigs);
+    return data as any;
 };
 
-export const getBookedGigsForDj = (djId: string) => {
-    const bookedGigs = gigs.filter(g => g.bookedDjId === djId && g.status === 'Booked');
-    return simulate(bookedGigs);
+export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promise<Gig | null> => {
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_gigs') as any)
+        .update(updatedData)
+        .eq('id', gigId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating gig:', error);
+        return null;
+    }
+    return data as any;
 };
 
-export const getCompletedGigsForDj = (djId: string) => {
-    const completedGigs = gigs.filter(g => g.bookedDjId === djId && g.status === 'Completed');
-    return simulate(completedGigs);
-}
-
-export const getInterestedDJsForGig = (gigId: string): Promise<DJ[]> => {
-    const interestedDjIds = interests.filter(i => i.gigId === gigId).map(i => i.djId);
-    const interestedDjs = djs.filter(d => interestedDjIds.includes(d.id));
-    return simulate(interestedDjs);
-};
-
-
-
-    if (gig && dj && venue) {
-        if (gig.status === 'Booked') {
-            console.error("Gig is already booked");
-            return simulate(false);
-        }
-
-
-
-        // Notify other applicants
-        const allInterestedDjIds = interests.filter(i => i.gigId === gigId).map(i => i.djId);
-        allInterestedDjIds.forEach(interestedDjId => {
-            if (interestedDjId !== dj.id) {
-                notifications.unshift({
-                    id: `n${notifications.length + 1}`,
-                    userId: interestedDjId,
-                    type: NotificationType.GigFilled,
-                    text: `The gig "${gig.title}" has been filled. Better luck next time!`,
-                    timestamp: 'Just now',
-                    read: false,
-                    relatedId: gig.id,
-                });
-            }
-        });
-
-        // Remove all interest entries for this gig now that it's booked
-        interests = interests.filter(i => i.gigId !== gigId);
-
-        return simulate(true);
-    }
-
-
-
-// Leaderboard Functions
-export const getTopDJs = () => simulate(djs.slice().sort((a, b) => b.rating - a.rating));
-export const getTopVenues = () => simulate(businesses.slice().sort((a, b) => b.rating - a.rating));
-
-// Social Functions
-const findMutableProfile = (userId: string): DJ | Business | Listener | undefined => {
-    let user: DJ | Business | Listener | undefined = djs.find(u => u.id === userId);
-    if (user) return user;
-    user = businesses.find(u => u.id === userId);
-    if (user) return user;
-    return listeners.find(u => u.id === userId);
-}
-
-export const followUser = (currentUserId: string, targetUserId: string) => {
-    const currentUser = findMutableProfile(currentUserId);
-    const targetUser = allUsers.find(u => u.id === targetUserId);
-    
-    if(!targetUser) return simulate(false);
-
-    if (currentUser && !currentUser.following.includes(targetUserId)) {
-        currentUser.following.push(targetUserId);
-        
-        const targetProfile = findMutableProfile(targetUserId);
-        if (targetProfile) {
-            targetProfile.followers++;
-        }
-
-        notifications.unshift({
-             id: `n${notifications.length + 1}`,
-             userId: targetUserId,
-             type: NotificationType.NewFollower,
-             text: `${currentUser.name} started following you.`,
-             timestamp: 'Just now',
-             read: false,
-             relatedId: currentUserId,
-        });
-    
-export const unfollowUser = (currentUserId: string, targetUserId: string) => {
-    const currentUser = findMutableProfile(currentUserId);
-    const targetUser = findMutableProfile(targetUserId);
-
-    if (currentUser) {
-        currentUser.following = currentUser.following.filter(id => id !== targetUserId);
-    }
-     if (targetUser) {
-        targetUser.followers--;
-    }
-    return simulate(true);
-}
-
-
-export const getFollowersForUser = (userId: string) => {
-    const followers = allUsers.filter(u => {
-      const profile = findMutableProfile(u.id);
-      return profile && profile.following.includes(userId);
-    });
-    return simulate(followers);
-}
-
-export const getFollowingForUser = (userId: string) => {
-    const user = findMutableProfile(userId);
-    if(user) {
-        const followingUsers = user.following.map(id => allUsers.find(u => u.id === id)).filter(Boolean) as User[];
-        return simulate(followingUsers);
-    }
-    return simulate([]);
-}
-
-export const createStreamSession = (djId: string, title: string) => {
-    const newSession: StreamSession = {
-        id: `stream-${streamSessions.length + 1}`,
-        djId,
-        title,
-        isLive: true,
-        listenerCount: 0,
+export const expressInterestInGig = async (gigId: string, djUserId: string): Promise<boolean> => {
+    const application: Database['public']['Tables']['app_e255c3cdb5_gig_applications']['Insert'] = { 
+        gig_id: gigId, 
+        dj_user_id: djUserId, 
+        status: 'pending' 
     };
-    streamSessions.push(newSession);
-    return simulate(newSession);
+    const { error } = await (supabase
+        .from('app_e255c3cdb5_gig_applications') as any)
+        .insert([application]);
+
+    if (error) {
+        console.error('Error expressing interest in gig:', error);
+        return false;
+    }
+    return true;
 };
 
-export const getTracksForDj = (djId: string) => {
-    const djTracks = tracks.filter(t => t.artistId === djId);
-    return simulate(djTracks);
+export const getInterestedDJsForGig = async (gigId: string): Promise<DJ[]> => {
+    const { data: applications, error } = await supabase
+        .from('app_e255c3cdb5_gig_applications')
+        .select('dj_user_id')
+        .eq('gig_id', gigId);
+
+    if (error) {
+        console.error('Error fetching interested DJs:', error);
+        return [];
+    }
+    if (!applications) return [];
+
+    const djUserIds = (applications as any[]).map(app => app.dj_user_id);
+    if (djUserIds.length === 0) return [];
+
+    const { data: djs, error: djError } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .select(PROFILE_QUERY_STRING)
+        .in('user_id', djUserIds);
+    
+    if (djError) {
+        console.error('Error fetching interested DJ profiles:', djError);
+        return [];
+    }
+
+    return (djs || []).map(d => mapJoinedDataToUserProfile(d) as DJ);
+};
+
+export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: number): Promise<boolean> => {
+    const { error: gigError } = await (supabase
+        .from('app_e255c3cdb5_gigs') as any)
+        .update({ status: 'Booked', booked_dj_id: djUserId })
+        .eq('id', gigId);
+
+    if (gigError) {
+        console.error('Error updating gig status:', gigError);
+        return false;
+    }
+
+    const gig = await getGigById(gigId);
+    if (!gig) return false;
+
+    const booking: Database['public']['Tables']['app_e255c3cdb5_bookings']['Insert'] = { 
+        gig_id: gigId, 
+        dj_user_id: djUserId, 
+        business_user_id: gig.business_user_id, 
+        agreed_rate: agreedRate 
+    };
+    const { error: bookingError } = await (supabase
+        .from('app_e255c3cdb5_bookings') as any)
+        .insert([booking]);
+
+    if (bookingError) {
+        console.error('Error creating booking:', bookingError);
+        return false;
+    }
+    
+    return true;
+};
+
+export const getTopDJs = async (): Promise<DJ[]> => {
+    const djs = await getDJs();
+    // In a real app, you'd order by rating/followers in the query.
+    // For now, we'll sort the results we get.
+    return djs.sort((a, b) => b.rating - a.rating).slice(0, 50);
+};
+
+export const getTopVenues = async (): Promise<Business[]> => {
+    const businesses = await getBusinesses();
+    return businesses.sort((a, b) => b.rating - a.rating).slice(0, 50);
+};
+
+export const followUser = async (currentUserId: string, targetUserId: string): Promise<boolean> => {
+    console.warn("Follow functionality is not supported by the current database schema.");
+    return true;
 }
 
-export const getPlaylistsForDj = (djId: string) => {
-    const djPlaylists = playlists.filter(p => p.creatorId === djId);
-    return simulate(djPlaylists);
+export const unfollowUser = async (currentUserId: string, targetUserId: string): Promise<boolean> => {
+    console.warn("Unfollow functionality is not supported by the current database schema.");
+    return true;
+}
+
+export const getFollowersForUser = async (userId: string): Promise<UserProfile[]> => {
+    console.warn("Get followers functionality is not supported by the current database schema.");
+    return [];
+}
+
+export const getFollowingForUser = async (userId: string): Promise<UserProfile[]> => {
+    console.warn("Get following functionality is not supported by the current database schema.");
+    return [];
+}
+
+export const getTracksForDj = async (djUserId: string): Promise<Track[]> => {
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_dj_profiles') as any)
+        .select('portfolio_tracks')
+        .eq('user_id', djUserId)
+        .single();
+
+    if (error) {
+        console.error('Error fetching tracks for DJ:', error);
+        return [];
+    }
+    return data ? (data.portfolio_tracks as Track[] | null) || [] : [];
+};
+
+export const getPlaylistsForDj = async (djUserId: string): Promise<Playlist[]> => {
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_playlists')
+        .select('*')
+        .eq('dj_user_id', djUserId);
+
+    if (error) {
+        console.error('Error fetching playlists for DJ:', error);
+        return [];
+    }
+    return (data as any[] || []).map(p => ({...p, creatorId: p.dj_user_id, trackIds: p.tracks?.map((t:any) => t.id) || [] }));
+};
+
+export const addTrackToPortfolio = async (djUserId: string, track: Track): Promise<boolean> => {
+    const { error } = await (supabase as any).rpc('add_track_to_portfolio', {
+        dj_user_id_param: djUserId,
+        new_track: track
+    });
+
+    if (error) {
+        console.error('Error adding track to portfolio:', error);
+        return false;
+    }
+    return true;
+};
+
+export const createPlaylist = async (playlistData: Omit<Playlist, 'id' | 'tracks'>): Promise<Playlist | null> => {
+    const newPlaylist: Database['public']['Tables']['app_e255c3cdb5_playlists']['Insert'] = { 
+        dj_user_id: playlistData.creatorId, 
+        name: playlistData.name, 
+        artwork_url: playlistData.artworkUrl, 
+        tracks: [] 
+    };
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_playlists') as any)
+        .insert([newPlaylist])
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error creating playlist:', error);
+        return null;
+    }
+    return data as any;
+};
+
+export const updatePlaylist = async (playlistId: string, playlistData: Partial<Omit<Playlist, 'id' | 'dj_user_id' | 'tracks'>>): Promise<Playlist | null> => {
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_playlists') as any)
+        .update({ name: playlistData.name, artwork_url: playlistData.artworkUrl })
+        .eq('id', playlistId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating playlist:', error);
+        return null;
+    }
+    return data as any;
+};
+
+export const addTrackToPlaylist = async (playlistId: string, track: Track): Promise<boolean> => {
+    const { error } = await (supabase as any).rpc('add_track_to_playlist', {
+        playlist_id_param: playlistId,
+        new_track: track
+    });
+
+    if (error) {
+        console.error('Error adding track to playlist:', error);
+        return false;
+    }
+    return true;
+};
+
+export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedReview[]> => {
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_reviews')
+        .select('*')
+        .eq('reviewee_id', revieweeId);
+    
+    const reviews = data as Database['public']['Tables']['app_e255c3cdb5_reviews']['Row'][];
+
+    if (error) {
+        console.error('Error fetching reviews:', error);
+        return [];
+    }
+    if(!reviews) return [];
+
+    const authorIds = [...new Set(reviews.map(r => r.reviewer_id))];
+    if (authorIds.length === 0) return reviews.map(review => ({
+        id: review.id,
+        authorId: review.reviewer_id,
+        targetId: review.reviewee_id,
+        rating: review.rating,
+        comment: review.comment,
+        timestamp: review.created_at,
+        gigId: review.gig_id,
+        author: null as any, // Should not happen if authorIds logic is correct
+    }));
+
+    const { data: authorsData, error: authorError } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .select('user_id, display_name, avatar_url, user_type')
+        .in('user_id', authorIds);
+    
+    const authors = authorsData as UserProfileRow[];
+
+    if (authorError) {
+        console.error('Error fetching review authors:', authorError);
+        return []; // Or return reviews without authors
+    }
+
+    const authorMap = new Map(authors?.map(a => [a.user_id, {id: a.user_id, name: a.display_name, avatarUrl: a.avatar_url, role: a.user_type as Role} ]));
+
+    return reviews.map(review => ({
+        id: review.id,
+        authorId: review.reviewer_id,
+        targetId: review.reviewee_id,
+        rating: review.rating,
+        comment: review.comment,
+        timestamp: review.created_at,
+        gigId: review.gig_id,
+        author: authorMap.get(review.reviewer_id)!,
+    }));
+};
+
+export const submitReview = async (reviewData: Omit<Review, 'id' | 'created_at' | 'timestamp'>): Promise<Review | null> => {
+    const dbReview: Database['public']['Tables']['app_e255c3cdb5_reviews']['Insert'] = {
+        reviewer_id: reviewData.authorId,
+        reviewee_id: reviewData.targetId,
+        rating: reviewData.rating,
+        comment: reviewData.comment,
+        gig_id: reviewData.gigId
+    };
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_reviews') as any)
+        .insert([dbReview])
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error submitting review:', error);
+        return null;
+    }
+    return data as any;
+};
+
+export const getCommentsForPost = async (postId: string): Promise<EnrichedComment[]> => {
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_post_comments')
+        .select('*')
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true });
+    
+    const comments = data as Database['public']['Tables']['app_e255c3cdb5_post_comments']['Row'][];
+
+    if (error) {
+        console.error('Error fetching comments:', error);
+        return [];
+    }
+    if(!comments) return [];
+    
+    const authorIds = [...new Set(comments.map(c => c.user_id))];
+    if (authorIds.length === 0) return [];
+    const { data: authorsData, error: authorError } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .select('user_id, display_name, avatar_url, user_type')
+        .in('user_id', authorIds);
+    
+    const authors = authorsData as UserProfileRow[];
+    if(authorError) return [];
+    
+    const authorMap = new Map(authors?.map(a => [a.user_id, {id: a.user_id, name: a.display_name, avatarUrl: a.avatar_url, role: a.user_type as Role} ]));
+
+    return comments.map(comment => ({
+        id: comment.id,
+        authorId: comment.user_id,
+        postId: comment.post_id,
+        text: comment.content,
+        timestamp: comment.created_at,
+        author: authorMap.get(comment.user_id)!,
+    }));
+};
+
+export const addCommentToPost = async (postId: string, userId: string, content: string): Promise<EnrichedComment | null> => {
+    const newComment: Database['public']['Tables']['app_e255c3cdb5_post_comments']['Insert'] = { 
+        post_id: postId, 
+        user_id: userId, 
+        content: content 
+    };
+    const { data, error } = await (supabase
+        .from('app_e255c3cdb5_post_comments') as any)
+        .insert([newComment])
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error adding comment:', error);
+        return null;
+    }
+    const author = await getUserById(userId);
+    if (!author) return null;
+
+    const result = data as Database['public']['Tables']['app_e255c3cdb5_post_comments']['Row'];
+
+    return {
+        id: result.id,
+        postId,
+        authorId: userId,
+        text: result.content,
+        timestamp: result.created_at,
+        author,
+    };
+};
+
+export const updateUserProfile = async (userId: string, data: Partial<UserProfile & { djProfile?: Partial<DjProfile>, businessProfile?: Partial<BusinessProfile> }>): Promise<boolean> => {
+    const { djProfile, businessProfile, ...userProfileData } = data;
+    const { name, avatarUrl, ...restUser } = userProfileData;
+    
+    const dbUserProfile: Database['public']['Tables']['app_e255c3cdb5_user_profiles']['Update'] = {};
+    if (name) dbUserProfile.display_name = name;
+    if (avatarUrl) dbUserProfile.avatar_url = avatarUrl;
+    
+
+    if (Object.keys(dbUserProfile).length > 0) {
+        const { error } = await (supabase
+            .from('app_e255c3cdb5_user_profiles') as any)
+            .update(dbUserProfile)
+            .eq('user_id', userId);
+        if (error) {
+            console.error('Error updating user profile:', error);
+            return false;
+        }
+    }
+
+    if (djProfile && Object.keys(djProfile).length > 0) {
+        const { error } = await (supabase
+            .from('app_e255c3cdb5_dj_profiles') as any)
+            .update(djProfile)
+            .eq('user_id', userId);
+        if (error) {
+            console.error('Error updating DJ profile:', error);
+            return false;
+        }
+    }
+
+    if (businessProfile && Object.keys(businessProfile).length > 0) {
+        const {name: venue_name, description, ...rest} = businessProfile as any;
+        const dbBusinessProfile = {venue_name, description, ...rest};
+        const { error } = await (supabase
+            .from('app_e255c3cdb5_business_profiles') as any)
+            .update(dbBusinessProfile)
+            .eq('user_id', userId);
+        if (error) {
+            console.error('Error updating business profile:', error);
+            return false;
+        }
+    }
+
+    return true;
+};
+
+export const toggleLikePost = async (postId: string, userId: string): Promise<boolean> => {
+    const { data: like, error: selectError } = await supabase
+        .from('app_e255c3cdb5_post_likes')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('user_id', userId)
+        .single();
+
+    if (selectError && !selectError.message.includes('rows returned')) {
+        console.error('Error checking for like:', selectError);
+        return false;
+    }
+
+    if (like) {
+        const { error: deleteError } = await supabase
+            .from('app_e255c3cdb5_post_likes')
+            .delete()
+            .eq('id', (like as any).id);
+        
+        if (deleteError) {
+            console.error('Error unliking post:', deleteError);
+            return false;
+        }
+    } else {
+        const newLike: Database['public']['Tables']['app_e255c3cdb5_post_likes']['Insert'] = { 
+            post_id: postId, 
+            user_id: userId 
+        };
+        const { error: insertError } = await (supabase
+            .from('app_e255c3cdb5_post_likes') as any)
+            .insert([newLike]);
+
+        if (insertError) {
+            console.error('Error liking post:', insertError);
+            return false;
+        }
+    }
+
+    return true;
+};
+
+export const searchUsers = async (query: string): Promise<UserProfile[]> => {
+    if (!query) return [];
+    const lowercasedQuery = query.toLowerCase();
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .select(PROFILE_QUERY_STRING)
+        .ilike('display_name', `%${lowercasedQuery}%`)
+        .limit(10);
+    
+    if (error) {
+        console.error('Error searching users:', error);
+        return [];
+    }
+    return (data || []).map(mapJoinedDataToUserProfile) as UserProfile[];
+}
+
+// --- MOCK IMPLEMENTATIONS FOR MISSING FUNCTIONS ---
+
+export const getFeedItems = async (): Promise<Post[]> => getPosts();
+export const getFeedItemById = async (id: string): Promise<Post | undefined> => getPostById(id);
+export const repost = async (originalPostId: string, userId: string): Promise<Post | null> => {
+  console.warn("repost mock not implemented");
+  return null;
+};
+
+export const getTrackById = async (id: string): Promise<Track | null> => {
+  // This would require a tracks table. For now, returning mock data.
+  return { id, title: "Mock Track", artistId: "1", artworkUrl: "https://source.unsplash.com/random/200x200?music", duration: "3:30", trackUrl: "mock_url" };
+};
+export const getTracksByIds = async (ids: string[]): Promise<Track[]> => {
+  return ids.map(id => ({ id, title: "Mock Track", artistId: "1", artworkUrl: `https://source.unsplash.com/random/200x200?music&sig=${id}`, duration: "3:30", trackUrl: "mock_url" }));
+}
+
+export const findChatByParticipants = async (userId1: string, userId2: string): Promise<Chat | null> => {
+  // Not a scalable way to do this, but works for mock
+  const { data, error } = await supabase.from('app_e255c3cdb5_messages').select('*').or(`(sender_id.eq.${userId1},recipient_id.eq.${userId2}),(sender_id.eq.${userId2},recipient_id.eq.${userId1})`).limit(1);
+  if (error || !data || data.length === 0) return null;
+  return { id: userId2, participants: [userId1, userId2], messages: [] }; // Mocked chat
+};
+
+export const createChat = async (userId1: string, userId2: string): Promise<Chat | null> => {
+  // In a real app, you'd create a chat room. Here we just return a mock object.
+  return { id: userId2, participants: [userId1, userId2], messages: [] };
+};
+
+export const getInterestedGigsForDj = async (djId: string): Promise<Gig[]> => {
+  const { data, error } = await supabase.from('app_e255c3cdb5_gig_applications').select('gig_id').eq('dj_user_id', djId);
+  if (error || !data) return [];
+  const gigIds = (data as any[]).map(d => d.gig_id);
+  const { data: gigs, error: gigError } = await supabase.from('app_e255c3cdb5_gigs').select('*').in('id', gigIds);
+  return (gigs as Gig[]) || [];
+}
+
+export const getBookedGigsForDj = async (djId: string): Promise<Gig[]> => {
+    const { data, error } = await supabase.from('app_e255c3cdb5_bookings').select('gig_id').eq('dj_user_id', djId);
+    if(error || !data) return [];
+    const gigIds = (data as any[]).map(d => d.gig_id);
+    const { data: gigs, error: gigError } = await supabase.from('app_e255c3cdb5_gigs').select('*').in('id', gigIds).eq('status', 'Booked');
+    return (gigs as Gig[]) || [];
+}
+
+export const getCompletedGigsForDj = async (djId: string): Promise<Gig[]> => {
+    const { data, error } = await supabase.from('app_e255c3cdb5_bookings').select('gig_id').eq('dj_user_id', djId);
+    if(error || !data) return [];
+    const gigIds = (data as any[]).map(d => d.gig_id);
+    const { data: gigs, error: gigError } = await supabase.from('app_e255c3cdb5_gigs').select('*').in('id', gigIds).eq('status', 'Completed');
+    return (gigs as Gig[]) || [];
+}
+
+export const getStreamSessionById = async (sessionId: string): Promise<StreamSession | null> => {
+    console.warn("getStreamSessionById mock not implemented");
+    return { id: sessionId, djId: 'dj-1', title: 'Live Session', isLive: true, listenerCount: 123 };
+}
+export const endStreamSession = async (sessionId: string): Promise<boolean> => {
+    console.warn("endStreamSession mock not implemented");
+    return true;
+}
+export const createStreamSession = async (djId: string, title: string): Promise<StreamSession> => {
+    console.warn("createStreamSession mock not implemented");
+    const id = uuidv4();
+    return { id, djId, title, isLive: true, listenerCount: 0 };
+}
+
+export const addFeedItem = async (item: any): Promise<Post | null> => {
+    return addPost(item);
+}
+
+export const addTrack = async (userId: string, title: string, artworkUrl: string, trackUrl: string): Promise<boolean> => {
+    const newTrack: Track = { id: uuidv4(), artistId: userId, title, artworkUrl, trackUrl, duration: '3:30' };
+    return addTrackToPortfolio(userId, newTrack);
+}
+
+export const seedDatabase = async (): Promise<any> => {
+    console.warn("seedDatabase mock not implemented");
+    return { djs: [], businesses: [], gigs: [], tracks: [], playlists: [] };
+};
+export const getChatById = async (chatId: string): Promise<Chat | null> => {
+    return { id: chatId, participants: ["a", "b"], messages: [] };
+}
+
+export const updateUserSettings = async(userId: string, settings: Partial<UserSettings>): Promise<boolean> => {
+    const { error } = await (supabase.from('app_e255c3cdb5_user_profiles') as any).update({ settings: settings }).eq('user_id', userId);
+    return !error;
 }

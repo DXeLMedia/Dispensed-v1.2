@@ -1,9 +1,11 @@
+
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { User, Role, DJ, Business, Notification, UserSettings, Listener } from '../types';
+import * as api from '../services/mockApi';
+import { useMediaPlayer } from './MediaPlayerContext';
+import { supabase } from '../services/supabaseClient';
 
-
-type FullUser = (User | DJ | Business) & { user_type?: Role, needsRoleSelection?: boolean };
-
-const API_URL = ''; // Use relative paths for Vercel deployment
+type FullUser = User | DJ | Business | Listener;
 
 interface AuthContextType {
   user: FullUser | null;
@@ -12,12 +14,15 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-
+  signUp: (email: string, password: string, name: string, role: Role) => Promise<void>;
+  signInWithGoogle: (role?: Role) => Promise<void>;
   updateUser: (updatedUser: FullUser) => void;
   notifications: Notification[];
   unreadCount: number;
   refreshNotifications: () => Promise<void>;
   markNotificationsAsRead: () => Promise<void>;
+  theme: UserSettings['theme'];
+  updateTheme: (newTheme: UserSettings['theme']) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +36,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { closePlayer } = useMediaPlayer();
+  const [theme, setTheme] = useState<UserSettings['theme']>('electric_blue');
 
   const refreshNotifications = useCallback(async () => {
     if (user) {
@@ -43,6 +50,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [user]);
 
+  const fetchUserProfile = useCallback(async (authUser: any): Promise<FullUser | null> => {
+    if (!authUser) return null;
+
+    // Step 1: Fetch the full user profile from the view via our simplified api call.
+    let fullProfile: FullUser | undefined = await api.getUserById(authUser.id);
+
+    // Step 2: If profile is missing, retry after a delay (for slow DB triggers/view updates).
+    if (!fullProfile) {
+        console.warn(`Profile not found for user ${authUser.id}. Retrying...`);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        fullProfile = await api.getUserById(authUser.id);
+    }
+
+    // Step 3: If still missing, attempt to "self-heal" by creating it from auth metadata.
+    if (!fullProfile && authUser.user_metadata?.user_type) {
+        console.warn(`Profile for ${authUser.id} is missing. Attempting self-healing.`);
+        const createdBaseProfile = await api.createUserProfile(authUser);
+        if (createdBaseProfile) {
+            console.log(`Successfully self-healed profile for user ${authUser.id}. Refetching...`);
+            // Wait for view to update
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            fullProfile = await api.getUserById(authUser.id);
+        }
+    }
+
+    // Step 4: If no profile exists after all attempts, the user cannot proceed.
+    if (!fullProfile) {
+        console.error(`FATAL: Could not find or create a user profile for ${authUser.id}.`);
+        await supabase.auth.signOut();
+        return null;
+    }
+
+    // Step 5: Success. Attach email from auth session and return the complete profile.
+    // The view should already provide the email, but this is a safe fallback.
+    if (!fullProfile.email) {
+      fullProfile.email = authUser.email;
+    }
+    
+    return fullProfile;
+  }, []);
 
 
   useEffect(() => {
@@ -71,25 +118,74 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 
   useEffect(() => {
+    const currentTheme = user?.settings?.theme || 'electric_blue';
+    setTheme(currentTheme);
+    document.documentElement.className = currentTheme === 'cyber_glow' ? 'theme-light' : 'theme-dark';
+  }, [user]);
+
+  useEffect(() => {
     refreshNotifications();
   }, [user, refreshNotifications]);
 
-
+  const login = async (email: string, password: string) => {
+    try {
+      const authenticatedUser = await api.authenticate(email, password);
+      if (!authenticatedUser) {
+        throw new Error("Authentication failed. Please check your credentials.");
+      }
+      setUser(authenticatedUser);
+    } catch (err: any) {
+      if (err.message.includes('Invalid login credentials')) {
+        throw new Error('Invalid email or password. Please try again.');
+      }
+      if (err.message.includes('User profile not found after login')) {
+        // If Supabase auth succeeds but our public profile is missing, it's a critical error.
+        // Sign the user out to prevent a broken state.
+        await supabase.auth.signOut();
+        throw new Error('Login successful, but your profile could not be found. Please contact support.');
+      }
+      // Re-throw other errors
+      throw err;
     }
-    // Auth state change will handle setting the user.
-    alert('Sign up successful! Please check your email to verify your account.');
-  
-
+  };
 
   const logout = async () => {
+    closePlayer(); // Reset media player state
     await supabase.auth.signOut();
-    setUser(null);
-    setNotifications([]);
-    setUnreadCount(0);
+    document.documentElement.className = 'theme-dark'; // Reset to default on logout
+  };
+
+  const signUp = async (email: string, password: string, name: string, role: Role) => {
+    const { error } = await api.signUpWithEmail(email, password, name, role);
+    if (error) {
+        throw error;
+    }
+    // Don't log in automatically; user needs to confirm email.
+  };
+
+  const signInWithGoogle = async (role?: Role) => {
+    const { error } = await api.signInWithGoogle(role);
+    if (error) {
+        throw error;
+    }
+    // Supabase handles the redirect from here.
   };
   
   const updateUser = (updatedUser: FullUser) => {
     setUser(updatedUser);
+  };
+
+  const updateTheme = async (newTheme: UserSettings['theme']) => {
+    if (user) {
+        setTheme(newTheme);
+        document.documentElement.className = newTheme === 'cyber_glow' ? 'theme-light' : 'theme-dark';
+        await api.updateUserSettings(user.id, { theme: newTheme });
+        const updatedUser = { 
+            ...user, 
+            settings: { ...user.settings, theme: newTheme } as UserSettings
+        };
+        updateUser(updatedUser as FullUser);
+    }
   };
   
   const markNotificationsAsRead = async () => {
@@ -99,26 +195,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const AuthProvider = ({ children }) => {
   const value = {
     user,
-    role: user?.user_type ?? null,
+    role: user?.role ?? null,
     isAuthenticated: !!user,
     isLoading,
     login,
     logout,
-    signup,
-    googleSignIn,
+    signUp,
+    signInWithGoogle,
     updateUser,
     notifications,
     unreadCount,
     refreshNotifications,
     markNotificationsAsRead,
+    theme,
+    updateTheme,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

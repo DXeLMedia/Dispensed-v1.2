@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import * as api from '../services/mockApi';
 import { Playlist, Track } from '../types';
 import { Spinner } from './Spinner';
 import { IconChevronLeft, IconChevronRight, IconPlay, IconMusic } from '../constants';
+import { useMediaPlayer } from '../contexts/MediaPlayerContext';
 
 interface TrackPreviewProps {
     playlistId: string;
@@ -13,6 +15,7 @@ export const TrackPreview: React.FC<TrackPreviewProps> = ({ playlistId }) => {
     const [tracks, setTracks] = useState<Track[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
+    const { playPlaylist } = useMediaPlayer();
 
     useEffect(() => {
         const fetchPlaylistData = async () => {
@@ -28,16 +31,21 @@ export const TrackPreview: React.FC<TrackPreviewProps> = ({ playlistId }) => {
         fetchPlaylistData();
     }, [playlistId]);
 
-    const handleNext = () => {
+    const handleNext = (e: React.MouseEvent) => {
+        e.stopPropagation();
         setCurrentIndex((prevIndex) => (prevIndex + 1) % tracks.length);
     };
 
-    const handlePrev = () => {
+    const handlePrev = (e: React.MouseEvent) => {
+        e.stopPropagation();
         setCurrentIndex((prevIndex) => (prevIndex - 1 + tracks.length) % tracks.length);
     };
 
-    const handlePlay = (track: Track) => {
-        alert(`Playing ${track.title}`);
+    const handlePlay = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (tracks.length > 0) {
+            playPlaylist(tracks, currentIndex);
+        }
     };
 
     if (loading) {
@@ -73,7 +81,7 @@ export const TrackPreview: React.FC<TrackPreviewProps> = ({ playlistId }) => {
                     <IconChevronLeft size={24} />
                 </button>
                 <button
-                    onClick={() => handlePlay(currentTrack)}
+                    onClick={handlePlay}
                     className="p-4 bg-lime-400/80 text-black rounded-full hover:bg-lime-400 scale-100 hover:scale-110 transition-transform"
                 >
                     <IconPlay size={32} className="fill-current" />
