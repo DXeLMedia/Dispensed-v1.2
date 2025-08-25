@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Notification as NotificationType, NotificationType as ENotificationType } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { Spinner } from '../components/Spinner';
-import { IconArrowLeft, IconBookOpen, IconMessages, IconUserPlus, IconCalendar, IconCheckCircle2, IconXCircle, IconComment, IconRepeat } from '../constants';
+import { IconArrowLeft, IconBookOpen, IconMessages, IconUserPlus, IconCalendar, IconCheckCircle2, IconXCircle } from '../constants';
 
 const NotificationIcon = ({ type }: { type: ENotificationType }) => {
     switch (type) {
@@ -20,10 +20,6 @@ const NotificationIcon = ({ type }: { type: ENotificationType }) => {
              return <IconCheckCircle2 className="text-green-400 mt-1" size={20}/>;
         case ENotificationType.GigFilled:
              return <IconXCircle className="text-red-400 mt-1" size={20}/>;
-        case ENotificationType.NewComment:
-             return <IconComment className="text-teal-400 mt-1" size={20}/>;
-        case ENotificationType.Repost:
-            return <IconRepeat className="text-green-400 mt-1" size={20}/>;
         default:
             return <IconBookOpen className="text-gray-400 mt-1" size={20}/>;
     }
@@ -41,9 +37,6 @@ const getLinkForNotification = (notif: NotificationType): string => {
             return notif.relatedId ? `/gigs?highlight=${notif.relatedId}` : '/gigs';
         case ENotificationType.GigFilled: // For DJs
             return '/discover'; // Go back to finding gigs
-        case ENotificationType.NewComment:
-        case ENotificationType.Repost:
-            return notif.relatedId ? `/post/${notif.relatedId}` : '/feed';
         default:
             return '#';
     }

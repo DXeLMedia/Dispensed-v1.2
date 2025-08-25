@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import * as api from '../services/mockApi';
@@ -11,11 +10,11 @@ import { Avatar } from '../components/Avatar';
 const Header = ({ title }: { title: string }) => {
     const navigate = useNavigate();
     return (
-        <div className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-sm p-4 flex items-center border-b border-[var(--border)]">
+        <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm p-4 flex items-center border-b border-zinc-800">
             <button onClick={() => navigate(-1)} className="mr-4"><IconArrowLeft size={22} /></button>
             <div className='overflow-hidden'>
-                <p className="text-xs text-[var(--text-secondary)]">Applicants for</p>
-                <h1 className="font-orbitron text-lg font-bold text-[var(--text-primary)] truncate">{title}</h1>
+                <p className="text-xs text-zinc-400">Applicants for</p>
+                <h1 className="font-orbitron text-lg font-bold text-white truncate">{title}</h1>
             </div>
         </div>
     );
@@ -31,26 +30,26 @@ interface ApplicantCardProps {
 
 const ApplicantCard: React.FC<ApplicantCardProps> = ({ dj, isBooked, isGigOpen, onBook, isBooking }) => {
     return (
-        <div className={`bg-[var(--surface-1)] border border-[var(--border)] rounded-lg p-3 transition-all ${isBooked ? 'border-[var(--accent)]' : ''}`}>
+        <div className={`bg-zinc-900 border border-zinc-800 rounded-lg p-3 transition-all ${isBooked ? 'border-lime-400' : ''}`}>
             <div className="flex items-center gap-3">
                  <Link to={`/profile/${dj.id}`}>
                     <Avatar src={dj.avatarUrl} alt={dj.name} />
                 </Link>
                 <div className="flex-1 overflow-hidden">
-                    <Link to={`/profile/${dj.id}`} className="font-bold text-[var(--text-primary)] truncate hover:underline">{dj.name}</Link>
+                    <Link to={`/profile/${dj.id}`} className="font-bold text-white truncate hover:underline">{dj.name}</Link>
                     <div className="flex items-center gap-2 mt-1">
                         <IconStar className="text-lime-400" size={14} fill="currentColor" />
-                        <span className="text-[var(--text-primary)] font-semibold text-sm">{dj.rating.toFixed(1)}</span>
-                        <span className="text-[var(--text-muted)] text-xs">({dj.reviewsCount} reviews)</span>
+                        <span className="text-white font-semibold text-sm">{dj.rating}</span>
+                        <span className="text-zinc-500 text-xs">({dj.reviewsCount} reviews)</span>
                     </div>
                 </div>
                 {isGigOpen ? (
                     <button 
                         onClick={() => onBook(dj.id)}
                         disabled={isBooking}
-                        className="bg-[var(--accent)] text-[var(--accent-text)] font-bold text-sm px-4 py-2 rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:bg-[var(--surface-2)] disabled:cursor-not-allowed w-28 h-9 flex items-center justify-center"
+                        className="bg-lime-400 text-black font-bold text-sm px-4 py-2 rounded-lg hover:bg-lime-300 transition-colors disabled:bg-zinc-600 disabled:cursor-not-allowed w-28 h-9 flex items-center justify-center"
                     >
-                       {isBooking ? <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-current"></div> : 'Book DJ'}
+                       {isBooking ? <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-black"></div> : 'Book DJ'}
                     </button>
                 ) : (
                     isBooked && (
@@ -75,20 +74,20 @@ interface ConfirmationModalProps {
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ dj, onConfirm, onCancel, isBooking }) => (
     <div className="fixed inset-0 bg-black/70 z-50 flex justify-center items-center p-4 animate-fade-in">
-        <div className="bg-[var(--surface-1)] border-2 border-[var(--accent)] rounded-lg p-6 max-w-sm w-full shadow-2xl shadow-[var(--accent)]/20 text-center" onClick={e => e.stopPropagation()}>
+        <div className="bg-zinc-900 border-2 border-lime-400 rounded-lg p-6 max-w-sm w-full shadow-2xl shadow-lime-500/20 text-center" onClick={e => e.stopPropagation()}>
             <div className="flex justify-end">
-                <button onClick={onCancel} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"><IconX size={20}/></button>
+                <button onClick={onCancel} className="text-zinc-500 hover:text-white"><IconX size={20}/></button>
             </div>
-            <h2 className="font-orbitron text-xl text-[var(--text-primary)] -mt-4">Confirm Booking</h2>
-            <p className="text-[var(--text-secondary)] my-4">
-                Are you sure you want to book <span className="font-bold text-[var(--text-primary)]">{dj.name}</span> for this gig?
+            <h2 className="font-orbitron text-xl text-white -mt-4">Confirm Booking</h2>
+            <p className="text-zinc-300 my-4">
+                Are you sure you want to book <span className="font-bold text-white">{dj.name}</span> for this gig?
             </p>
             <Avatar src={dj.avatarUrl} alt={dj.name} size="lg" className="mx-auto mb-6" />
             <div className="flex gap-4">
-                <button onClick={onCancel} className="flex-1 py-3 px-4 rounded-lg bg-[var(--surface-2)] text-[var(--text-primary)] font-bold hover:bg-[var(--border)] transition-colors">
+                <button onClick={onCancel} className="flex-1 py-3 px-4 rounded-lg bg-zinc-800 text-white font-bold hover:bg-zinc-700 transition-colors">
                     Cancel
                 </button>
-                <button onClick={onConfirm} disabled={isBooking} className="flex-1 py-3 px-4 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] font-bold hover:bg-[var(--accent-hover)] transition-colors disabled:bg-[var(--surface-2)] disabled:cursor-not-allowed">
+                <button onClick={onConfirm} disabled={isBooking} className="flex-1 py-3 px-4 rounded-lg bg-lime-400 text-black font-bold hover:bg-lime-300 transition-colors disabled:bg-zinc-600 disabled:cursor-not-allowed">
                     {isBooking ? 'Booking...' : 'Confirm'}
                 </button>
             </div>
@@ -152,14 +151,14 @@ export const GigApplicants = () => {
     };
 
     const handleConfirmBooking = async () => {
-        if (!gigId || !confirmingDj || !gig) return;
+        if (!gigId || !confirmingDj) return;
 
         setBookingDjId(confirmingDj.id);
         setError(null);
         setConfirmingDj(null); // Close modal
 
         try {
-            const success = await api.bookDJForGig(gigId, confirmingDj.id, gig.budget);
+            const success = await api.bookDJForGig(gigId, confirmingDj.id);
             if (success) {
                 // Optimistic update
                 setGig(prevGig => prevGig ? {
@@ -184,7 +183,7 @@ export const GigApplicants = () => {
     if (!gig) return <div className="text-center text-red-500 p-8">Gig not found.</div>;
 
     return (
-        <div className="text-[var(--text-primary)] min-h-full pb-20">
+        <div className="text-white min-h-full pb-20">
             <Header title={gig.title} />
 
             <div className="p-4 space-y-4">
@@ -199,7 +198,7 @@ export const GigApplicants = () => {
                     </div>
                  )}
 
-                <h2 className="font-orbitron text-lg font-bold text-[var(--text-primary)]">
+                <h2 className="font-orbitron text-lg font-bold text-white">
                    {applicants.length} {applicants.length === 1 ? 'Applicant' : 'Applicants'}
                 </h2>
 
@@ -217,7 +216,7 @@ export const GigApplicants = () => {
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center text-[var(--text-muted)] pt-10">
+                    <div className="text-center text-zinc-500 pt-10">
                         <p>No one has expressed interest in this gig yet.</p>
                     </div>
                 )}

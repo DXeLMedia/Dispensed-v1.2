@@ -14,13 +14,13 @@ export enum Tier {
 }
 
 export interface UserSettings {
-  theme: 'electric_blue' | 'magenta_pulse' | 'emerald_haze' | 'cyber_glow';
+  theme: 'electric_blue' | 'magenta_pulse' | 'emerald_haze';
 }
 
 export interface User {
   id: string;
   name: string;
-  email?: string;
+  email: string;
   role: Role;
   avatarUrl: string;
   settings?: UserSettings;
@@ -41,26 +41,15 @@ export interface DJ extends User, Followable {
   tier: Tier;
   tracks: Track[];
   mixes: Playlist[];
-  socials?: {
-    instagram?: string;
-    soundcloud?: string;
-    facebook?: string;
-    website?: string;
-  };
 }
 
 export interface Business extends User, Followable {
   role: Role.Business;
-  name: string; // Formerly venueName, updated for consistency with User and DB schema
+  venueName: string;
   location: string;
   description: string;
   rating: number;
   reviewsCount: number;
-  socials?: {
-    instagram?: string;
-    facebook?: string;
-    website?: string;
-  };
 }
 
 export interface Listener extends User, Followable {
@@ -71,7 +60,7 @@ export interface Listener extends User, Followable {
 export interface Gig {
   id: string;
   title: string;
-  business_user_id: string;
+  venueId: string;
   date: string;
   time: string;
   budget: number;
@@ -80,7 +69,6 @@ export interface Gig {
   status: 'Open' | 'Booked' | 'Completed' | 'Cancelled';
   bookedDjId?: string;
   interestCount?: number;
-  flyerUrl?: string;
 }
 
 export interface Track {
@@ -89,7 +77,6 @@ export interface Track {
   artistId: string;
   artworkUrl: string;
   duration: string; // e.g., "3:45"
-  trackUrl?: string;
 }
 
 export interface Playlist {
@@ -126,9 +113,6 @@ export enum NotificationType {
     NewFollower = 'new_follower',
     BookingConfirmed = 'booking_confirmed',
     GigFilled = 'gig_filled',
-    NewReview = 'new_review',
-    NewComment = 'new_comment',
-    Repost = 'repost',
 }
 
 export interface Notification {
@@ -138,25 +122,21 @@ export interface Notification {
   text: string;
   timestamp: string;
   read: boolean;
-  relatedId?: string; // e.g., messageId, gigId, postId
+  relatedId?: string; // e.g., messageId, gigId
 }
 
 export interface FeedItem {
     id: string;
-    type: 'new_track' | 'new_mix' | 'gig_announcement' | 'live_now' | 'new_connection' | 'new_review' | 'user_post';
+    type: 'new_track' | 'new_mix' | 'gig_announcement' | 'live_now' | 'new_connection' | 'new_review';
     userId: string;
     title: string;
     description: string;
-    mediaUrl?: string;
-    mediaType?: 'image' | 'video';
+    imageUrl: string;
     timestamp: string;
     likes: number;
-    likedBy?: string[];
     comments: number;
-    reposts: number;
+    shares: number;
     relatedId?: string; // e.g., playlistId, streamSessionId
-    rating?: number; // For new_review type
-    repostOf?: string;
 }
 
 export interface StreamSession {
@@ -165,63 +145,4 @@ export interface StreamSession {
   title: string;
   isLive: boolean;
   listenerCount: number;
-}
-
-export interface Review {
-  id: string;
-  authorId: string;
-  targetId: string; // The ID of the DJ or Business being reviewed
-  rating: number; // 1-5
-  comment?: string;
-  timestamp: string;
-  gigId?: string; // Optional gig ID this review is associated with
-}
-
-// For displaying reviews with author info
-export interface EnrichedReview extends Review {
-    author: User;
-}
-
-export interface Comment {
-  id: string;
-  authorId: string;
-  postId: string;
-  text: string;
-  timestamp: string;
-}
-
-export interface EnrichedComment extends Comment {
-  author: User;
-}
-
-// Type Aliases for compatibility
-export type UserProfile = User;
-export type Post = FeedItem;
-export type PostComment = Comment;
-
-export interface DjProfile {
-    genres?: string[];
-    bio?: string;
-    location?: string;
-    rating?: number;
-    reviewsCount?: number;
-    tier?: Tier;
-    socials?: {
-        instagram?: string;
-        soundcloud?: string;
-        facebook?: string;
-        website?: string;
-    };
-}
-
-export interface BusinessProfile {
-    location?: string;
-    description?: string;
-    rating?: number;
-    reviewsCount?: number;
-    socials?: {
-        instagram?: string;
-        facebook?: string;
-        website?: string;
-    };
 }
