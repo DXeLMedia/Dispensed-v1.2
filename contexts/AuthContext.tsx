@@ -99,26 +99,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const AuthProvider = ({ children }) => {
   const value = {
-  user,
-  role: user?.user_type ?? null,
-  isAuthenticated: !!user,
-  isLoading,
-  login,
-  logout,
-  signup,
-  googleSignIn,
-  updateUser,
-  notifications,
-  unreadCount,
-  refreshNotifications,
-  markNotificationsAsRead,
-};
+    user,
+    role: user?.user_type ?? null,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    logout,
+    signup,
+    googleSignIn,
+    updateUser,
+    notifications,
+    unreadCount,
+    refreshNotifications,
+    markNotificationsAsRead,
+  };
 
-return (
-  <AuthContext.Provider value={value}>
-    {children}
-  </AuthContext.Provider>
-);
-    
-  
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
