@@ -114,5 +114,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     refreshNotifications,
     markNotificationsAsRead,
   };
+    // Incorrect (Top-level return)
+    // return 'someValue';
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    // Correct
+   const getValue() {
+        return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    }
+    const result = getValue();
+  
