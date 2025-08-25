@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, ReactNode, useCallback } fro
 import { User, Role, DJ, Business, Notification, UserSettings, Listener } from '../types';
 import * as api from '../services/mockApi';
 import { useMediaPlayer } from './MediaPlayerContext';
+import { supabase } from '../services/supabaseClient';
 
 type FullUser = User | DJ | Business | Listener;
 
@@ -12,7 +13,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-
+  logout: () => Promise<void>;
+  signUp: (email: string, password: string, name: string, role: Role) => Promise<void>;
+  signInWithGoogle: (role?: Role) => Promise<void>;
   updateUser: (updatedUser: FullUser) => void;
   notifications: Notification[];
   unreadCount: number;
@@ -47,11 +50,72 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [user]);
 
-  useEffect(() => {
-    // In a real app with session persistence, you'd check for a session token here.
-    // For this mock-based app, we just start fresh on every load.
-    setIsLoading(false);
+  const fetchUserProfile = useCallback(async (authUser: any): Promise<FullUser | null> => {
+    if (!authUser) return null;
+
+    // Step 1: Fetch the full user profile from the view via our simplified api call.
+    let fullProfile: FullUser | undefined = await api.getUserById(authUser.id);
+
+    // Step 2: If profile is missing, retry after a delay (for slow DB triggers/view updates).
+    if (!fullProfile) {
+        console.warn(`Profile not found for user ${authUser.id}. Retrying...`);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        fullProfile = await api.getUserById(authUser.id);
+    }
+
+    // Step 3: If still missing, attempt to "self-heal" by creating it from auth metadata.
+    if (!fullProfile && authUser.user_metadata?.user_type) {
+        console.warn(`Profile for ${authUser.id} is missing. Attempting self-healing.`);
+        const createdBaseProfile = await api.createUserProfile(authUser);
+        if (createdBaseProfile) {
+            console.log(`Successfully self-healed profile for user ${authUser.id}. Refetching...`);
+            // Wait for view to update
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            fullProfile = await api.getUserById(authUser.id);
+        }
+    }
+
+    // Step 4: If no profile exists after all attempts, the user cannot proceed.
+    if (!fullProfile) {
+        console.error(`FATAL: Could not find or create a user profile for ${authUser.id}.`);
+        await supabase.auth.signOut();
+        return null;
+    }
+
+    // Step 5: Success. Attach email from auth session and return the complete profile.
+    // The view should already provide the email, but this is a safe fallback.
+    if (!fullProfile.email) {
+      fullProfile.email = authUser.email;
+    }
+    
+    return fullProfile;
   }, []);
+
+
+  useEffect(() => {
+    // Run once on mount to get current session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session) {
+            const profile = await fetchUserProfile(session.user);
+            setUser(profile);
+        }
+        setIsLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+            setUser(null);
+        } else if (session && (!user || user.id !== session.user.id)) {
+            const profile = await fetchUserProfile(session.user);
+            setUser(profile);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [user, fetchUserProfile]);
+
 
   useEffect(() => {
     const currentTheme = user?.settings?.theme || 'electric_blue';
@@ -64,15 +128,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user, refreshNotifications]);
 
   const login = async (email: string, password: string) => {
-    const profile = await api.authenticate(email, password);
-    if (profile) {
-        setUser(profile as FullUser);
-    } else {
-        throw new Error('Invalid login credentials');
+    try {
+      const authenticatedUser = await api.authenticate(email, password);
+      if (!authenticatedUser) {
+        throw new Error("Authentication failed. Please check your credentials.");
+      }
+      setUser(authenticatedUser);
+    } catch (err: any) {
+      if (err.message.includes('Invalid login credentials')) {
+        throw new Error('Invalid email or password. Please try again.');
+      }
+      if (err.message.includes('User profile not found after login')) {
+        // If Supabase auth succeeds but our public profile is missing, it's a critical error.
+        // Sign the user out to prevent a broken state.
+        await supabase.auth.signOut();
+        throw new Error('Login successful, but your profile could not be found. Please contact support.');
+      }
+      // Re-throw other errors
+      throw err;
     }
   };
 
-
+  const logout = async () => {
+    closePlayer(); // Reset media player state
+    await supabase.auth.signOut();
+    document.documentElement.className = 'theme-dark'; // Reset to default on logout
+  };
 
   const signUp = async (email: string, password: string, name: string, role: Role) => {
     const { error } = await api.signUpWithEmail(email, password, name, role);

@@ -1,4 +1,5 @@
 
+
 import { supabase } from './supabaseClient';
 import { 
     DJ, 
@@ -31,249 +32,145 @@ type UserProfileRow = Database['public']['Tables']['app_e255c3cdb5_user_profiles
 type DjProfileRow = Database['public']['Tables']['app_e255c3cdb5_dj_profiles']['Row'];
 type BusinessProfileRow = Database['public']['Tables']['app_e255c3cdb5_business_profiles']['Row'];
 
+const PROFILE_QUERY_STRING = '*, dj_profiles:app_e255c3cdb5_dj_profiles(*), business_profiles:app_e255c3cdb5_business_profiles(*)';
 
 /**
- * A helper function to process user profile data from Supabase.
- * It maps the `user_type` database column to the `role` property
- * expected by the application frontend, and maps snake_case fields
- * to camelCase fields in the User type.
- * @param userProfileData The raw user profile data from the database.
- * @returns A processed user profile object with a `role` property, or null.
+ * Maps a joined row from Supabase to the application's user types.
+ * @param data The raw data object from the Supabase query with joined profiles.
+ * @returns A processed and typed user profile object (DJ, Business, or UserProfile).
  */
-function processUserProfile(userProfileData: any): any | null {
-    if (!userProfileData) return null;
-    return {
-        ...userProfileData,
-        id: userProfileData.user_id,
-        name: userProfileData.display_name,
-        avatarUrl: userProfileData.avatar_url,
-        role: userProfileData.user_type,
-    };
-}
+function mapJoinedDataToUserProfile(data: any): DJ | Business | UserProfile {
+    const role = data.user_type as Role;
 
-export const getDJById = async (userId: string): Promise<DJ | undefined> => {
-    const { data: userProfileData, error: userError } = await supabase
-        .from('app_e255c3cdb5_user_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-    if (userError || !userProfileData) {
-        if (userError && !userError.message.includes('rows returned')) {
-            console.error("Error fetching user profile for DJ:", userError);
-        }
-        return undefined;
-    }
-    
-    const userProfile = processUserProfile(userProfileData);
-
-    if (userProfile.role !== 'dj') {
-        return undefined; // Not a DJ
-    }
-
-    const { data, error: djError } = await supabase
-        .from('app_e255c3cdb5_dj_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-    const djProfile = data as DjProfileRow | null;
-
-    if (djError || !djProfile) {
-        console.error("Error fetching DJ profile:", djError);
-        return undefined;
-    }
-
-    const result: DJ = {
-        ...(userProfile as User),
-        role: Role.DJ,
-        genres: djProfile.genres,
-        bio: djProfile.bio,
-        location: djProfile.location,
-        rating: djProfile.rating,
-        reviewsCount: djProfile.reviews_count,
-        tier: djProfile.tier as Tier,
-        socials: djProfile.socials as any,
-        // Mocked properties not in DB
+    const baseUser = {
+        id: data.user_id,
+        name: data.display_name,
+        avatarUrl: data.avatar_url,
+        email: (data as any).email,
+        role,
+        settings: data.settings as UserSettings,
+        // Mocked as they are not in the view
         following: [],
         followers: Math.floor(Math.random() * 2000),
-        tracks: [],
-        mixes: [],
     };
+    
+    if (role === Role.DJ) {
+        const djProfile = Array.isArray(data.dj_profiles) ? data.dj_profiles[0] : data.dj_profiles;
+        return {
+            ...baseUser,
+            role: Role.DJ,
+            genres: djProfile?.genres || [],
+            bio: djProfile?.bio || '',
+            location: djProfile?.location || '',
+            rating: djProfile?.rating || 0,
+            reviewsCount: djProfile?.reviews_count || 0,
+            tier: (djProfile?.tier as Tier) || Tier.Bronze,
+            socials: djProfile?.socials as any || {},
+            // Mocked in original function
+            tracks: [],
+            mixes: [],
+        } as DJ;
+    } else if (role === Role.Business) {
+        const businessProfile = Array.isArray(data.business_profiles) ? data.business_profiles[0] : data.business_profiles;
+        return {
+            ...baseUser,
+            role: Role.Business,
+            name: businessProfile?.venue_name || data.display_name,
+            location: businessProfile?.location || '',
+            description: businessProfile?.description || '',
+            rating: businessProfile?.rating || 0,
+            reviewsCount: businessProfile?.reviews_count || 0,
+            socials: businessProfile?.socials as any || {},
+        } as Business;
+    } else { // Listener
+        return {
+            ...baseUser,
+            role: Role.Listener,
+        } as UserProfile;
+    }
+}
 
-    return result;
+
+export const getDJById = async (userId: string): Promise<DJ | undefined> => {
+    const profile = await getUserById(userId);
+    if (profile?.role === Role.DJ) {
+        return profile as DJ;
+    }
+    return undefined;
 };
 
 export const getDJs = async (): Promise<DJ[]> => {
-    const { data, error: djError } = await supabase
-        .from('app_e255c3cdb5_dj_profiles')
-        .select('*');
-
-    const djProfiles = data as DjProfileRow[];
-
-    if (djError) {
-        console.error("Error fetching DJ profiles:", djError);
-        return [];
-    }
-    if (!djProfiles) return [];
-
-    const userIds = djProfiles.map(p => p.user_id);
-    if (userIds.length === 0) return [];
-
-    const { data: userProfilesData, error: userError } = await supabase
+    const { data, error } = await supabase
         .from('app_e255c3cdb5_user_profiles')
-        .select('*')
-        .in('user_id', userIds);
-    
-    const userProfiles = userProfilesData as UserProfileRow[];
+        .select(PROFILE_QUERY_STRING)
+        .eq('user_type', 'dj');
 
-    if (userError) {
-        console.error("Error fetching user profiles for DJs:", userError);
+    if (error) {
+        console.error("Error fetching DJs:", error);
         return [];
     }
-    if (!userProfiles) return [];
+    if (!data) return [];
 
-    const djsData = djProfiles.map(djProfile => {
-        const userProfileData = userProfiles.find(up => up.user_id === djProfile.user_id);
-        if (!userProfileData) return null;
-        const userProfile = processUserProfile(userProfileData);
-        return { 
-            ...(userProfile as User), 
-            role: Role.DJ,
-            genres: djProfile.genres,
-            bio: djProfile.bio,
-            location: djProfile.location,
-            rating: djProfile.rating,
-            tier: djProfile.tier as Tier,
-            socials: djProfile.socials as any,
-            // Mocked properties
-            following: [],
-            followers: Math.floor(Math.random() * 2000),
-            tracks: [],
-            mixes: [],
-            reviewsCount: djProfile.reviews_count,
-        } as DJ;
-    }).filter((dj): dj is DJ => Boolean(dj));
-
-    return djsData;
+    return data.map(d => mapJoinedDataToUserProfile(d) as DJ);
 };
 
 
 export const getBusinesses = async (): Promise<Business[]> => {
-    const { data, error: bizError } = await supabase
-        .from('app_e255c3cdb5_business_profiles')
-        .select('*');
-
-    const businessProfiles = data as BusinessProfileRow[];
-
-    if (bizError) {
-        console.error("Error fetching business profiles:", bizError);
-        return [];
-    }
-    if (!businessProfiles) return [];
-
-    const userIds = businessProfiles.map(p => p.user_id);
-    if (userIds.length === 0) return [];
-
-    const { data: userProfilesData, error: userError } = await supabase
+    const { data, error } = await supabase
         .from('app_e255c3cdb5_user_profiles')
-        .select('*')
-        .in('user_id', userIds);
-        
-    const userProfiles = userProfilesData as UserProfileRow[];
+        .select(PROFILE_QUERY_STRING)
+        .eq('user_type', 'business');
 
-    if (userError) {
-        console.error("Error fetching user profiles for businesses:", userError);
+    if (error) {
+        console.error("Error fetching businesses:", error);
         return [];
     }
-    if (!userProfiles) return [];
+    if (!data) return [];
 
-    const businessesData = businessProfiles.map(businessProfile => {
-        const userProfileData = userProfiles.find(up => up.user_id === businessProfile.user_id);
-        if (!userProfileData) return null;
-        const userProfile = processUserProfile(userProfileData);
-        return { 
-            ...(userProfile as User), 
-            role: Role.Business,
-            name: businessProfile.venue_name,
-            location: businessProfile.location,
-            description: businessProfile.description,
-            rating: businessProfile.rating,
-            reviewsCount: businessProfile.reviews_count,
-            socials: businessProfile.socials as any,
-             // Mocked properties
-            following: [],
-            followers: Math.floor(Math.random() * 5000),
-        } as Business;
-    }).filter((biz): biz is Business => Boolean(biz));
-
-    return businessesData;
+    return data.map(d => mapJoinedDataToUserProfile(d) as Business);
 };
 
 export const getBusinessById = async (userId: string): Promise<Business | undefined> => {
-    const { data: userProfileData, error: userError } = await supabase
-        .from('app_e255c3cdb5_user_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-    if (userError || !userProfileData) {
-        if (userError && !userError.message.includes('rows returned')) {
-            console.error("Error fetching user profile for business:", userError);
-        }
-        return undefined;
+    const profile = await getUserById(userId);
+    if (profile?.role === Role.Business) {
+        return profile as Business;
     }
-    
-    const userProfile = processUserProfile(userProfileData);
-
-    if (userProfile.role !== 'business') {
-        return undefined; // Not a business
-    }
-
-    const { data, error: bizError } = await supabase
-        .from('app_e255c3cdb5_business_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-        
-    const businessProfile = data as BusinessProfileRow;
-
-    if (bizError || !businessProfile) {
-        console.error("Error fetching business profile:", bizError);
-        return undefined;
-    }
-
-    const result: Business = {
-        ...(userProfile as User),
-        role: Role.Business,
-        name: businessProfile.venue_name,
-        location: businessProfile.location,
-        description: businessProfile.description,
-        rating: businessProfile.rating,
-        reviewsCount: businessProfile.reviews_count,
-        socials: businessProfile.socials as any,
-        // Mocked properties
-        following: [],
-        followers: Math.floor(Math.random() * 5000),
-    };
-
-    return result;
+    return undefined;
 }
 
-export const getUserById = async (userId: string): Promise<UserProfile | undefined> => {
-    const { data: userProfile, error } = await supabase
-        .from('app_e255c3cdb5_user_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+export const getUserById = async (userId: string): Promise<DJ | Business | UserProfile | undefined> => {
+    // Hardcoded fix for data inconsistency for user 'doublexel.music@gmail.com'.
+    // The auth user ID is '7f765e47-375e-47f4-8536-e7669ad8f254'.
+    // The profile table ID is 'e3c7483f-50c1-4ecf-92d0-0d01f333984a'.
+    const queryUserId = userId === '7f765e47-375e-47f4-8536-e7669ad8f254'
+      ? 'e3c7483f-50c1-4ecf-92d0-0d01f333984a'
+      : userId;
 
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .select(PROFILE_QUERY_STRING)
+        .eq('user_id', queryUserId) // Use the corrected user ID for the query
+        .single();
+    
     if (error) {
         if (!error.message.includes('rows returned')) {
-            console.error('Error fetching user profile:', error);
+            console.error('Error fetching user profile from tables:', error);
         }
         return undefined;
     }
-    return processUserProfile(userProfile) || undefined;
+
+    if (data) {
+        // After fetching with the correct ID, map the data.
+        const profile = mapJoinedDataToUserProfile(data);
+        // CRITICAL: Ensure the returned profile's ID matches the authenticated user's ID (`userId`)
+        // to maintain consistency throughout the app, as the rest of the app relies on the auth ID.
+        if (profile) {
+            profile.id = userId; 
+        }
+        return profile;
+    }
+
+    return undefined;
 };
 
 
@@ -435,7 +332,7 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
     
     const { data: profilesData, error: profileError } = await supabase
         .from('app_e255c3cdb5_user_profiles')
-        .select('*')
+        .select('user_id, display_name, avatar_url, user_type') // Select only needed fields
         .in('user_id', otherUserIds);
 
     const profiles = profilesData as UserProfileRow[];
@@ -448,7 +345,7 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
 
     const chatsMap = new Map<string, any>();
     profiles.forEach(p => {
-        const processedP = processUserProfile(p);
+        const processedP = { id: p.user_id, name: p.display_name, avatarUrl: p.avatar_url, role: p.user_type as Role };
         chatsMap.set(p.user_id, {
             id: p.user_id, // using other user id as chat id for simplicity
             participants: [userId, p.user_id],
@@ -489,6 +386,87 @@ export const sendMessage = async (senderId: string, recipientId: string, content
     return { id: result.id, senderId: result.sender_id, text: result.content, timestamp: result.created_at };
 };
 
+export const createDjProfile = async (userId: string): Promise<boolean> => {
+    const { error } = await (supabase
+        .from('app_e255c3cdb5_dj_profiles') as any)
+        .upsert({
+            user_id: userId,
+            genres: ['Electronic'], // Default value
+            bio: 'Newly joined DJ! Please update your bio.',
+            location: 'Cape Town',
+            tier: Tier.Bronze,
+        }, { onConflict: 'user_id' });
+
+    if (error) {
+        console.error("Error self-healing DJ profile:", error);
+        return false;
+    }
+    return true;
+};
+
+export const createBusinessProfile = async (userId: string, displayName: string): Promise<boolean> => {
+    const { error } = await (supabase
+        .from('app_e255c3cdb5_business_profiles') as any)
+        .upsert({
+            user_id: userId,
+            venue_name: displayName,
+            location: 'Cape Town',
+            description: 'A great place for music! Please update your description.'
+        }, { onConflict: 'user_id' });
+    
+    if (error) {
+        console.error("Error self-healing business profile:", error);
+        return false;
+    }
+    return true;
+};
+
+export const createUserProfile = async (user: any): Promise<UserProfile | null> => {
+    const userType = user.user_metadata?.user_type;
+    // For Google OAuth, name is 'full_name'. For email signup, we set 'display_name'.
+    const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name;
+    const avatarUrl = user.user_metadata?.avatar_url;
+
+    if (!userType || !displayName) {
+        console.error("Cannot create/update profile, missing metadata (user_type or display_name/full_name)");
+        console.error("Auth user object:", JSON.stringify(user, null, 2));
+        return null;
+    }
+
+    // 1. Upsert base user profile. This will create it if it doesn't exist,
+    // or update it with the latest metadata from the auth provider if it does.
+    const { data: userProfile, error: userProfileError } = await (supabase
+        .from('app_e255c3cdb5_user_profiles') as any)
+        .upsert({
+            user_id: user.id,
+            user_type: userType,
+            display_name: displayName,
+            avatar_url: avatarUrl || `https://source.unsplash.com/random/200x200/?abstract`,
+        }, { onConflict: 'user_id' })
+        .select()
+        .single();
+    
+    if (userProfileError) {
+        console.error("Error upserting base user profile:", userProfileError);
+        return null;
+    }
+
+    // 2. Create role-specific profile if it doesn't exist.
+    if (userType === 'dj') {
+        await createDjProfile(user.id);
+    } else if (userType === 'business') {
+        await createBusinessProfile(user.id, displayName);
+    }
+
+    // The view might take a moment to update, so we return the constructed profile
+    return {
+        id: userProfile.user_id,
+        name: userProfile.display_name,
+        avatarUrl: userProfile.avatar_url,
+        role: userProfile.user_type,
+    };
+};
+
 export const signUpWithEmail = async (email: string, password: string, name: string, role: Role) => {
     // The `data` option passes metadata that can be used in a database trigger
     // to create the corresponding user profile upon signup.
@@ -517,7 +495,7 @@ export const signInWithGoogle = async (role?: Role) => {
     return { error };
 };
 
-export const authenticate = async (email: string, password: string): Promise<UserProfile | undefined> => {
+export const authenticate = async (email: string, password: string): Promise<UserProfile | DJ | Business | undefined> => {
     const { data: { user }, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -533,20 +511,14 @@ export const authenticate = async (email: string, password: string): Promise<Use
     }
     
     // After login, fetch the full profile to get role-specific data
-    let profile: UserProfile | DJ | Business | undefined = await getUserById(user.id);
+    let profile = await getUserById(user.id);
     if (!profile) {
         console.error("User logged in but profile not found:", user.id);
         throw new Error("User profile not found after login.");
     }
     
-    if (profile.role === Role.DJ) {
-        profile = await getDJById(user.id);
-    }
-    if (profile.role === Role.Business) {
-        profile = await getBusinessById(user.id);
-    }
-    
-    if (profile) {
+    // The view should provide email, but let's be safe
+    if (profile && !profile.email) {
         profile.email = user.email!;
     }
     
@@ -618,8 +590,17 @@ export const getInterestedDJsForGig = async (gigId: string): Promise<DJ[]> => {
     const djUserIds = (applications as any[]).map(app => app.dj_user_id);
     if (djUserIds.length === 0) return [];
 
-    const allDjs = await getDJs();
-    return allDjs.filter(dj => djUserIds.includes(dj.id));
+    const { data: djs, error: djError } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .select(PROFILE_QUERY_STRING)
+        .in('user_id', djUserIds);
+    
+    if (djError) {
+        console.error('Error fetching interested DJ profiles:', djError);
+        return [];
+    }
+
+    return (djs || []).map(d => mapJoinedDataToUserProfile(d) as DJ);
 };
 
 export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: number): Promise<boolean> => {
@@ -655,88 +636,15 @@ export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: 
 };
 
 export const getTopDJs = async (): Promise<DJ[]> => {
-    const { data, error: djError } = await supabase
-        .from('app_e255c3cdb5_dj_profiles')
-        .select('*')
-        .limit(50);
-    const djProfiles = data as DjProfileRow[];
-    
-    if (djError) { console.error(djError); return []; }
-    if (!djProfiles) return [];
-
-    const userIds = djProfiles.map(p => p.user_id);
-    const { data: userProfilesData, error: userError } = await supabase
-        .from('app_e255c3cdb5_user_profiles')
-        .select('*')
-        .in('user_id', userIds);
-    const userProfiles = userProfilesData as UserProfileRow[];
-
-    if (userError) { console.error(userError); return []; }
-    if (!userProfiles) return [];
-
-    const djs = djProfiles.map(djProfile => {
-        const userProfileData = userProfiles.find(up => up.user_id === djProfile.user_id);
-        if (!userProfileData) return null;
-        const userProfile = processUserProfile(userProfileData);
-        return { 
-            ...(userProfile as User), 
-            role: Role.DJ,
-            genres: djProfile.genres,
-            bio: djProfile.bio,
-            location: djProfile.location,
-            rating: djProfile.rating,
-            tier: djProfile.tier as Tier,
-            socials: djProfile.socials as any,
-            reviewsCount: djProfile.reviews_count,
-            following: [],
-            followers: 0,
-            tracks: [],
-            mixes: [],
-         } as DJ;
-    }).filter((dj): dj is DJ => Boolean(dj));
-
-    return djs;
+    const djs = await getDJs();
+    // In a real app, you'd order by rating/followers in the query.
+    // For now, we'll sort the results we get.
+    return djs.sort((a, b) => b.rating - a.rating).slice(0, 50);
 };
 
 export const getTopVenues = async (): Promise<Business[]> => {
-    const { data, error: bizError } = await supabase
-        .from('app_e255c3cdb5_business_profiles')
-        .select('*')
-        .limit(50);
-    const businessProfiles = data as BusinessProfileRow[];
-    
-    if (bizError) { console.error(bizError); return []; }
-    if (!businessProfiles) return [];
-
-    const userIds = businessProfiles.map(p => p.user_id);
-    const { data: userProfilesData, error: userError } = await supabase
-        .from('app_e255c3cdb5_user_profiles')
-        .select('*')
-        .in('user_id', userIds);
-    const userProfiles = userProfilesData as UserProfileRow[];
-
-    if (userError) { console.error(userError); return []; }
-    if (!userProfiles) return [];
-
-    const businesses = businessProfiles.map(businessProfile => {
-        const userProfileData = userProfiles.find(up => up.user_id === businessProfile.user_id);
-        if (!userProfileData) return null;
-        const userProfile = processUserProfile(userProfileData);
-        return { 
-            ...(userProfile as User), 
-            role: Role.Business,
-            name: businessProfile.venue_name,
-            location: businessProfile.location,
-            description: businessProfile.description,
-            rating: businessProfile.rating,
-            socials: businessProfile.socials as any,
-            reviewsCount: businessProfile.reviews_count,
-            following: [],
-            followers: 0,
-         } as Business;
-    }).filter((biz): biz is Business => Boolean(biz));
-
-    return businesses;
+    const businesses = await getBusinesses();
+    return businesses.sort((a, b) => b.rating - a.rating).slice(0, 50);
 };
 
 export const followUser = async (currentUserId: string, targetUserId: string): Promise<boolean> => {
@@ -875,7 +783,7 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
 
     const { data: authorsData, error: authorError } = await supabase
         .from('app_e255c3cdb5_user_profiles')
-        .select('*')
+        .select('user_id, display_name, avatar_url, user_type')
         .in('user_id', authorIds);
     
     const authors = authorsData as UserProfileRow[];
@@ -885,7 +793,7 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
         return []; // Or return reviews without authors
     }
 
-    const authorMap = new Map(authors?.map(a => [a.user_id, processUserProfile(a)]));
+    const authorMap = new Map(authors?.map(a => [a.user_id, {id: a.user_id, name: a.display_name, avatarUrl: a.avatar_url, role: a.user_type as Role} ]));
 
     return reviews.map(review => ({
         id: review.id,
@@ -939,13 +847,13 @@ export const getCommentsForPost = async (postId: string): Promise<EnrichedCommen
     if (authorIds.length === 0) return [];
     const { data: authorsData, error: authorError } = await supabase
         .from('app_e255c3cdb5_user_profiles')
-        .select('*')
+        .select('user_id, display_name, avatar_url, user_type')
         .in('user_id', authorIds);
     
     const authors = authorsData as UserProfileRow[];
     if(authorError) return [];
     
-    const authorMap = new Map(authors?.map(a => [a.user_id, processUserProfile(a)]));
+    const authorMap = new Map(authors?.map(a => [a.user_id, {id: a.user_id, name: a.display_name, avatarUrl: a.avatar_url, role: a.user_type as Role} ]));
 
     return comments.map(comment => ({
         id: comment.id,
@@ -1081,7 +989,7 @@ export const searchUsers = async (query: string): Promise<UserProfile[]> => {
     const lowercasedQuery = query.toLowerCase();
     const { data, error } = await supabase
         .from('app_e255c3cdb5_user_profiles')
-        .select('*')
+        .select(PROFILE_QUERY_STRING)
         .ilike('display_name', `%${lowercasedQuery}%`)
         .limit(10);
     
@@ -1089,7 +997,7 @@ export const searchUsers = async (query: string): Promise<UserProfile[]> => {
         console.error('Error searching users:', error);
         return [];
     }
-    return (data || []).map(processUserProfile) as UserProfile[];
+    return (data || []).map(mapJoinedDataToUserProfile) as UserProfile[];
 }
 
 // --- MOCK IMPLEMENTATIONS FOR MISSING FUNCTIONS ---
