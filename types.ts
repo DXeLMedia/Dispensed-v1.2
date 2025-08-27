@@ -41,6 +41,11 @@ export interface DJ extends User, Followable {
   tier: Tier;
   tracks: Track[];
   mixes: Playlist[];
+  experienceYears?: number;
+  equipmentOwned?: string[];
+  hourlyRate?: number;
+  travelRadius?: number; // in km
+  availabilitySchedule?: string;
   socials?: {
     instagram?: string;
     soundcloud?: string;
@@ -195,7 +200,7 @@ export interface EnrichedComment extends Comment {
 }
 
 // Type Aliases for compatibility
-export type UserProfile = User;
+export type UserProfile = DJ | Business | Listener;
 export type Post = FeedItem;
 export type PostComment = Comment;
 
@@ -206,6 +211,11 @@ export interface DjProfile {
     rating?: number;
     reviewsCount?: number;
     tier?: Tier;
+    experienceYears?: number;
+    equipmentOwned?: string[];
+    hourlyRate?: number;
+    travelRadius?: number;
+    availabilitySchedule?: string;
     socials?: {
         instagram?: string;
         soundcloud?: string;

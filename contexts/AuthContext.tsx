@@ -4,6 +4,7 @@ import { User, Role, DJ, Business, Notification, UserSettings, Listener } from '
 import * as api from '../services/mockApi';
 import { useMediaPlayer } from './MediaPlayerContext';
 import { supabase } from '../services/supabaseClient';
+import { userAppUpdatesService } from '../services/userAppUpdatesService';
 
 type FullUser = User | DJ | Business | Listener;
 
@@ -157,6 +158,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
+    if (user) {
+        await userAppUpdatesService.syncActions(user.id);
+    }
     closePlayer(); // Reset media player state
     await supabase.auth.signOut();
     document.documentElement.className = 'theme-dark'; // Reset to default on logout
@@ -174,8 +178,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // Redirect the user back to the page they were on.
-        // The onAuthStateChange listener will handle the session.
         redirectTo: window.location.origin,
         data: role ? { user_type: role } : undefined,
       } as any,

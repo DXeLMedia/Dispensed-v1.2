@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
@@ -83,7 +82,7 @@ export const SignUp = () => {
                 <label htmlFor="role" className="block text-sm font-medium text-[var(--text-secondary)]">I am a...</label>
                 <select id="role" value={role} onChange={(e) => setRole(e.target.value as Role)} className="mt-1 block w-full pl-3 pr-10 py-2 bg-[var(--surface-1)] border border-[var(--border)] rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--accent)]">
                   <option value={Role.DJ}>DJ</option>
-                  <option value={Role.Business}>Venue / Promoter</option>
+                  <option value={Role.Business}>Venue / Event Brand</option>
                   <option value={Role.Listener}>Listener</option>
                 </select>
               </div>

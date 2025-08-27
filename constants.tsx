@@ -55,6 +55,7 @@ import {
   Globe,
   Download,
   Building,
+  Banknote,
 } from 'lucide-react';
 import React from 'react';
 
@@ -112,3 +113,4 @@ export const IconInstagram = (props: React.ComponentProps<typeof Instagram>) => 
 export const IconWebsite = (props: React.ComponentProps<typeof Globe>) => <Globe {...props} />;
 export const IconDownload = (props: React.ComponentProps<typeof Download>) => <Download {...props} />;
 export const IconBuilding = (props: React.ComponentProps<typeof Building>) => <Building {...props} />;
+export const IconMoney = (props: React.ComponentProps<typeof Banknote>) => <Banknote {...props} />;

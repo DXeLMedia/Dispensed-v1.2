@@ -6,7 +6,7 @@ import * as api from '../services/mockApi';
 import { useAuth } from '../hooks/useAuth';
 import { PageSpinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
-import { IconSettings, IconStar, IconMusic, IconPlay, IconShare, IconArrowLeft, IconBriefcase, IconRadio, IconPlusCircle, IconList, IconPencil, IconInstagram, IconWebsite } from '../constants';
+import { IconSettings, IconStar, IconMusic, IconPlay, IconShare, IconArrowLeft, IconBriefcase, IconRadio, IconPlusCircle, IconList, IconPencil, IconInstagram, IconWebsite, IconTrophy, IconMoney, IconMapPin, IconCalendar } from '../constants';
 import { RatingModal } from '../components/RatingModal';
 import { ReviewCard } from '../components/ReviewCard';
 import { useMediaPlayer } from '../contexts/MediaPlayerContext';
@@ -166,6 +166,7 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitt
     };
 
     const hasSocials = dj.socials && Object.values(dj.socials).some(Boolean);
+    const hasDetails = dj.experienceYears || dj.hourlyRate || dj.travelRadius;
 
     return (
         <>
@@ -212,11 +213,11 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitt
             
             <ProfileTabs activeTab={activeTab} setActiveTab={setActiveTab} />
             
-            <div className="px-4 pb-4 space-y-3">
+            <div className="px-4 pb-4 space-y-4">
                 {activeTab === 'about' && (
-                     <>
+                     <div className="space-y-4">
                         {hasSocials && (
-                             <div className="mb-4">
+                             <div>
                                 <h2 className="font-orbitron text-lg font-bold mb-2 text-[var(--text-primary)]">Connect</h2>
                                 <div className="flex flex-wrap gap-2">
                                     {dj.socials?.instagram && <a href={`https://instagram.com/${dj.socials.instagram}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 bg-[var(--surface-2)] rounded-lg hover:bg-[var(--border)]"><IconInstagram size={20} /></a>}
@@ -225,7 +226,7 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitt
                                 </div>
                             </div>
                         )}
-                        <div className="mb-4">
+                        <div>
                              <h2 className="font-orbitron text-lg font-bold mb-2 text-[var(--text-primary)]">Genres</h2>
                              <div className="flex flex-wrap gap-2">
                                 {dj.genres.map(genre => (
@@ -234,11 +235,61 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitt
                             </div>
                         </div>
 
+                        {hasDetails && (
+                            <div>
+                                <h2 className="font-orbitron text-lg font-bold mb-2 text-[var(--text-primary)]">DJ Details</h2>
+                                <div className="grid grid-cols-3 gap-2 text-center p-3 bg-[var(--surface-2)]/50 rounded-lg">
+                                    {dj.experienceYears != null && (
+                                        <div>
+                                            <IconTrophy size={22} className="mx-auto text-[var(--accent)]" />
+                                            <p className="font-bold text-sm mt-1">{dj.experienceYears} yrs</p>
+                                            <p className="text-xs text-[var(--text-muted)]">Experience</p>
+                                        </div>
+                                    )}
+                                    {dj.hourlyRate != null && (
+                                        <div>
+                                            <IconMoney size={22} className="mx-auto text-[var(--accent)]" />
+                                            <p className="font-bold text-sm mt-1">R{dj.hourlyRate}/hr</p>
+                                            <p className="text-xs text-[var(--text-muted)]">Rate</p>
+                                        </div>
+                                    )}
+                                    {dj.travelRadius != null && (
+                                        <div>
+                                            <IconMapPin size={22} className="mx-auto text-[var(--accent)]" />
+                                            <p className="font-bold text-sm mt-1">{dj.travelRadius} km</p>
+                                            <p className="text-xs text-[var(--text-muted)]">Travels</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {dj.availabilitySchedule && (
+                            <div>
+                                <h2 className="font-orbitron text-lg font-bold mb-2 text-[var(--text-primary)]">Availability</h2>
+                                <div className="flex items-start gap-3 p-3 bg-[var(--surface-2)]/50 rounded-lg">
+                                    <IconCalendar size={20} className="text-[var(--accent)] mt-1 flex-shrink-0" />
+                                    <p className="text-[var(--text-secondary)] whitespace-pre-line">{dj.availabilitySchedule}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {dj.equipmentOwned && dj.equipmentOwned.length > 0 && (
+                            <div>
+                                <h2 className="font-orbitron text-lg font-bold mb-2 text-[var(--text-primary)]">Equipment</h2>
+                                <div className="flex flex-wrap gap-2">
+                                    {dj.equipmentOwned.map(item => (
+                                        <span key={item} className="px-3 py-1 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] text-xs font-semibold rounded-full">{item}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div>
                             <h2 className="font-orbitron text-lg font-bold mb-2 text-[var(--text-primary)]">About</h2>
                             <p className="text-[var(--text-secondary)] whitespace-pre-line">{dj.bio}</p>
                         </div>
-                    </>
+                    </div>
                 )}
                 {activeTab === 'media' && (
                      <div className="space-y-4">

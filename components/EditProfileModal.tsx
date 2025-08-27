@@ -2,8 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
+import * as gemini from '../services/geminiService';
 import { DJ, Business, Role } from '../types';
-import { IconX, IconInstagram, IconMusic, IconWebsite, IconPencil } from '../constants';
+import { IconX, IconInstagram, IconMusic, IconWebsite, IconPencil, IconSparkles } from '../constants';
 import { Spinner } from './Spinner';
 import { Avatar } from './Avatar';
 
@@ -25,23 +26,45 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     const [soundcloud, setSoundcloud] = useState('');
     const [website, setWebsite] = useState('');
     const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // New DJ specific fields
+    const [experienceYears, setExperienceYears] = useState<string>('');
+    const [hourlyRate, setHourlyRate] = useState<string>('');
+    const [travelRadius, setTravelRadius] = useState<string>('');
+    const [equipmentOwnedStr, setEquipmentOwnedStr] = useState<string>('');
+    const [availabilitySchedule, setAvailabilitySchedule] = useState('');
+
+    // AI Bio Gen
+    const [keywordsForBio, setKeywordsForBio] = useState('');
+    const [isGeneratingBio, setIsGeneratingBio] = useState(false);
+    
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
 
     useEffect(() => {
         if (profileData) {
             setName(profileData.name);
-            setBio(profileData.role === Role.Business ? profileData.description : profileData.bio);
             setLocation(profileData.location);
             setInstagram(profileData.socials?.instagram || '');
-            setSoundcloud(profileData.role === Role.DJ ? profileData.socials?.soundcloud || '' : '');
             setWebsite(profileData.socials?.website || '');
+            
             if (profileData.role === Role.DJ) {
+                setBio(profileData.bio);
+                setSoundcloud(profileData.socials?.soundcloud || '');
                 setSelectedGenres(profileData.genres);
+                setExperienceYears(String(profileData.experienceYears || ''));
+                setHourlyRate(String(profileData.hourlyRate || ''));
+                setTravelRadius(String(profileData.travelRadius || ''));
+                setEquipmentOwnedStr((profileData.equipmentOwned || []).join(', '));
+                setAvailabilitySchedule(profileData.availabilitySchedule || '');
+            } else {
+                setBio(profileData.description);
             }
+            
             setAvatarPreview(null);
+            setKeywordsForBio('');
         }
     }, [profileData]);
 
@@ -65,6 +88,21 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
             reader.readAsDataURL(file);
         }
     };
+    
+    const handleGenerateBio = async () => {
+        if (!profileData || profileData.role !== Role.DJ) return;
+        setIsGeneratingBio(true);
+        const generatedBio = await gemini.generateDjBio(
+            name,
+            selectedGenres,
+            location,
+            Number(experienceYears) || undefined,
+            equipmentOwnedStr.split(',').map(s => s.trim()).filter(Boolean),
+            keywordsForBio
+        );
+        setBio(generatedBio);
+        setIsGeneratingBio(false);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -78,6 +116,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                     bio,
                     location,
                     genres: selectedGenres,
+                    experienceYears: Number(experienceYears) || undefined,
+                    hourlyRate: Number(hourlyRate) || undefined,
+                    travelRadius: Number(travelRadius) || undefined,
+                    equipmentOwned: equipmentOwnedStr.split(',').map(s => s.trim()).filter(Boolean),
+                    availabilitySchedule: availabilitySchedule || undefined,
                     socials: {
                         instagram: instagram || undefined,
                         soundcloud: soundcloud || undefined,
@@ -141,8 +184,19 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                     </div>
                     
                     <div>
-                        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">{profileData.role === Role.DJ ? 'Bio' : 'Description'}</label>
+                        <div className="flex justify-between items-center mb-1">
+                             <label className="block text-sm font-medium text-[var(--text-secondary)]">{profileData.role === Role.DJ ? 'Bio' : 'Description'}</label>
+                             {profileData.role === Role.DJ && (
+                                <button type="button" onClick={handleGenerateBio} disabled={isGeneratingBio} className="flex items-center gap-1 text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] disabled:text-[var(--text-muted)]">
+                                    {isGeneratingBio ? <div className="w-4 h-4"><Spinner /></div> : <IconSparkles size={16} />}
+                                    {isGeneratingBio ? 'Generating...' : 'Generate with AI'}
+                                </button>
+                             )}
+                        </div>
                         <textarea value={bio} onChange={e => setBio(e.target.value)} rows={4} className="w-full p-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" required></textarea>
+                         {profileData.role === Role.DJ && (
+                             <input type="text" value={keywordsForBio} onChange={e => setKeywordsForBio(e.target.value)} placeholder="Add keywords for AI bio (e.g., melodic, high-energy)" className="w-full mt-2 p-2 text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded-lg" />
+                         )}
                     </div>
 
                     <div>
@@ -151,28 +205,60 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                     </div>
                      
                     {profileData.role === Role.DJ && (
-                        <div>
-                            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Genres</label>
-                            <div className="flex flex-wrap gap-2">
-                                {availableGenres.map(genre => {
-                                    const isSelected = selectedGenres.includes(genre);
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={genre}
-                                            onClick={() => handleGenreToggle(genre)}
-                                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
-                                                isSelected
-                                                    ? 'bg-[var(--accent)] text-[var(--accent-text)]'
-                                                    : 'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--border)]'
-                                            }`}
-                                        >
-                                            {genre}
-                                        </button>
-                                    );
-                                })}
+                        <>
+                             <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Experience (Yrs)</label>
+                                    <input type="number" value={experienceYears} onChange={e => setExperienceYears(e.target.value)} className="w-full p-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg"/>
+                                </div>
+                                 <div>
+                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Rate (R/hr)</label>
+                                    <input type="number" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} className="w-full p-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg"/>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Travel (km)</label>
+                                    <input type="number" value={travelRadius} onChange={e => setTravelRadius(e.target.value)} className="w-full p-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg"/>
+                                </div>
                             </div>
-                        </div>
+                             <div>
+                                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Equipment</label>
+                                <input type="text" value={equipmentOwnedStr} onChange={e => setEquipmentOwnedStr(e.target.value)} placeholder="e.g., CDJ 3000, Technics SL-1200" className="w-full p-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg" />
+                                <p className="text-xs text-[var(--text-muted)] mt-1">Separate items with a comma.</p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Availability</label>
+                                <textarea
+                                    value={availabilitySchedule}
+                                    onChange={e => setAvailabilitySchedule(e.target.value)}
+                                    placeholder="e.g., Weekends after 8pm, Available for last-minute bookings"
+                                    rows={3}
+                                    className="w-full p-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                                />
+                                <p className="text-xs text-[var(--text-muted)] mt-1">Describe your general availability.</p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Genres</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {availableGenres.map(genre => {
+                                        const isSelected = selectedGenres.includes(genre);
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={genre}
+                                                onClick={() => handleGenreToggle(genre)}
+                                                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                                                    isSelected
+                                                        ? 'bg-[var(--accent)] text-[var(--accent-text)]'
+                                                        : 'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--border)]'
+                                                }`}
+                                            >
+                                                {genre}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </>
                     )}
 
                     <div>
