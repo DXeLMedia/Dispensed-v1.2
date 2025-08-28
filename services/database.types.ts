@@ -39,6 +39,7 @@ export type Database = {
           timestamp?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_user_profiles: {
         Row: {
@@ -62,12 +63,13 @@ export type Database = {
           avatar_url?: string;
           settings?: Json | null;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_dj_profiles: {
         Row: {
           user_id: string;
           genres: string[];
-          bio: string;
+          description: string;
           location: string;
           rating: number;
           reviews_count: number;
@@ -83,7 +85,7 @@ export type Database = {
         Insert: {
           user_id: string;
           genres: string[];
-          bio: string;
+          description: string;
           location: string;
           rating?: number;
           reviews_count?: number;
@@ -99,7 +101,7 @@ export type Database = {
         Update: {
           user_id?: string;
           genres?: string[];
-          bio?: string;
+          description?: string;
           location?: string;
           rating?: number;
           reviews_count?: number;
@@ -112,6 +114,7 @@ export type Database = {
           travel_radius?: number | null;
           availability_schedule?: Json | null;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_business_profiles: {
         Row: {
@@ -141,6 +144,7 @@ export type Database = {
           reviews_count?: number;
           socials?: Json | null;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_gigs: {
         Row: {
@@ -185,6 +189,7 @@ export type Database = {
           interest_count?: number | null;
           flyer_url?: string | null;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_posts: {
         Row: {
@@ -197,7 +202,7 @@ export type Database = {
           updated_at: string;
           likes_count: number;
           comments_count: number;
-          repost_of_id: string | null;
+          original_post_id: string | null;
           type: string | null;
         };
         Insert: {
@@ -206,7 +211,7 @@ export type Database = {
           content: string;
           media_url?: string | null;
           media_type?: 'image' | 'video' | null;
-          repost_of_id?: string | null;
+          original_post_id?: string | null;
           type?: string | null;
         };
         Update: {
@@ -217,9 +222,10 @@ export type Database = {
           media_type?: 'image' | 'video' | null;
           likes_count?: number;
           comments_count?: number;
-          repost_of_id?: string | null;
+          original_post_id?: string | null;
           type?: string | null;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_notifications: {
         Row: {
@@ -250,6 +256,7 @@ export type Database = {
           is_read?: boolean;
           related_id?: string | null;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_playlists: {
         Row: {
@@ -273,6 +280,7 @@ export type Database = {
           artwork_url?: string | null;
           tracks?: Json | null;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_messages: {
         Row: {
@@ -294,6 +302,7 @@ export type Database = {
           recipient_id?: string;
           content?: string;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_gig_applications: {
         Row: {
@@ -314,6 +323,7 @@ export type Database = {
           dj_user_id?: string;
           status?: string;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_bookings: {
         Row: {
@@ -337,6 +347,7 @@ export type Database = {
           business_user_id?: string;
           agreed_rate?: number;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_reviews: {
         Row: {
@@ -364,6 +375,7 @@ export type Database = {
           comment?: string | null;
           gig_id?: string | null;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_post_comments: {
         Row: {
@@ -385,6 +397,7 @@ export type Database = {
           user_id?: string;
           content?: string;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_post_likes: {
         Row: {
@@ -402,6 +415,7 @@ export type Database = {
           post_id?: string;
           user_id?: string;
         };
+        Relationships: [];
       };
       app_e255c3cdb5_follows: {
         Row: {
@@ -422,7 +436,8 @@ export type Database = {
           following_id?: string;
           created_at?: string;
         };
-      };
+        Relationships: [];
+      },
       app_e255c3cdb5_stream_sessions: {
         Row: {
             id: string;
@@ -447,8 +462,9 @@ export type Database = {
             is_live?: boolean;
             listener_count?: number;
             created_at?: string;
-        }
-      }
+        },
+        Relationships: [];
+      },
     };
     Views: {
       [_ in never]: never;
@@ -475,6 +491,5 @@ export type Database = {
     CompositeTypes: {
       [_ in never]: never;
     };
-    Relationships: [];
   };
 }

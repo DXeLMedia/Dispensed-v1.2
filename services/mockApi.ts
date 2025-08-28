@@ -1,5 +1,4 @@
 
-
 import { supabase } from './supabaseClient';
 import { 
     DJ, 
@@ -35,7 +34,6 @@ import { userAppUpdatesService } from './userAppUpdatesService';
 // SECTION: Type Aliases & Constants
 // =================================================================
 
-// FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
 type UserProfileRow = Database['public']['Tables']['app_e255c3cdb5_user_profiles']['Row'];
 type DjProfileRow = Database['public']['Tables']['app_e255c3cdb5_dj_profiles']['Row'];
 type BusinessProfileRow = Database['public']['Tables']['app_e255c3cdb5_business_profiles']['Row'];
@@ -49,8 +47,9 @@ type GigRow = Database['public']['Tables']['app_e255c3cdb5_gigs']['Row'];
  * Common select string for user profiles to ensure consistent data fetching.
  * Joins the user_profiles table with dj_profiles and business_profiles.
  */
-// FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types and enable relationship queries.
-const PROFILE_QUERY_STRING = '*, app_e255c3cdb5_dj_profiles:app_e255c3cdb5_dj_profiles(*), app_e255c3cdb5_business_profiles:app_e255c3cdb5_business_profiles(*)';
+// FIX: Removed !inner to use left joins. This allows profiles for all roles (DJ, Business, Listener)
+// to be fetched correctly, as listeners do not have entries in the other tables.
+const PROFILE_QUERY_STRING = '*, dj_profiles:app_e255c3cdb5_dj_profiles(*), business_profiles:app_e255c3cdb5_business_profiles(*)';
 
 // =================================================================
 // SECTION: Data Mapping & Utilities
@@ -62,7 +61,7 @@ const PROFILE_QUERY_STRING = '*, app_e255c3cdb5_dj_profiles:app_e255c3cdb5_dj_pr
  * @param data The raw data object from the Supabase query with joined profiles.
  * @returns A processed and typed user profile object (DJ, Business, or Listener).
  */
-function mapJoinedDataToUserProfile(data: UserProfileRow & { app_e255c3cdb5_dj_profiles: DjProfileRow | DjProfileRow[] | null, app_e255c3cdb5_business_profiles: BusinessProfileRow | BusinessProfileRow[] | null }): UserProfile {
+function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProfileRow | DjProfileRow[] | null, business_profiles: BusinessProfileRow | BusinessProfileRow[] | null }): UserProfile {
     const role = data.user_type as Role;
 
     const baseUser = {
@@ -76,13 +75,14 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { app_e255c3cdb5_dj_p
         followers: 0,
     };
     
-    if (role === Role.DJ && data.app_e255c3cdb5_dj_profiles) {
-        const djProfile = Array.isArray(data.app_e255c3cdb5_dj_profiles) ? data.app_e255c3cdb5_dj_profiles[0] : data.app_e255c3cdb5_dj_profiles;
+    if (role === Role.DJ && data.dj_profiles) {
+        const djProfile = Array.isArray(data.dj_profiles) ? data.dj_profiles[0] : data.dj_profiles;
         return {
             ...baseUser,
             role: Role.DJ,
             genres: djProfile?.genres || [],
-            bio: djProfile?.bio || '',
+            // FIX: Map the 'description' column from the DB to the app's 'bio' property.
+            bio: djProfile?.description || '',
             location: djProfile?.location || '',
             rating: djProfile?.rating || 0,
             reviewsCount: djProfile?.reviews_count || 0,
@@ -96,8 +96,8 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { app_e255c3cdb5_dj_p
             travelRadius: djProfile?.travel_radius || undefined,
             availabilitySchedule: (djProfile?.availability_schedule as string) || undefined,
         };
-    } else if (role === Role.Business && data.app_e255c3cdb5_business_profiles) {
-        const businessProfile = Array.isArray(data.app_e255c3cdb5_business_profiles) ? data.app_e255c3cdb5_business_profiles[0] : data.app_e255c3cdb5_business_profiles;
+    } else if (role === Role.Business && data.business_profiles) {
+        const businessProfile = Array.isArray(data.business_profiles) ? data.business_profiles[0] : data.business_profiles;
         return {
             ...baseUser,
             role: Role.Business,
@@ -130,7 +130,7 @@ const mapPostToFeedItem = (post: PostRow, repostsCount: number = 0): FeedItem =>
     reposts: repostsCount,
     relatedId: undefined, // Needs specific logic per type
     type: (post.type as FeedItem['type']) || 'user_post',
-    repostOf: post.repost_of_id || undefined,
+    repostOf: post.original_post_id || undefined,
 });
 
 /** Maps a gig row from Supabase to a Gig. */
@@ -155,27 +155,27 @@ const mapRowToGig = (gig: GigRow): Gig => ({
 // =================================================================
 
 export const getUserById = async (userId: string): Promise<UserProfile | undefined> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select(PROFILE_QUERY_STRING)
         .eq('user_id', userId)
-        .single();
+        // FIX: Use .maybeSingle() to prevent crashing when no user is found.
+        // This allows the self-healing profile creation logic to proceed.
+        .maybeSingle();
     
     if (error || !data) {
-        if (error && !error.message.includes('0 rows')) console.error('Error fetching user profile:', error.message);
+        if (error) console.error('Error fetching user profile:', error.message);
         return undefined;
     }
 
     const [followersResult, followingResult] = await Promise.all([
-        // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
         supabase.from('app_e255c3cdb5_follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
         supabase.from('app_e255c3cdb5_follows').select('following_id').eq('follower_id', userId),
     ]);
 
     const user = mapJoinedDataToUserProfile(data as any);
     user.followers = followersResult.count ?? 0;
-    user.following = (followingResult.data || []).map(f => f.following_id);
+    user.following = (followingResult.data || []).map((f) => f.following_id);
 
     return user;
 };
@@ -186,7 +186,6 @@ export const getDJById = async (userId: string): Promise<DJ | undefined> => {
 };
 
 export const getDJs = async (): Promise<DJ[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data: profiles, error } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select(PROFILE_QUERY_STRING)
@@ -197,11 +196,10 @@ export const getDJs = async (): Promise<DJ[]> => {
         return [];
     }
     
-    return profiles.map(p => mapJoinedDataToUserProfile(p as any)).filter(p => p.role === Role.DJ) as DJ[];
+    return (profiles as any[]).map((p) => mapJoinedDataToUserProfile(p)).filter((p) => p.role === Role.DJ) as DJ[];
 };
 
 export const getBusinesses = async (): Promise<Business[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data: profiles, error } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select(PROFILE_QUERY_STRING)
@@ -212,7 +210,7 @@ export const getBusinesses = async (): Promise<Business[]> => {
         return [];
     }
 
-    return profiles.map(p => mapJoinedDataToUserProfile(p as any)).filter(p => p.role === Role.Business) as Business[];
+    return (profiles as any[]).map((p) => mapJoinedDataToUserProfile(p)).filter((p) => p.role === Role.Business) as Business[];
 };
 
 export const getBusinessById = async (userId: string): Promise<Business | undefined> => {
@@ -221,10 +219,9 @@ export const getBusinessById = async (userId: string): Promise<Business | undefi
 }
 
 export const getTopDJs = async (): Promise<DJ[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data: djProfiles, error } = await supabase
         .from('app_e255c3cdb5_dj_profiles')
-        .select('*, app_e255c3cdb5_user_profiles:app_e255c3cdb5_user_profiles(*)')
+        .select('*')
         .order('rating', { ascending: false })
         .order('reviews_count', { ascending: false })
         .limit(50);
@@ -245,10 +242,9 @@ export const getTopDJs = async (): Promise<DJ[]> => {
 };
 
 export const getTopVenues = async (): Promise<Business[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data: businessProfiles, error } = await supabase
         .from('app_e255c3cdb5_business_profiles')
-        .select('*, app_e255c3cdb5_user_profiles:app_e255c3cdb5_user_profiles(*)')
+        .select('*')
         .order('rating', { ascending: false })
         .order('reviews_count', { ascending: false })
         .limit(50);
@@ -269,7 +265,6 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     userAppUpdatesService.logAction('UPDATE_USER_PROFILE', { userId, data });
     const { name, avatarUrl, ...rest } = data;
     
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const userProfileData: Database['public']['Tables']['app_e255c3cdb5_user_profiles']['Update'] = {};
     if (name) userProfileData.display_name = name;
     if (avatarUrl) userProfileData.avatar_url = avatarUrl;
@@ -277,7 +272,6 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     let success = true;
 
     if (Object.keys(userProfileData).length > 0) {
-        // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
         const { error } = await supabase.from('app_e255c3cdb5_user_profiles').update(userProfileData).eq('user_id', userId);
         if (error) {
             console.error('Error updating user profile:', error.message);
@@ -287,10 +281,10 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
 
     if (data.role === Role.DJ) {
         const djData = rest as Partial<DJ>;
-        // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
         const djProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_dj_profiles']['Update'] = {};
         const djFullProfile = rest as DjProfile;
-        if (djData.bio) djProfileUpdate.bio = djData.bio;
+        // FIX: Map the app's 'bio' field to the DB's 'description' column.
+        if (djData.bio) djProfileUpdate.description = djData.bio;
         if (djData.genres) djProfileUpdate.genres = djData.genres;
         if (djData.location) djProfileUpdate.location = djData.location;
         if (djData.socials) djProfileUpdate.socials = djData.socials as Json;
@@ -301,7 +295,6 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
         if (djFullProfile.availabilitySchedule) djProfileUpdate.availability_schedule = djFullProfile.availabilitySchedule;
         
         if (Object.keys(djProfileUpdate).length > 0) {
-            // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
             const { error } = await supabase.from('app_e255c3cdb5_dj_profiles').update(djProfileUpdate).eq('user_id', userId);
             if (error) {
                 console.error('Error updating DJ profile:', error.message);
@@ -312,7 +305,6 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
 
     if (data.role === Role.Business) {
         const businessData = rest as Partial<Business>;
-        // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
         const businessProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_business_profiles']['Update'] = {};
         if (businessData.name) businessProfileUpdate.venue_name = businessData.name;
         if (businessData.description) businessProfileUpdate.description = businessData.description;
@@ -320,7 +312,6 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
         if (businessData.socials) businessProfileUpdate.socials = businessData.socials as Json;
 
         if (Object.keys(businessProfileUpdate).length > 0) {
-            // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
             const { error } = await supabase.from('app_e255c3cdb5_business_profiles').update(businessProfileUpdate).eq('user_id', userId);
             if (error) {
                 console.error('Error updating business profile:', error.message);
@@ -335,8 +326,7 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
 
 export const updateUserSettings = async(userId: string, settings: Partial<UserSettings>): Promise<boolean> => {
     userAppUpdatesService.logAction('UPDATE_USER_SETTINGS', { userId, settings });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
-    const { error } = await supabase.from('app_e255c3cdb5_user_profiles').update({ settings: settings as any }).eq('user_id', userId);
+    const { error } = await supabase.from('app_e255c3cdb5_user_profiles').update({ settings: settings as Json }).eq('user_id', userId);
     if (!error) persistenceService.markDirty();
     return !error;
 }
@@ -348,7 +338,6 @@ export const updateUserSettings = async(userId: string, settings: Partial<UserSe
 
 export const followUser = async (currentUserId: string, targetUserId: string): Promise<boolean> => {
     userAppUpdatesService.logAction('FOLLOW_USER', { currentUserId, targetUserId });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { error } = await supabase.from('app_e255c3cdb5_follows').insert({ follower_id: currentUserId, following_id: targetUserId });
     if (error) {
         console.error("Error following user:", error.message);
@@ -360,7 +349,6 @@ export const followUser = async (currentUserId: string, targetUserId: string): P
 
 export const unfollowUser = async (currentUserId: string, targetUserId: string): Promise<boolean> => {
     userAppUpdatesService.logAction('UNFOLLOW_USER', { currentUserId, targetUserId });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { error } = await supabase.from('app_e255c3cdb5_follows').delete().match({ follower_id: currentUserId, following_id: targetUserId });
      if (error) {
         console.error("Error unfollowing user:", error.message);
@@ -371,36 +359,31 @@ export const unfollowUser = async (currentUserId: string, targetUserId: string):
 }
 
 export const getFollowersForUser = async (userId: string): Promise<UserProfile[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_follows').select('follower_id').eq('following_id', userId);
     if (error || !data) return [];
     
-    const followerIds = data.map(f => f.follower_id);
+    const followerIds = data.map((f) => f.follower_id);
     if(followerIds.length === 0) return [];
 
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data: profiles, error: profileError } = await supabase.from('app_e255c3cdb5_user_profiles').select(PROFILE_QUERY_STRING).in('user_id', followerIds);
-    return profileError ? [] : (profiles || []).map(p => mapJoinedDataToUserProfile(p as any));
+    return profileError ? [] : (profiles || []).map((p) => mapJoinedDataToUserProfile(p as any));
 }
 
 export const getFollowingForUser = async (userId: string): Promise<UserProfile[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_follows').select('following_id').eq('follower_id', userId);
     if (error || !data) return [];
     
-    const followingIds = data.map(f => f.following_id);
+    const followingIds = data.map((f) => f.following_id);
     if(followingIds.length === 0) return [];
     
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data: profiles, error: profileError } = await supabase.from('app_e255c3cdb5_user_profiles').select(PROFILE_QUERY_STRING).in('user_id', followingIds);
-    return profileError ? [] : (profiles || []).map(p => mapJoinedDataToUserProfile(p as any));
+    return profileError ? [] : (profiles || []).map((p) => mapJoinedDataToUserProfile(p as any));
 }
 
 // =================================================================
 // SECTION: Gig & Booking Management
 // =================================================================
 export const getGigById = async (id: string): Promise<Gig | undefined> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').select('*').eq('id', id).single();
     if (error || !data) {
         if (error && !error.message.includes('0 rows')) console.error('Error fetching gig by id:', error.message);
@@ -410,14 +393,12 @@ export const getGigById = async (id: string): Promise<Gig | undefined> => {
 };
 
 export const getGigs = async (): Promise<Gig[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').select('*');
     if (error) console.error('Error fetching gigs:', error.message);
     return (data || []).map(mapRowToGig);
 };
 
 export const getGigsForVenue = async (businessUserId: string): Promise<Gig[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').select('*').eq('business_user_id', businessUserId);
     if (error) console.error('Error fetching gigs for venue:', error.message);
     return (data || []).map(mapRowToGig);
@@ -425,7 +406,6 @@ export const getGigsForVenue = async (businessUserId: string): Promise<Gig[]> =>
 
 export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig | null> => {
     userAppUpdatesService.logAction('ADD_GIG', { gigData });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
      const newGig: Database['public']['Tables']['app_e255c3cdb5_gigs']['Insert'] = { 
         title: gigData.title,
         business_user_id: gigData.business_user_id,
@@ -437,7 +417,6 @@ export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig |
         flyer_url: gigData.flyerUrl,
         status: 'Open' 
     };
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').insert(newGig).select().single();
 
     if (error || !data) {
@@ -450,7 +429,6 @@ export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig |
 
 export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promise<Gig | null> => {
     userAppUpdatesService.logAction('UPDATE_GIG', { gigId, updatedData });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const dbData: Database['public']['Tables']['app_e255c3cdb5_gigs']['Update'] = {};
     if (updatedData.title) dbData.title = updatedData.title;
     if (updatedData.date) dbData.date = updatedData.date;
@@ -462,7 +440,6 @@ export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promi
     if (updatedData.bookedDjId) dbData.booked_dj_id = updatedData.bookedDjId;
     if (updatedData.flyerUrl) dbData.flyer_url = updatedData.flyerUrl;
     
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').update(dbData).eq('id', gigId).select().single();
     if (error || !data) {
         console.error('Error updating gig:', error?.message);
@@ -474,7 +451,6 @@ export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promi
 
 export const expressInterestInGig = async (gigId: string, djUserId: string): Promise<boolean> => {
     userAppUpdatesService.logAction('EXPRESS_INTEREST_IN_GIG', { gigId, djUserId });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { error } = await supabase.from('app_e255c3cdb5_gig_applications').insert({ gig_id: gigId, dj_user_id: djUserId, status: 'pending' });
     if (error) {
         console.error('Error expressing interest in gig:', error.message);
@@ -485,26 +461,23 @@ export const expressInterestInGig = async (gigId: string, djUserId: string): Pro
 };
 
 export const getInterestedDJsForGig = async (gigId: string): Promise<DJ[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_gig_applications').select('dj_user_id').eq('gig_id', gigId);
     if (error || !data) return [];
 
-    const djUserIds = data.map(app => app.dj_user_id);
+    const djUserIds = data.map((app) => app.dj_user_id);
     if (djUserIds.length === 0) return [];
     
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data: profiles, error: profileError } = await supabase.from('app_e255c3cdb5_user_profiles')
         .select(PROFILE_QUERY_STRING)
         .in('user_id', djUserIds)
         .eq('user_type', 'dj');
 
     if (profileError) return [];
-    return (profiles || []).map(p => mapJoinedDataToUserProfile(p as any)) as DJ[];
+    return (profiles || []).map((p) => mapJoinedDataToUserProfile(p as any)) as DJ[];
 };
 
 export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: number): Promise<boolean> => {
     userAppUpdatesService.logAction('BOOK_DJ_FOR_GIG', { gigId, djUserId, agreedRate });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { error: gigError } = await supabase.from('app_e255c3cdb5_gigs').update({ status: 'Booked', booked_dj_id: djUserId }).eq('id', gigId);
     if (gigError) {
         console.error('Error updating gig status:', gigError.message);
@@ -514,7 +487,6 @@ export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: 
     const gig = await getGigById(gigId);
     if (!gig) return false;
 
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { error: bookingError } = await supabase.from('app_e255c3cdb5_bookings').insert({ gig_id: gigId, dj_user_id: djUserId, business_user_id: gig.business_user_id, agreed_rate: agreedRate });
     if (bookingError) {
         console.error('Error creating booking:', bookingError.message);
@@ -526,24 +498,20 @@ export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: 
 };
 
 export const getInterestedGigsForDj = async (djId: string): Promise<Gig[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
   const { data, error } = await supabase.from('app_e255c3cdb5_gig_applications').select('gig_id').eq('dj_user_id', djId);
   if (error || !data) return [];
-  const gigIds = data.map(d => d.gig_id);
-  // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
+  const gigIds = data.map((d) => d.gig_id);
   const { data: gigs, error: gigError } = await supabase.from('app_e255c3cdb5_gigs').select('*').in('id', gigIds);
   return gigError ? [] : (gigs || []).map(mapRowToGig);
 }
 
 export const getBookedGigsForDj = async (djId: string): Promise<Gig[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').select('*').eq('booked_dj_id', djId).eq('status', 'Booked');
     if(error) return [];
     return (data || []).map(mapRowToGig);
 }
 
 export const getCompletedGigsForDj = async (djId: string): Promise<Gig[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').select('*').eq('booked_dj_id', djId).eq('status', 'Completed');
     if(error) return [];
     return (data || []).map(mapRowToGig);
@@ -554,7 +522,6 @@ export const getCompletedGigsForDj = async (djId: string): Promise<Gig[]> => {
 // =================================================================
 
 export const getFeedItems = async (): Promise<FeedItem[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data: posts, error } = await supabase.from('app_e255c3cdb5_posts').select('*').order('created_at', { ascending: false });
     if (error || !posts) {
         console.error('Error fetching posts:', error?.message);
@@ -562,21 +529,23 @@ export const getFeedItems = async (): Promise<FeedItem[]> => {
     }
     
     // Efficiently get repost counts
-    const postIds = posts.map(p => p.id);
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
-    const { data: reposts, error: repostError } = await supabase.from('app_e255c3cdb5_posts').select('repost_of_id').in('repost_of_id', postIds);
+    const postIds = posts.map((p) => p.id).filter(Boolean);
+    if (postIds.length === 0) {
+        return posts.map((p) => mapPostToFeedItem(p, 0));
+    }
+
+    const { data: reposts, error: repostError } = await supabase.from('app_e255c3cdb5_posts').select('original_post_id').in('original_post_id', postIds);
     if (repostError) console.error('Error fetching repost counts:', repostError.message);
     
-    const repostCounts = (reposts || []).reduce((acc, { repost_of_id }) => {
-        if (repost_of_id) acc[repost_of_id] = (acc[repost_of_id] || 0) + 1;
+    const repostCounts = (reposts || []).reduce((acc: Record<string, number>, { original_post_id }) => {
+        if (original_post_id) acc[original_post_id] = (acc[original_post_id] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
 
-    return posts.map(p => mapPostToFeedItem(p, repostCounts[p.id]));
+    return posts.map((p) => mapPostToFeedItem(p, repostCounts[p.id]));
 };
 
 export const getFeedItemById = async (id: string): Promise<FeedItem | undefined> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_posts').select('*').eq('id', id).single();
     if (error || !data) {
         if (error && !error.message.includes('0 rows')) console.error('Error fetching post by id:', error.message);
@@ -587,17 +556,15 @@ export const getFeedItemById = async (id: string): Promise<FeedItem | undefined>
 
 export const addFeedItem = async (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'comments' | 'reposts'>): Promise<FeedItem | null> => {
     userAppUpdatesService.logAction('ADD_FEED_ITEM', { item });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const newPost: Database['public']['Tables']['app_e255c3cdb5_posts']['Insert'] = {
         user_id: item.userId,
         content: item.description,
         media_url: item.mediaUrl,
         media_type: item.mediaType,
-        repost_of_id: item.repostOf,
+        original_post_id: item.repostOf,
         type: item.type
     };
     
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_posts').insert(newPost).select().single();
 
     if (error || !data) {
@@ -625,16 +592,17 @@ export const repost = async (originalPostId: string, userId: string): Promise<Fe
 };
 
 export const getCommentsForPost = async (postId: string): Promise<EnrichedComment[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_post_comments')
-        .select('*, author:app_e255c3cdb5_user_profiles(user_id, display_name, avatar_url, user_type)')
+        .select('*, author:app_e255c3cdb5_user_profiles!user_id(user_id, display_name, avatar_url, user_type)')
         .eq('post_id', postId)
         .order('created_at', { ascending: true });
 
     if (error || !data) return [];
     
-    return data.map(comment => {
-        const author = comment.author as UserProfileRow;
+    return data.map((comment) => {
+// FIX: Changed unsafe type assertion to `as unknown as UserProfileRow` to handle cases where Supabase type inference for joins is incorrect, preventing a TypeScript error.
+        const author = comment.author as unknown as UserProfileRow;
+        if (!author) return null;
         return {
             id: comment.id,
             authorId: comment.user_id,
@@ -648,12 +616,11 @@ export const getCommentsForPost = async (postId: string): Promise<EnrichedCommen
                 role: author.user_type as Role,
             },
         };
-    });
+    }).filter((c): c is EnrichedComment => !!c);
 };
 
 export const addCommentToPost = async (postId: string, userId: string, content: string): Promise<EnrichedComment | null> => {
     userAppUpdatesService.logAction('ADD_COMMENT_TO_POST', { postId, userId, content });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_post_comments').insert({ post_id: postId, user_id: userId, content }).select().single();
     if (error || !data) {
         if(error) console.error('Error adding comment:', error.message);
@@ -668,7 +635,6 @@ export const addCommentToPost = async (postId: string, userId: string, content: 
 
 export const toggleLikePost = async (postId: string, userId: string): Promise<boolean> => {
     // This could be a single RPC call for atomicity, but this is simpler.
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data: like, error: selectError } = await supabase.from('app_e255c3cdb5_post_likes').select('id').eq('post_id', postId).eq('user_id', userId).maybeSingle();
 
     if (selectError) {
@@ -679,12 +645,10 @@ export const toggleLikePost = async (postId: string, userId: string): Promise<bo
     let finalError = null;
     if (like) {
         userAppUpdatesService.logAction('UNLIKE_POST', { postId, userId });
-        // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
         const { error } = await supabase.from('app_e255c3cdb5_post_likes').delete().eq('id', like.id);
         finalError = error;
     } else {
         userAppUpdatesService.logAction('LIKE_POST', { postId, userId });
-        // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
         const { error } = await supabase.from('app_e255c3cdb5_post_likes').insert({ post_id: postId, user_id: userId });
         finalError = error;
     }
@@ -703,19 +667,17 @@ export const toggleLikePost = async (postId: string, userId: string): Promise<bo
 // =================================================================
 export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedChat[]> => {
     // Note: This implementation can be slow with many messages. A better schema would have a `chats` table.
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data: messages, error } = await supabase.from('app_e255c3cdb5_messages').select('*').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).order('created_at', { ascending: true });
     if (error || !messages) return [];
 
-    const otherUserIds = [...new Set(messages.map(m => m.sender_id === userId ? m.recipient_id : m.sender_id))];
+    const otherUserIds = [...new Set(messages.map((m) => m.sender_id === userId ? m.recipient_id : m.sender_id))];
     if (otherUserIds.length === 0) return [];
     
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data: profiles, error: profileError } = await supabase.from('app_e255c3cdb5_user_profiles').select('user_id, display_name, avatar_url, user_type').in('user_id', otherUserIds);
     if (profileError || !profiles) return [];
 
     const chatsMap = new Map<string, EnrichedChat>();
-    profiles.forEach(p => {
+    profiles.forEach((p) => {
         chatsMap.set(p.user_id, {
             id: p.user_id, // Using other user's ID as chat ID
             participants: [userId, p.user_id],
@@ -724,7 +686,7 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
         });
     });
 
-    messages.forEach(message => {
+    messages.forEach((message) => {
         const otherUserId = message.sender_id === userId ? message.recipient_id : message.sender_id;
         const chat = chatsMap.get(otherUserId);
         if (chat) {
@@ -737,7 +699,6 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
 
 export const sendMessage = async (senderId: string, recipientId: string, content: string): Promise<Message | null> => {
     userAppUpdatesService.logAction('SEND_MESSAGE', { senderId, recipientId, content });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_messages').insert({ sender_id: senderId, recipient_id: recipientId, content }).select().single();
     if (error || !data) {
         if(error) console.error('Error sending message:', error.message);
@@ -749,7 +710,6 @@ export const sendMessage = async (senderId: string, recipientId: string, content
 
 export const findChatByParticipants = async (userId1: string, userId2: string): Promise<Chat | null> => {
   // This is a "virtual" chat find. A real implementation would have a chats table.
-  // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
   const { data, error } = await supabase.from('app_e255c3cdb5_messages').select('*').or(`(sender_id.eq.${userId1},recipient_id.eq.${userId2}),(sender_id.eq.${userId2},recipient_id.eq.${userId1})`).limit(1);
   if (error || !data || data.length === 0) return null;
   return { id: userId2, participants: [userId1, userId2], messages: [] };
@@ -771,7 +731,6 @@ export const getChatById = async (chatId: string): Promise<Chat | null> => {
 // SECTION: Media (Tracks & Playlists)
 // =================================================================
 export const getTracksForDj = async (djUserId: string): Promise<Track[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_dj_profiles').select('portfolio_tracks').eq('user_id', djUserId).single();
     if (error || !data) {
         if(error) console.error('Error fetching tracks for DJ:', error.message);
@@ -781,13 +740,12 @@ export const getTracksForDj = async (djUserId: string): Promise<Track[]> => {
 };
 
 export const getPlaylistsForDj = async (djUserId: string): Promise<Playlist[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_playlists').select('*').eq('dj_user_id', djUserId);
     if (error) {
         console.error('Error fetching playlists for DJ:', error.message);
         return [];
     }
-    return (data || []).map(p => ({
+    return (data || []).map((p) => ({
         id: p.id,
         name: p.name,
         creatorId: p.dj_user_id, 
@@ -797,7 +755,6 @@ export const getPlaylistsForDj = async (djUserId: string): Promise<Playlist[]> =
 };
 
 export const getPlaylistById = async (id: string): Promise<Playlist | null> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_playlists').select('*').eq('id', id).single();
     if (error || !data) return null;
     return {
@@ -822,13 +779,12 @@ export const getTracksByIds = async (ids: string[]): Promise<Track[]> => {
     // to `user_id` would be the correct, performant solution.
     if (ids.length === 0) return [];
     
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_dj_profiles').select('portfolio_tracks');
     if (error) {
         console.error('Error fetching all tracks for ID lookup:', error.message);
         return [];
     }
-    const allTracks = (data || []).flatMap(p => (p.portfolio_tracks as unknown as Track[] || [])).filter(t => t && t.id);
+    const allTracks = (data || []).flatMap((p) => (p.portfolio_tracks as unknown as Track[] || [])).filter(t => t && t.id);
     const trackMap = new Map(allTracks.map(t => [t.id, t]));
     return ids.map(id => trackMap.get(id)).filter((t): t is Track => !!t);
 };
@@ -847,7 +803,6 @@ export const addTrack = async (userId: string, title: string, artworkUrl: string
 
 export const createPlaylist = async (playlistData: Omit<Playlist, 'id'>): Promise<Playlist | null> => {
     userAppUpdatesService.logAction('CREATE_PLAYLIST', { playlistData });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_playlists').insert({ dj_user_id: playlistData.creatorId, name: playlistData.name, artwork_url: playlistData.artworkUrl, tracks: [] }).select().single();
     if (error || !data) {
         console.error('Error creating playlist:', error?.message);
@@ -859,12 +814,10 @@ export const createPlaylist = async (playlistData: Omit<Playlist, 'id'>): Promis
 
 export const updatePlaylist = async (playlistId: string, playlistData: Partial<Playlist>): Promise<Playlist | null> => {
     userAppUpdatesService.logAction('UPDATE_PLAYLIST', { playlistId, playlistData });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const dbUpdate: Database['public']['Tables']['app_e255c3cdb5_playlists']['Update'] = {};
     if (playlistData.name) dbUpdate.name = playlistData.name;
     if (playlistData.artworkUrl) dbUpdate.artwork_url = playlistData.artworkUrl;
 
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_playlists').update(dbUpdate).eq('id', playlistId).select().single();
     if (error || !data) {
         console.error('Error updating playlist:', error?.message);
@@ -889,15 +842,17 @@ export const addTrackToPlaylist = async (playlistId: string, track: Track): Prom
 // SECTION: Reviews
 // =================================================================
 export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedReview[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_reviews')
-        .select('*, author:app_e255c3cdb5_user_profiles(user_id, display_name, avatar_url, user_type)')
+        .select('*, author:app_e255c3cdb5_user_profiles!reviewer_id(user_id, display_name, avatar_url, user_type)')
         .eq('reviewee_id', revieweeId);
         
     if (error || !data) return [];
     
-    return data.map(review => {
-        const author = review.author as UserProfileRow;
+// FIX: Added an explicit return type to the map function to guide TypeScript's inference and resolve a type predicate error in the subsequent filter.
+    return data.map((review): EnrichedReview | null => {
+// FIX: Changed unsafe type assertion to `as unknown as UserProfileRow` to handle cases where Supabase type inference for joins is incorrect, preventing a TypeScript error.
+        const author = review.author as unknown as UserProfileRow;
+        if (!author) return null;
         return {
             id: review.id,
             authorId: review.reviewer_id,
@@ -913,14 +868,12 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
                 role: author.user_type as Role,
             },
         };
-    });
+    }).filter((r): r is EnrichedReview => !!r);
 };
 
 export const submitReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>): Promise<Review | null> => {
     userAppUpdatesService.logAction('SUBMIT_REVIEW', { reviewData });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const dbReview: Database['public']['Tables']['app_e255c3cdb5_reviews']['Insert'] = { reviewer_id: reviewData.authorId, reviewee_id: reviewData.targetId, rating: reviewData.rating, comment: reviewData.comment, gig_id: reviewData.gigId };
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_reviews').insert(dbReview).select().single();
     if (error || !data) {
         console.error('Error submitting review:', error?.message);
@@ -942,7 +895,6 @@ export const submitReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>)
 // =================================================================
 export const createStreamSession = async (djId: string, title: string): Promise<StreamSession> => {
     userAppUpdatesService.logAction('CREATE_STREAM_SESSION', { djId, title });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_stream_sessions').insert({ dj_user_id: djId, title, is_live: true }).select().single();
     if (error || !data) {
         console.error("Error creating stream session:", error?.message);
@@ -953,7 +905,6 @@ export const createStreamSession = async (djId: string, title: string): Promise<
 };
 
 export const getStreamSessionById = async (sessionId: string): Promise<StreamSession | null> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_stream_sessions').select('*').eq('id', sessionId).single();
     if (error || !data) return null;
     return { id: data.id, djId: data.dj_user_id, title: data.title, isLive: data.is_live, listenerCount: data.listener_count };
@@ -961,7 +912,6 @@ export const getStreamSessionById = async (sessionId: string): Promise<StreamSes
 
 export const endStreamSession = async (sessionId: string): Promise<boolean> => {
     userAppUpdatesService.logAction('END_STREAM_SESSION', { sessionId });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { error } = await supabase.from('app_e255c3cdb5_stream_sessions').update({ is_live: false }).eq('id', sessionId);
     if (error) {
         console.error("Error ending stream session:", error.message);
@@ -976,7 +926,6 @@ export const endStreamSession = async (sessionId: string): Promise<boolean> => {
 // =================================================================
 
 export const getNotifications = async (userId: string): Promise<Notification[]> => {
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false });
     if (error) console.error('Error fetching notifications:', error.message);
     return ((data || []) as NotificationRow[]).map(n => ({
@@ -992,7 +941,6 @@ export const getNotifications = async (userId: string): Promise<Notification[]> 
 
 export const markAllAsRead = async (userId: string): Promise<boolean> => {
     userAppUpdatesService.logAction('MARK_ALL_NOTIFICATIONS_AS_READ', { userId });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { error } = await supabase.from('app_e255c3cdb5_notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
     if (error) {
         console.error('Error marking notifications as read:', error.message);
@@ -1008,10 +956,9 @@ export const markAllAsRead = async (userId: string): Promise<boolean> => {
 
 export const searchUsers = async (query: string): Promise<UserProfile[]> => {
     if (!query) return [];
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error } = await supabase.from('app_e255c3cdb5_user_profiles').select(PROFILE_QUERY_STRING).ilike('display_name', `%${query.toLowerCase()}%`).limit(10);
     if (error) console.error('Error searching users:', error.message);
-    return (data || []).map(p => mapJoinedDataToUserProfile(p as any));
+    return (data || []).map((p) => mapJoinedDataToUserProfile(p as any));
 }
 
 // =================================================================
@@ -1019,8 +966,8 @@ export const searchUsers = async (query: string): Promise<UserProfile[]> => {
 // =================================================================
 export const createDjProfile = async (userId: string): Promise<boolean> => {
     userAppUpdatesService.logAction('CREATE_DJ_PROFILE', { userId });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
-    const { error } = await supabase.from('app_e255c3cdb5_dj_profiles').upsert({ user_id: userId, genres: ['Electronic'], bio: 'Newly joined DJ! Please update your bio.', location: 'Cape Town', tier: Tier.Bronze }, { onConflict: 'user_id' });
+    // FIX: Changed 'bio' to 'description' to match the actual database schema.
+    const { error } = await supabase.from('app_e255c3cdb5_dj_profiles').upsert({ user_id: userId, genres: ['Electronic'], description: 'Newly joined DJ! Please update your bio.', location: 'Cape Town', tier: Tier.Bronze }, { onConflict: 'user_id' });
     if (error) console.error("Error self-healing DJ profile:", error.message);
     else persistenceService.markDirty();
     return !error;
@@ -1028,7 +975,6 @@ export const createDjProfile = async (userId: string): Promise<boolean> => {
 
 export const createBusinessProfile = async (userId: string, displayName: string): Promise<boolean> => {
     userAppUpdatesService.logAction('CREATE_BUSINESS_PROFILE', { userId, displayName });
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { error } = await supabase.from('app_e255c3cdb5_business_profiles').upsert({ user_id: userId, venue_name: displayName, location: 'Cape Town', description: 'A great place for music! Please update your description.' }, { onConflict: 'user_id' });
     if (error) console.error("Error self-healing business profile:", error.message);
     else persistenceService.markDirty();
@@ -1046,7 +992,6 @@ export const createUserProfile = async (user: any): Promise<UserProfile | null> 
         return null;
     }
 
-    // FIX: Added 'app_e255c3cdb5_' prefix to table names to match corrected Database types.
     const { data, error: userProfileError } = await supabase.from('app_e255c3cdb5_user_profiles').upsert({ user_id: user.id, user_type: userType, display_name: displayName, avatar_url: avatarUrl || `https://source.unsplash.com/random/200x200/?abstract` }, { onConflict: 'user_id' }).select().single();
     
     if (userProfileError || !data) {

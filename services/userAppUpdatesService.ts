@@ -1,3 +1,4 @@
+
 import { supabase } from './supabaseClient';
 import { Json } from './database.types';
 
@@ -61,7 +62,6 @@ const syncActions = async (userId: string): Promise<void> => {
 
   // Using a 'background service' approach as requested, by performing this on logout.
   // In a real-world scenario with service workers, this could be more robust.
-  // FIX: Added 'app_e255c3cdb5_' prefix to table name to match corrected Database types.
   const { error } = await supabase.from('app_e255c3cdb5_user_actions_log').insert(actionsToSync);
 
   if (error) {
