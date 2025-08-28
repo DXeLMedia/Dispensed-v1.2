@@ -26,7 +26,7 @@ import {
     NotificationType,
     DjProfile,
 } from '../types';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidvv4 } from 'uuid';
 import { Database, Json } from './supabase';
 import { persistenceService } from './persistenceService';
 import { userAppUpdatesService } from './userAppUpdatesService';
@@ -59,7 +59,8 @@ const PROFILE_QUERY_STRING = '*, dj_profiles:app_e255c3cdb5_dj_profiles(*), busi
 export const uploadFile = async (folder: string, file: File): Promise<string> => {
     const bucket = 'DDJ';
     const fileExt = file.name.split('.').pop();
-    const fileName = `${uuidv4()}.${fileExt}`;
+    // FIX: Corrected typo from uuidv4 to uuidvv4.
+    const fileName = `${uuidvv4()}.${fileExt}`;
     const filePath = `${folder}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
@@ -860,7 +861,8 @@ export const getTracksByIds = async (ids: string[]): Promise<Track[]> => {
 
 export const addTrack = async (userId: string, title: string, artworkUrl: string, trackUrl: string): Promise<boolean> => {
     userAppUpdatesService.logAction('ADD_TRACK', { userId, title });
-    const newTrack: Track = { id: uuidv4(), artistId: userId, title, artworkUrl, trackUrl, duration: '3:30' }; // Mock duration
+    // FIX: Corrected typo from uuidv4 to uuidvv4.
+    const newTrack: Track = { id: uuidvv4(), artistId: userId, title, artworkUrl, trackUrl, duration: '3:30' }; // Mock duration
     const { error } = await supabase.rpc('add_track_to_portfolio', { dj_user_id_param: userId, new_track: newTrack as any });
     if (error) {
         console.error('Error adding track to portfolio:', error.message);
