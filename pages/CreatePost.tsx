@@ -13,7 +13,8 @@ export const CreatePost = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [description, setDescription] = useState('');
-    const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+    const [mediaFile, setMediaFile] = useState<File | null>(null);
+    const [mediaPreview, setMediaPreview] = useState<string | null>(null);
     const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -99,6 +100,7 @@ export const CreatePost = () => {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+            setMediaFile(file);
 
             if (file.type.startsWith('image/')) {
                 setMediaType('image');
@@ -111,14 +113,15 @@ export const CreatePost = () => {
 
             const reader = new FileReader();
             reader.onloadend = () => {
-                setMediaUrl(reader.result as string);
+                setMediaPreview(reader.result as string);
             };
             reader.readAsDataURL(file);
         }
     };
 
     const handleRemoveMedia = () => {
-        setMediaUrl(null);
+        setMediaFile(null);
+        setMediaPreview(null);
         setMediaType(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
@@ -127,19 +130,24 @@ export const CreatePost = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!description.trim() && !mediaUrl) {
+        if (!description.trim() && !mediaFile) {
             alert("Please write something or add a photo/video.");
             return;
         }
 
         setIsLoading(true);
         try {
+            let uploadedMediaUrl: string | undefined = undefined;
+            if (mediaFile) {
+                uploadedMediaUrl = await api.uploadFile('posts', mediaFile);
+            }
+
             await api.addFeedItem({
                 type: 'user_post',
                 userId: user.id,
                 title: '', // Not used for user posts
                 description,
-                mediaUrl: mediaUrl || undefined,
+                mediaUrl: uploadedMediaUrl,
                 mediaType: mediaType || undefined,
             });
             navigate('/feed');
@@ -151,7 +159,7 @@ export const CreatePost = () => {
         }
     };
 
-    const canPost = (description.trim().length > 0 || !!mediaUrl) && !isLoading;
+    const canPost = (description.trim().length > 0 || !!mediaFile) && !isLoading;
 
     return (
         <div className="text-white min-h-full flex flex-col">
@@ -179,10 +187,10 @@ export const CreatePost = () => {
                     />
                 </div>
 
-                {mediaUrl && (
+                {mediaPreview && (
                     <div className="relative">
-                        {mediaType === 'image' && <img src={mediaUrl} alt="Post preview" className="rounded-lg w-full" />}
-                        {mediaType === 'video' && <video src={mediaUrl} controls className="rounded-lg w-full bg-black" />}
+                        {mediaType === 'image' && <img src={mediaPreview} alt="Post preview" className="rounded-lg w-full" />}
+                        {mediaType === 'video' && <video src={mediaPreview} controls className="rounded-lg w-full bg-black" />}
                         <button 
                             onClick={handleRemoveMedia} 
                             className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white hover:bg-black/80"

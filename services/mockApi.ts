@@ -52,6 +52,37 @@ type GigRow = Database['public']['Tables']['app_e255c3cdb5_gigs']['Row'];
 const PROFILE_QUERY_STRING = '*, dj_profiles:app_e255c3cdb5_dj_profiles(*), business_profiles:app_e255c3cdb5_business_profiles(*)';
 
 // =================================================================
+// SECTION: Storage Service
+// =================================================================
+
+export const uploadFile = async (folder: string, file: File): Promise<string> => {
+    const bucket = 'ddj-dev-test';
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${uuidv4()}.${fileExt}`;
+    const filePath = `${folder}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, file);
+
+    if (uploadError) {
+        console.error('Error uploading file:', uploadError);
+        throw uploadError;
+    }
+
+    const { data } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(filePath);
+        
+    if (!data || !data.publicUrl) {
+        throw new Error("Could not get public URL for uploaded file.");
+    }
+
+    return data.publicUrl;
+};
+
+
+// =================================================================
 // SECTION: Data Mapping & Utilities
 // =================================================================
 
@@ -291,7 +322,7 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
         if (djData.hourlyRate !== undefined) djProfileUpdate.hourly_rate = djData.hourlyRate;
         if (djData.travelRadius !== undefined) djProfileUpdate.travel_radius = djData.travelRadius;
         if (djData.equipmentOwned !== undefined) djProfileUpdate.equipment_owned = djData.equipmentOwned;
-        if (djData.availabilitySchedule !== undefined) djProfileUpdate.availability_schedule = djData.availabilitySchedule as Json;
+        if (djData.availabilitySchedule !== undefined) djProfileUpdate.availability_schedule = djData.availabilitySchedule as unknown as string;
         
         if (Object.keys(djProfileUpdate).length > 0) {
             const { error } = await supabase.from('app_e255c3cdb5_dj_profiles').update(djProfileUpdate).eq('user_id', userId);
@@ -842,7 +873,7 @@ export const addTrackToPlaylist = async (playlistId: string, track: Track): Prom
 // =================================================================
 export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedReview[]> => {
     const { data, error } = await supabase.from('app_e255c3cdb5_reviews')
-        .select('*, author:app_e255c3cdb5_user_profiles!app_e255c3cdb5_reviews_reviewer_id_fkey(user_id, display_name, avatar_url, user_type)')
+        .select('*, author:app_e255c3cdb5_user_profiles!reviewer_id(user_id, display_name, avatar_url, user_type)')
         .eq('reviewee_id', revieweeId);
         
     if (error || !data) return [];

@@ -19,7 +19,7 @@ export const CreateGig = () => {
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [flyerUrl, setFlyerUrl] = useState('');
+  const [flyerFile, setFlyerFile] = useState<File | null>(null);
   const [flyerPreview, setFlyerPreview] = useState<string | null>(null);
 
   if (!user) {
@@ -56,11 +56,10 @@ export const CreateGig = () => {
   const handleFlyerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
         const file = e.target.files[0];
+        setFlyerFile(file);
         const reader = new FileReader();
         reader.onloadend = () => {
-            const dataUrl = reader.result as string;
-            setFlyerPreview(dataUrl);
-            setFlyerUrl(dataUrl); // Use the data URL for both preview and submission
+            setFlyerPreview(reader.result as string);
         };
         reader.readAsDataURL(file);
     }
@@ -70,6 +69,11 @@ export const CreateGig = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
+        let uploadedFlyerUrl = '';
+        if (flyerFile) {
+            uploadedFlyerUrl = await api.uploadFile('flyers', flyerFile);
+        }
+
         await api.addGig({
             title,
             business_user_id: user.id,
@@ -78,7 +82,7 @@ export const CreateGig = () => {
             budget: Number(budget),
             genres,
             description,
-            flyerUrl,
+            flyerUrl: uploadedFlyerUrl,
         });
         alert('Gig created successfully!');
         navigate(`/venue/gigs`);
@@ -112,7 +116,7 @@ export const CreateGig = () => {
                 <img src={flyerPreview} alt="Flyer preview" className="w-full rounded-lg object-cover aspect-[4/3]" />
                 <button
                     type="button"
-                    onClick={() => { setFlyerPreview(null); setFlyerUrl(''); }}
+                    onClick={() => { setFlyerPreview(null); setFlyerFile(null); }}
                     className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white hover:bg-black/80"
                 >
                     <IconX size={18} />

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
@@ -14,8 +15,9 @@ export const AddTrackModal: React.FC<AddTrackModalProps> = ({ isOpen, onClose, o
     const { user } = useAuth();
     const [title, setTitle] = useState('');
     const [artworkPreview, setArtworkPreview] = useState<string | null>(null);
+    const [artworkFile, setArtworkFile] = useState<File | null>(null);
     const [trackFileName, setTrackFileName] = useState<string | null>(null);
-    const [trackDataUrl, setTrackDataUrl] = useState<string | null>(null);
+    const [trackFile, setTrackFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     if (!isOpen) return null;
@@ -23,6 +25,7 @@ export const AddTrackModal: React.FC<AddTrackModalProps> = ({ isOpen, onClose, o
     const handleArtworkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+            setArtworkFile(file);
             const reader = new FileReader();
             reader.onloadend = () => setArtworkPreview(reader.result as string);
             reader.readAsDataURL(file);
@@ -32,35 +35,37 @@ export const AddTrackModal: React.FC<AddTrackModalProps> = ({ isOpen, onClose, o
     const handleTrackFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+            setTrackFile(file);
             // Auto-populate title from filename, removing extension.
             setTitle(file.name.replace(/\.[^/.]+$/, ""));
             setTrackFileName(file.name);
-            const reader = new FileReader();
-            reader.onloadend = () => setTrackDataUrl(reader.result as string);
-            reader.readAsDataURL(file);
         }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!title || !artworkPreview || !trackDataUrl || !user) {
-            alert("Please fill all fields and upload both files.");
+        if (!title || !artworkFile || !trackFile || !user) {
+            alert("Please provide a title and upload both artwork and a track file.");
             return;
         }
         setIsSubmitting(true);
         try {
-            // Mock API call
+            const [artworkUrl, trackUrl] = await Promise.all([
+                api.uploadFile('artwork', artworkFile),
+                api.uploadFile('tracks', trackFile)
+            ]);
+            
             await api.addTrack(
                 user.id,
                 title,
-                artworkPreview, // Use the uploaded artwork data URL
-                trackDataUrl
+                artworkUrl,
+                trackUrl
             );
             onTrackAdded(); // This will refetch the tracks in the parent component
             onClose();
         } catch (error) {
             console.error(error);
-            alert("Failed to add track.");
+            alert("Failed to add track. Please check the console for details.");
         } finally {
             setIsSubmitting(false);
         }

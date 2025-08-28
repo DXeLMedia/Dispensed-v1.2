@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
@@ -15,6 +16,7 @@ interface EditPlaylistModalProps {
 export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({ isOpen, onClose, onPlaylistUpdated, playlist }) => {
     const { user } = useAuth();
     const [name, setName] = useState('');
+    const [artworkFile, setArtworkFile] = useState<File | null>(null);
     const [artworkPreview, setArtworkPreview] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -22,14 +24,16 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({ isOpen, on
         if (playlist) {
             setName(playlist.name);
             setArtworkPreview(playlist.artworkUrl);
+            setArtworkFile(null); // Reset file input on modal open
         }
-    }, [playlist]);
+    }, [playlist, isOpen]);
 
     if (!isOpen || !playlist) return null;
 
     const handleArtworkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+            setArtworkFile(file);
             const reader = new FileReader();
             reader.onloadend = () => setArtworkPreview(reader.result as string);
             reader.readAsDataURL(file);
@@ -42,9 +46,14 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({ isOpen, on
 
         setIsSubmitting(true);
         try {
+            let finalArtworkUrl = playlist.artworkUrl;
+            if (artworkFile) {
+                finalArtworkUrl = await api.uploadFile('playlists', artworkFile);
+            }
+
             await api.updatePlaylist(playlist.id, {
                 name: name.trim(),
-                artworkUrl: artworkPreview || '',
+                artworkUrl: finalArtworkUrl,
             });
             onPlaylistUpdated();
             onClose();

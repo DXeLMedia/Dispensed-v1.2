@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
@@ -13,6 +14,7 @@ interface AddPlaylistModalProps {
 export const AddPlaylistModal: React.FC<AddPlaylistModalProps> = ({ isOpen, onClose, onPlaylistAdded }) => {
     const { user } = useAuth();
     const [name, setName] = useState('');
+    const [artworkFile, setArtworkFile] = useState<File | null>(null);
     const [artworkPreview, setArtworkPreview] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -21,6 +23,7 @@ export const AddPlaylistModal: React.FC<AddPlaylistModalProps> = ({ isOpen, onCl
     const handleArtworkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+            setArtworkFile(file);
             const reader = new FileReader();
             reader.onloadend = () => setArtworkPreview(reader.result as string);
             reader.readAsDataURL(file);
@@ -33,10 +36,15 @@ export const AddPlaylistModal: React.FC<AddPlaylistModalProps> = ({ isOpen, onCl
 
         setIsSubmitting(true);
         try {
+            let uploadedArtworkUrl = '';
+            if (artworkFile) {
+                uploadedArtworkUrl = await api.uploadFile('playlists', artworkFile);
+            }
+
             await api.createPlaylist({
                 creatorId: user.id,
                 name: name.trim(),
-                artworkUrl: artworkPreview || '',
+                artworkUrl: uploadedArtworkUrl,
                 trackIds: []
             });
             onPlaylistAdded();

@@ -26,6 +26,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     const [soundcloud, setSoundcloud] = useState('');
     const [website, setWebsite] = useState('');
     const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,9 +55,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 setBio(profileData.bio);
                 setSoundcloud(profileData.socials?.soundcloud || '');
                 setSelectedGenres(profileData.genres);
-                setExperienceYears(String(profileData.experienceYears || ''));
-                setHourlyRate(String(profileData.hourlyRate || ''));
-                setTravelRadius(String(profileData.travelRadius || ''));
+                setExperienceYears(String(profileData.experienceYears ?? ''));
+                setHourlyRate(String(profileData.hourlyRate ?? ''));
+                setTravelRadius(String(profileData.travelRadius ?? ''));
                 setEquipmentOwnedStr((profileData.equipmentOwned || []).join(', '));
                 setAvailabilitySchedule(profileData.availabilitySchedule || '');
             } else {
@@ -64,9 +65,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
             }
             
             setAvatarPreview(null);
+            setAvatarFile(null);
             setKeywordsForBio('');
         }
-    }, [profileData]);
+    }, [profileData, isOpen]);
 
     if (!isOpen || !profileData) return null;
     
@@ -81,6 +83,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+            setAvatarFile(file);
             const reader = new FileReader();
             reader.onloadend = () => {
                 setAvatarPreview(reader.result as string);
@@ -116,6 +119,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 return isNaN(num) ? null : num;
             };
 
+            let uploadedAvatarUrl = profileData.avatarUrl;
+            if (avatarFile) {
+                uploadedAvatarUrl = await api.uploadFile('avatars', avatarFile);
+            }
+
             if (profileData.role === Role.DJ) {
                 const updatedData: Partial<DJ> = {
                     name,
@@ -126,14 +134,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                     hourlyRate: parseNumeric(hourlyRate),
                     travelRadius: parseNumeric(travelRadius),
                     equipmentOwned: equipmentOwnedStr.split(',').map(s => s.trim()).filter(Boolean),
-                    availabilitySchedule: availabilitySchedule,
+                    availabilitySchedule,
                     socials: {
                         instagram: instagram || undefined,
                         soundcloud: soundcloud || undefined,
                         website: website || undefined,
                     },
+                    avatarUrl: uploadedAvatarUrl,
                 };
-                 if (avatarPreview) updatedData.avatarUrl = avatarPreview;
                 await api.updateUserProfile(profileData.id, updatedData);
             } else { // Role.Business
                 const updatedData: Partial<Business> = {
@@ -144,8 +152,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                         instagram: instagram || undefined,
                         website: website || undefined,
                     },
+                    avatarUrl: uploadedAvatarUrl,
                 };
-                if (avatarPreview) updatedData.avatarUrl = avatarPreview;
                 await api.updateUserProfile(profileData.id, updatedData);
             }
 

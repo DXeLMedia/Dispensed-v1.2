@@ -23,6 +23,7 @@ export const EditGig = () => {
     const [description, setDescription] = useState('');
     const [flyerUrl, setFlyerUrl] = useState('');
     const [flyerPreview, setFlyerPreview] = useState<string | null>(null);
+    const [flyerFile, setFlyerFile] = useState<File | null>(null);
 
     const [isLoading, setIsLoading] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -87,11 +88,11 @@ export const EditGig = () => {
     const handleFlyerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+            setFlyerFile(file);
             const reader = new FileReader();
             reader.onloadend = () => {
                 const dataUrl = reader.result as string;
                 setFlyerPreview(dataUrl);
-                setFlyerUrl(dataUrl);
             };
             reader.readAsDataURL(file);
         }
@@ -102,6 +103,11 @@ export const EditGig = () => {
         if (!gigId) return;
         setIsLoading(true);
         try {
+            let finalFlyerUrl = flyerUrl;
+            if (flyerFile) {
+                finalFlyerUrl = await api.uploadFile('flyers', flyerFile);
+            }
+            
             await api.updateGig(gigId, {
                 title,
                 date,
@@ -109,7 +115,7 @@ export const EditGig = () => {
                 budget: Number(budget),
                 genres,
                 description,
-                flyerUrl,
+                flyerUrl: finalFlyerUrl,
             });
             alert('Gig updated successfully!');
             navigate(`/venue/gigs`);
@@ -147,7 +153,7 @@ export const EditGig = () => {
                             <img src={flyerPreview} alt="Flyer preview" className="w-full rounded-lg object-cover aspect-[4/3]" />
                             <button
                                 type="button"
-                                onClick={() => { setFlyerPreview(null); setFlyerUrl(''); }}
+                                onClick={() => { setFlyerPreview(null); setFlyerFile(null); setFlyerUrl(''); }}
                                 className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white hover:bg-black/80"
                             >
                                 <IconX size={18} />
