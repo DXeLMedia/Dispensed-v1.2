@@ -56,3 +56,29 @@ CREATE POLICY "DJs can delete their own tracks." ON app_e255c3cdb5_tracks FOR DE
 ALTER TABLE app_e255c3cdb5_dj_profiles DROP COLUMN IF EXISTS socials;
 ALTER TABLE app_e255c3cdb5_business_profiles DROP COLUMN IF EXISTS socials;
 ALTER TABLE app_e255c3cdb5_dj_profiles DROP COLUMN IF EXISTS portfolio_tracks;
+
+
+-- Step 6: Create the playlist_tracks junction table
+CREATE TABLE app_e255c3cdb5_playlist_tracks (
+    playlist_id UUID NOT NULL REFERENCES app_e255c3cdb5_playlists(id) ON DELETE CASCADE,
+    track_id UUID NOT NULL REFERENCES app_e255c3cdb5_tracks(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (playlist_id, track_id)
+);
+
+COMMENT ON TABLE app_e255c3cdb5_playlist_tracks IS 'Junction table to link tracks to playlists and define their order.';
+
+-- Step 7: Set up RLS for playlist_tracks
+ALTER TABLE app_e255c3cdb5_playlist_tracks ENABLE ROW LEVEL SECURITY;
+
+-- Allow public read access
+CREATE POLICY "Playlist tracks are viewable by everyone." ON app_e255c3cdb5_playlist_tracks FOR SELECT USING (true);
+-- Allow users to manage tracks in their own playlists
+CREATE POLICY "Users can manage tracks in their own playlists." ON app_e255c3cdb5_playlist_tracks FOR ALL USING (
+    auth.uid() = (SELECT dj_user_id FROM app_e255c3cdb5_playlists WHERE id = playlist_id)
+);
+
+-- Step 8: Drop the old tracks JSON column from the playlists table
+-- NOTE: A manual data migration script is required here to transfer existing data from the JSON blob.
+ALTER TABLE app_e255c3cdb5_playlists DROP COLUMN IF EXISTS tracks;

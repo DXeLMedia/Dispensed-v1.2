@@ -377,6 +377,7 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     return success;
 };
 
+
 export const updateUserSettings = async(userId: string, settings: Partial<UserSettings>): Promise<boolean> => {
     userAppUpdatesService.logAction('UPDATE_USER_SETTINGS', { userId, settings });
     const { error } = await supabase.from('app_e255c3cdb5_user_profiles').update({ settings: settings as Json }).eq('user_id', userId);
@@ -804,29 +805,86 @@ export const getTracksForDj = async (djUserId: string): Promise<Track[]> => {
 };
 
 export const getPlaylistsForDj = async (djUserId: string): Promise<Playlist[]> => {
-    const { data, error } = await supabase.from('app_e255c3cdb5_playlists').select('*').eq('dj_user_id', djUserId);
-    if (error) {
-        console.error('Error fetching playlists for DJ:', error.message);
+    const { data: playlistsData, error: playlistsError } = await supabase
+        .from('app_e255c3cdb5_playlists')
+        .select('*')
+        .eq('dj_user_id', djUserId);
+
+    if (playlistsError) {
+        console.error('Error fetching playlists for DJ:', playlistsError.message);
         return [];
     }
-    return (data || []).map((p) => ({
+    if (!playlistsData) return [];
+
+    const playlistIds = playlistsData.map(p => p.id);
+    if (playlistIds.length === 0) {
+        return playlistsData.map(p => ({
+            id: p.id,
+            name: p.name,
+            creatorId: p.dj_user_id,
+            trackIds: [],
+            artworkUrl: p.artwork_url || '',
+        }));
+    }
+
+    const { data: playlistTracksData, error: playlistTracksError } = await supabase
+        .from('app_e255c3cdb5_playlist_tracks')
+        .select('playlist_id, track_id')
+        .in('playlist_id', playlistIds)
+        .order('position', { ascending: true });
+
+    if (playlistTracksError) {
+        console.error('Error fetching playlist tracks:', playlistTracksError.message);
+        // Return playlists with empty tracks array as a fallback
+        return playlistsData.map(p => ({
+            id: p.id,
+            name: p.name,
+            creatorId: p.dj_user_id,
+            trackIds: [],
+            artworkUrl: p.artwork_url || '',
+        }));
+    }
+
+    const tracksByPlaylist = (playlistTracksData || []).reduce((acc, item) => {
+        if (!acc[item.playlist_id]) {
+            acc[item.playlist_id] = [];
+        }
+        acc[item.playlist_id].push(item.track_id);
+        return acc;
+    }, {} as Record<string, string[]>);
+
+    return playlistsData.map((p) => ({
         id: p.id,
         name: p.name,
-        creatorId: p.dj_user_id, 
-        trackIds: ((p.tracks as any[])?.map(t => t.id) || []).filter(Boolean),
-        artworkUrl: p.artwork_url || ''
+        creatorId: p.dj_user_id,
+        trackIds: tracksByPlaylist[p.id] || [],
+        artworkUrl: p.artwork_url || '',
     }));
 };
 
 export const getPlaylistById = async (id: string): Promise<Playlist | null> => {
-    const { data, error } = await supabase.from('app_e255c3cdb5_playlists').select('*').eq('id', id).single();
-    if (error || !data) return null;
+    const { data: playlistData, error: playlistError } = await supabase.from('app_e255c3cdb5_playlists').select('*').eq('id', id).single();
+    if (playlistError || !playlistData) return null;
+
+    const { data: playlistTracksData, error: playlistTracksError } = await supabase
+        .from('app_e255c3cdb5_playlist_tracks')
+        .select('track_id')
+        .eq('playlist_id', id)
+        .order('position', { ascending: true });
+
+    if (playlistTracksError) {
+        console.error(`Error fetching tracks for playlist ${id}:`, playlistTracksError.message);
+        // Return playlist without tracks as a fallback
+    }
+
+    const trackIds = playlistTracksData ? playlistTracksData.map(t => t.track_id) : [];
+
     return {
-        id: data.id,
-        name: data.name,
-        creatorId: data.dj_user_id, 
-        trackIds: ((data.tracks as any[])?.map(t => t.id) || []).filter(Boolean),
-        artworkUrl: data.artwork_url || ''
+        id: playlistData.id,
+        name: playlistData.name,
+        creatorId: playlistData.dj_user_id,
+        trackIds: trackIds,
+        artworkUrl: playlistData.artwork_url || ''
     };
 };
 
@@ -879,7 +937,7 @@ export const addTrack = async (userId: string, title: string, artworkUrl: string
 
 export const createPlaylist = async (playlistData: Omit<Playlist, 'id'>): Promise<Playlist | null> => {
     userAppUpdatesService.logAction('CREATE_PLAYLIST', { playlistData });
-    const { data, error } = await supabase.from('app_e255c3cdb5_playlists').insert({ dj_user_id: playlistData.creatorId, name: playlistData.name, artwork_url: playlistData.artworkUrl, tracks: [] }).select().single();
+    const { data, error } = await supabase.from('app_e255c3cdb5_playlists').insert({ dj_user_id: playlistData.creatorId, name: playlistData.name, artwork_url: playlistData.artworkUrl }).select().single();
     if (error || !data) {
         console.error('Error creating playlist:', error?.message);
         return null;
@@ -905,7 +963,26 @@ export const updatePlaylist = async (playlistId: string, playlistData: Partial<P
 
 export const addTrackToPlaylist = async (playlistId: string, track: Track): Promise<boolean> => {
     userAppUpdatesService.logAction('ADD_TRACK_TO_PLAYLIST', { playlistId, trackId: track.id });
-    const { error } = await supabase.rpc('add_track_to_playlist', { playlist_id_param: playlistId, new_track: track as any });
+
+    // Get the current number of tracks to determine the new position
+    const { count, error: countError } = await supabase
+        .from('app_e255c3cdb5_playlist_tracks')
+        .select('*', { count: 'exact', head: true })
+        .eq('playlist_id', playlistId);
+
+    if (countError) {
+        console.error('Error getting track count for playlist:', countError.message);
+        return false;
+    }
+
+    const position = count ?? 0;
+
+    const { error } = await supabase.from('app_e255c3cdb5_playlist_tracks').insert({
+        playlist_id: playlistId,
+        track_id: track.id,
+        position: position
+    });
+
     if (error) {
         console.error('Error adding track to playlist:', error.message);
         return false;

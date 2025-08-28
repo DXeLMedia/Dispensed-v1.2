@@ -325,23 +325,56 @@ export type Database = {
           dj_user_id: string;
           name: string;
           artwork_url: string | null;
-          tracks: Json | null;
         };
         Insert: {
           id?: string;
           dj_user_id: string;
           name: string;
           artwork_url?: string | null;
-          tracks?: Json | null;
         };
         Update: {
           id?: string;
           dj_user_id?: string;
           name?: string;
           artwork_url?: string | null;
-          tracks?: Json | null;
         };
         Relationships: [];
+      };
+      app_e255c3cdb5_playlist_tracks: {
+        Row: {
+          playlist_id: string;
+          track_id: string;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          playlist_id: string;
+          track_id: string;
+          position: number;
+          created_at?: string;
+        };
+        Update: {
+          playlist_id?: string;
+          track_id?: string;
+          position?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "app_e255c3cdb5_playlist_tracks_playlist_id_fkey";
+            columns: ["playlist_id"];
+            isOneToOne: false;
+            referencedRelation: "app_e255c3cdb5_playlists";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "app_e255c3cdb5_playlist_tracks_track_id_fkey";
+            columns: ["track_id"];
+            isOneToOne: false;
+            referencedRelation: "app_e255c3cdb5_tracks";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       app_e255c3cdb5_messages: {
         Row: {
