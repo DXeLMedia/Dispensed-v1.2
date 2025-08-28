@@ -41,10 +41,10 @@ export interface DJ extends User, Followable {
   tier: Tier;
   tracks: Track[];
   mixes: Playlist[];
-  experienceYears?: number;
+  experienceYears?: number | null;
   equipmentOwned?: string[];
-  hourlyRate?: number;
-  travelRadius?: number; // in km
+  hourlyRate?: number | null;
+  travelRadius?: number | null; // in km
   availabilitySchedule?: string;
   socials?: {
     instagram?: string;
@@ -211,10 +211,10 @@ export interface DjProfile {
     rating?: number;
     reviewsCount?: number;
     tier?: Tier;
-    experienceYears?: number;
+    experienceYears?: number | null;
     equipmentOwned?: string[];
-    hourlyRate?: number;
-    travelRadius?: number;
+    hourlyRate?: number | null;
+    travelRadius?: number | null;
     availabilitySchedule?: string;
     socials?: {
         instagram?: string;

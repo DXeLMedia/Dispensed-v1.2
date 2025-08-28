@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
 import * as gemini from '../services/geminiService';
-import { DJ, Business, Role } from '../types';
+import { DJ, Business, Role, UserProfile } from '../types';
 import { IconX, IconInstagram, IconMusic, IconWebsite, IconPencil, IconSparkles } from '../constants';
 import { Spinner } from './Spinner';
 import { Avatar } from './Avatar';
@@ -110,17 +110,23 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
         try {
             if (!profileData) return;
 
+            const parseNumeric = (val: string): number | null => {
+                if (val.trim() === '') return null;
+                const num = Number(val);
+                return isNaN(num) ? null : num;
+            };
+
             if (profileData.role === Role.DJ) {
                 const updatedData: Partial<DJ> = {
                     name,
                     bio,
                     location,
                     genres: selectedGenres,
-                    experienceYears: Number(experienceYears) || undefined,
-                    hourlyRate: Number(hourlyRate) || undefined,
-                    travelRadius: Number(travelRadius) || undefined,
+                    experienceYears: parseNumeric(experienceYears),
+                    hourlyRate: parseNumeric(hourlyRate),
+                    travelRadius: parseNumeric(travelRadius),
                     equipmentOwned: equipmentOwnedStr.split(',').map(s => s.trim()).filter(Boolean),
-                    availabilitySchedule: availabilitySchedule || undefined,
+                    availabilitySchedule: availabilitySchedule,
                     socials: {
                         instagram: instagram || undefined,
                         soundcloud: soundcloud || undefined,

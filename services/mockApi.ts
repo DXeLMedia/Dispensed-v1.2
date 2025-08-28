@@ -90,10 +90,10 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
             socials: (djProfile?.socials as any) || {},
             tracks: (djProfile?.portfolio_tracks as unknown as Track[]) || [],
             mixes: [], // Populated by getPlaylistsForDj
-            experienceYears: djProfile?.experience_years || undefined,
+            experienceYears: djProfile?.experience_years ?? undefined,
             equipmentOwned: djProfile?.equipment_owned || [],
-            hourlyRate: djProfile?.hourly_rate || undefined,
-            travelRadius: djProfile?.travel_radius || undefined,
+            hourlyRate: djProfile?.hourly_rate ?? undefined,
+            travelRadius: djProfile?.travel_radius ?? undefined,
             availabilitySchedule: (djProfile?.availability_schedule as string) || undefined,
         };
     } else if (role === Role.Business && data.business_profiles) {
@@ -266,8 +266,8 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     const { name, avatarUrl, ...rest } = data;
     
     const userProfileData: Database['public']['Tables']['app_e255c3cdb5_user_profiles']['Update'] = {};
-    if (name) userProfileData.display_name = name;
-    if (avatarUrl) userProfileData.avatar_url = avatarUrl;
+    if (name !== undefined) userProfileData.display_name = name;
+    if (avatarUrl !== undefined) userProfileData.avatar_url = avatarUrl;
     
     let success = true;
 
@@ -282,17 +282,16 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     if (data.role === Role.DJ) {
         const djData = rest as Partial<DJ>;
         const djProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_dj_profiles']['Update'] = {};
-        const djFullProfile = rest as DjProfile;
-        // FIX: Map the app's 'bio' field to the DB's 'description' column.
-        if (djData.bio) djProfileUpdate.description = djData.bio;
-        if (djData.genres) djProfileUpdate.genres = djData.genres;
-        if (djData.location) djProfileUpdate.location = djData.location;
-        if (djData.socials) djProfileUpdate.socials = djData.socials as Json;
-        if (djFullProfile.experienceYears) djProfileUpdate.experience_years = djFullProfile.experienceYears;
-        if (djFullProfile.hourlyRate) djProfileUpdate.hourly_rate = djFullProfile.hourlyRate;
-        if (djFullProfile.travelRadius) djProfileUpdate.travel_radius = djFullProfile.travelRadius;
-        if (djFullProfile.equipmentOwned) djProfileUpdate.equipment_owned = djFullProfile.equipmentOwned;
-        if (djFullProfile.availabilitySchedule) djProfileUpdate.availability_schedule = djFullProfile.availabilitySchedule;
+        
+        if (djData.bio !== undefined) djProfileUpdate.description = djData.bio;
+        if (djData.genres !== undefined) djProfileUpdate.genres = djData.genres;
+        if (djData.location !== undefined) djProfileUpdate.location = djData.location;
+        if (djData.socials !== undefined) djProfileUpdate.socials = djData.socials as Json;
+        if (djData.experienceYears !== undefined) djProfileUpdate.experience_years = djData.experienceYears;
+        if (djData.hourlyRate !== undefined) djProfileUpdate.hourly_rate = djData.hourlyRate;
+        if (djData.travelRadius !== undefined) djProfileUpdate.travel_radius = djData.travelRadius;
+        if (djData.equipmentOwned !== undefined) djProfileUpdate.equipment_owned = djData.equipmentOwned;
+        if (djData.availabilitySchedule !== undefined) djProfileUpdate.availability_schedule = djData.availabilitySchedule as Json;
         
         if (Object.keys(djProfileUpdate).length > 0) {
             const { error } = await supabase.from('app_e255c3cdb5_dj_profiles').update(djProfileUpdate).eq('user_id', userId);
@@ -306,10 +305,10 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     if (data.role === Role.Business) {
         const businessData = rest as Partial<Business>;
         const businessProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_business_profiles']['Update'] = {};
-        if (businessData.name) businessProfileUpdate.venue_name = businessData.name;
-        if (businessData.description) businessProfileUpdate.description = businessData.description;
-        if (businessData.location) businessProfileUpdate.location = businessData.location;
-        if (businessData.socials) businessProfileUpdate.socials = businessData.socials as Json;
+        if (businessData.name !== undefined) businessProfileUpdate.venue_name = businessData.name;
+        if (businessData.description !== undefined) businessProfileUpdate.description = businessData.description;
+        if (businessData.location !== undefined) businessProfileUpdate.location = businessData.location;
+        if (businessData.socials !== undefined) businessProfileUpdate.socials = businessData.socials as Json;
 
         if (Object.keys(businessProfileUpdate).length > 0) {
             const { error } = await supabase.from('app_e255c3cdb5_business_profiles').update(businessProfileUpdate).eq('user_id', userId);
