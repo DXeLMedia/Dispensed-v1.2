@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Database } from './database.types';
+import { Database } from './supabase';
 
 // Hardcoded Supabase credentials to ensure connection in the simple
 // module-based environment where process.env is not available.

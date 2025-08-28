@@ -1,4 +1,5 @@
 
+
 import { supabase } from './supabaseClient';
 import { 
     DJ, 
@@ -26,7 +27,7 @@ import {
     DjProfile,
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { Database, Json } from './database.types';
+import { Database, Json } from './supabase';
 import { persistenceService } from './persistenceService';
 import { userAppUpdatesService } from './userAppUpdatesService';
 
@@ -118,9 +119,8 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
             rating: djProfile?.rating || 0,
             reviewsCount: djProfile?.reviews_count || 0,
             tier: (djProfile?.tier as Tier) || Tier.Bronze,
-            // socials and tracks are now populated by the calling function (e.g., getUserById)
-            socials: {},
-            tracks: [],
+            socials: (djProfile?.socials as any) || {},
+            tracks: (djProfile?.portfolio_tracks as unknown as Track[]) || [],
             mixes: [], // Populated by getPlaylistsForDj
             experienceYears: djProfile?.experience_years ?? undefined,
             equipmentOwned: djProfile?.equipment_owned || [],
@@ -138,8 +138,7 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
             description: businessProfile?.description || '',
             rating: businessProfile?.rating || 0,
             reviewsCount: businessProfile?.reviews_count || 0,
-            // socials is now populated by the calling function (e.g., getUserById)
-            socials: {},
+            socials: (businessProfile?.socials as any) || {},
         };
     } else {
         return {
@@ -201,44 +200,14 @@ export const getUserById = async (userId: string): Promise<UserProfile | undefin
         return undefined;
     }
 
-    // Fetch followers, following, social links, and tracks in parallel
-    const [
-        followersResult,
-        followingResult,
-        socialsResult,
-        tracksResult
-    ] = await Promise.all([
+    const [followersResult, followingResult] = await Promise.all([
         supabase.from('app_e255c3cdb5_follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
         supabase.from('app_e255c3cdb5_follows').select('following_id').eq('follower_id', userId),
-        supabase.from('app_e255c3cdb5_social_links').select('platform, url').eq('user_id', userId),
-        // Only fetch tracks if the user is a DJ
-        data.user_type === 'dj'
-            ? supabase.from('app_e255c3cdb5_tracks').select('*').eq('artist_id', userId)
-            : Promise.resolve({ data: [], error: null })
     ]);
 
     const user = mapJoinedDataToUserProfile(data as any);
     user.followers = followersResult.count ?? 0;
     user.following = (followingResult.data || []).map((f) => f.following_id);
-
-    // Attach social links and tracks to the user profile
-    if (socialsResult.data) {
-        user.socials = socialsResult.data.reduce((acc, link) => {
-            acc[link.platform] = link.url;
-            return acc;
-        }, {} as { [key: string]: string });
-    }
-
-    if (user.role === Role.DJ && tracksResult.data) {
-        (user as DJ).tracks = tracksResult.data.map(t => ({
-            id: t.id,
-            artistId: t.artist_id,
-            title: t.title,
-            artworkUrl: t.artwork_url || '',
-            duration: t.duration || '0:00',
-            trackUrl: t.track_url || undefined,
-        }));
-    }
 
     return user;
 };
@@ -326,7 +295,7 @@ export const getTopVenues = async (): Promise<Business[]> => {
 
 export const updateUserProfile = async (userId: string, data: Partial<UserProfile>): Promise<boolean> => {
     userAppUpdatesService.logAction('UPDATE_USER_PROFILE', { userId, data });
-    const { name, avatarUrl, socials, ...rest } = data;
+    const { name, avatarUrl, ...rest } = data;
     
     const userProfileData: Database['public']['Tables']['app_e255c3cdb5_user_profiles']['Update'] = {};
     if (name !== undefined) userProfileData.display_name = name;
@@ -342,30 +311,6 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
         }
     }
 
-    // Handle socials update using a "delete-then-insert" strategy for simplicity.
-    if (socials) {
-        // Delete existing social links for the user
-        const { error: deleteError } = await supabase.from('app_e255c3cdb5_social_links').delete().eq('user_id', userId);
-        if (deleteError) {
-            console.error('Error deleting old social links:', deleteError.message);
-            success = false;
-        } else {
-            // Insert new social links
-            const newLinks = Object.entries(socials).map(([platform, url]) => ({
-                user_id: userId,
-                platform,
-                url
-            }));
-            if (newLinks.length > 0) {
-                const { error: insertError } = await supabase.from('app_e255c3cdb5_social_links').insert(newLinks);
-                if (insertError) {
-                    console.error('Error inserting new social links:', insertError.message);
-                    success = false;
-                }
-            }
-        }
-    }
-
     if (data.role === Role.DJ) {
         const djData = rest as Partial<DJ>;
         const djProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_dj_profiles']['Update'] = {};
@@ -373,6 +318,7 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
         if (djData.bio !== undefined) djProfileUpdate.description = djData.bio;
         if (djData.genres !== undefined) djProfileUpdate.genres = djData.genres;
         if (djData.location !== undefined) djProfileUpdate.location = djData.location;
+        if (djData.socials !== undefined) djProfileUpdate.socials = djData.socials as Json;
         if (djData.experienceYears !== undefined) djProfileUpdate.experience_years = djData.experienceYears;
         if (djData.hourlyRate !== undefined) djProfileUpdate.hourly_rate = djData.hourlyRate;
         if (djData.travelRadius !== undefined) djProfileUpdate.travel_radius = djData.travelRadius;
@@ -394,6 +340,7 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
         if (businessData.name !== undefined) businessProfileUpdate.venue_name = businessData.name;
         if (businessData.description !== undefined) businessProfileUpdate.description = businessData.description;
         if (businessData.location !== undefined) businessProfileUpdate.location = businessData.location;
+        if (businessData.socials !== undefined) businessProfileUpdate.socials = businessData.socials as Json;
 
         if (Object.keys(businessProfileUpdate).length > 0) {
             const { error } = await supabase.from('app_e255c3cdb5_business_profiles').update(businessProfileUpdate).eq('user_id', userId);
@@ -605,6 +552,30 @@ export const getCompletedGigsForDj = async (djId: string): Promise<Gig[]> => {
 // SECTION: Feed, Posts, Comments, Likes
 // =================================================================
 
+/**
+ * Maps the application's abstract FeedItem type to a database-compliant type.
+ * @param item The application-level FeedItem data.
+ * @returns A valid string for the `type` column in the posts table.
+ */
+const mapAppTypeToDb = (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'comments' | 'reposts'>): 'text' | 'image' | 'video' | 'playlist' | 'event' => {
+    switch (item.type) {
+        case 'user_post':
+            if (item.mediaType === 'image') return 'image';
+            if (item.mediaType === 'video') return 'video';
+            return 'text';
+        case 'new_track':
+        case 'new_mix':
+            return 'playlist';
+        case 'gig_announcement':
+        case 'live_now':
+            return 'event';
+        case 'new_connection':
+        case 'new_review':
+        default:
+            return 'text';
+    }
+};
+
 export const getFeedItems = async (): Promise<FeedItem[]> => {
     const { data: posts, error } = await supabase.from('app_e255c3cdb5_posts').select('*').order('created_at', { ascending: false });
     if (error || !posts) {
@@ -646,7 +617,7 @@ export const addFeedItem = async (item: Omit<FeedItem, 'id' | 'timestamp' | 'lik
         media_url: item.mediaUrl,
         media_type: item.mediaType,
         original_post_id: item.repostOf,
-        type: item.type
+        type: mapAppTypeToDb(item)
     };
     
     const { data, error } = await supabase.from('app_e255c3cdb5_posts').insert(newPost).select().single();
@@ -815,23 +786,12 @@ export const getChatById = async (chatId: string): Promise<Chat | null> => {
 // SECTION: Media (Tracks & Playlists)
 // =================================================================
 export const getTracksForDj = async (djUserId: string): Promise<Track[]> => {
-    const { data, error } = await supabase
-        .from('app_e255c3cdb5_tracks')
-        .select('*')
-        .eq('artist_id', djUserId);
-
+    const { data, error } = await supabase.from('app_e255c3cdb5_dj_profiles').select('portfolio_tracks').eq('user_id', djUserId).single();
     if (error || !data) {
         if(error) console.error('Error fetching tracks for DJ:', error.message);
         return [];
     }
-    return data.map(t => ({
-        id: t.id,
-        artistId: t.artist_id,
-        title: t.title,
-        artworkUrl: t.artwork_url || '',
-        duration: t.duration || '0:00',
-        trackUrl: t.track_url || undefined,
-    }));
+    return (data.portfolio_tracks as unknown as Track[] || []).filter(Boolean);
 };
 
 export const getPlaylistsForDj = async (djUserId: string): Promise<Playlist[]> => {
@@ -868,40 +828,28 @@ export const getTrackById = async (id: string): Promise<Track | null> => {
 };
 
 export const getTracksByIds = async (ids: string[]): Promise<Track[]> => {
+    // WARNING: This is a highly inefficient implementation due to the database schema
+    // storing tracks in a JSONB column on the `dj_profiles` table. It must scan
+    // all DJ profiles to find tracks. A dedicated 'tracks' table with a foreign key
+    // to `user_id` would be the correct, performant solution.
     if (ids.length === 0) return [];
     
-    const { data, error } = await supabase
-        .from('app_e255c3cdb5_tracks')
-        .select('*')
-        .in('id', ids);
-
+    const { data, error } = await supabase.from('app_e255c3cdb5_dj_profiles').select('portfolio_tracks');
     if (error) {
-        console.error('Error fetching tracks by IDs:', error.message);
+        console.error('Error fetching all tracks for ID lookup:', error.message);
         return [];
     }
-    return data.map(t => ({
-        id: t.id,
-        artistId: t.artist_id,
-        title: t.title,
-        artworkUrl: t.artwork_url || '',
-        duration: t.duration || '0:00',
-        trackUrl: t.track_url || undefined,
-    }));
+    const allTracks = (data || []).flatMap((p) => (p.portfolio_tracks as unknown as Track[] || [])).filter(t => t && t.id);
+    const trackMap = new Map(allTracks.map(t => [t.id, t]));
+    return ids.map(id => trackMap.get(id)).filter((t): t is Track => !!t);
 };
 
 export const addTrack = async (userId: string, title: string, artworkUrl: string, trackUrl: string): Promise<boolean> => {
     userAppUpdatesService.logAction('ADD_TRACK', { userId, title });
-
-    const { error } = await supabase.from('app_e255c3cdb5_tracks').insert({
-        artist_id: userId,
-        title: title,
-        artwork_url: artworkUrl,
-        track_url: trackUrl,
-        duration: '3:30' // Mock duration, consistent with old implementation
-    });
-
+    const newTrack: Track = { id: uuidv4(), artistId: userId, title, artworkUrl, trackUrl, duration: '3:30' }; // Mock duration
+    const { error } = await supabase.rpc('add_track_to_portfolio', { dj_user_id_param: userId, new_track: newTrack as any });
     if (error) {
-        console.error('Error adding track:', error.message);
+        console.error('Error adding track to portfolio:', error.message);
         return false;
     }
     persistenceService.markDirty();

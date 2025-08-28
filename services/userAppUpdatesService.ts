@@ -1,6 +1,6 @@
 
 import { supabase } from './supabaseClient';
-import { Json } from './database.types';
+import { Json } from './supabase';
 
 interface UserAction {
   type: string;

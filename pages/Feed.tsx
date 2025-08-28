@@ -225,7 +225,12 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, onRepostSuccess }) => {
                     <img src={item.mediaUrl} alt={item.title || 'User post'} className="w-full h-auto object-cover" />
                 )
             ) : null;
-            default: return item.mediaUrl ? <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" /> : null;
+            default:
+                 if (!item.mediaUrl) return null;
+                 if (item.mediaType === 'video') {
+                    return <video src={item.mediaUrl} controls muted loop className="w-full h-auto object-cover bg-black" />;
+                 }
+                 return <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" />;
         }
     };
     
