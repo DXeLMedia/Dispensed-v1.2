@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
@@ -51,8 +52,8 @@ export const AddTrackModal: React.FC<AddTrackModalProps> = ({ isOpen, onClose, o
         setIsSubmitting(true);
         try {
             const [artworkUrl, trackUrl] = await Promise.all([
-                api.uploadFile('artwork', artworkFile),
-                api.uploadFile('tracks', trackFile)
+                api.uploadFile('Artwork', artworkFile),
+                api.uploadFile('Tracks', trackFile)
             ]);
             
             await api.addTrack(

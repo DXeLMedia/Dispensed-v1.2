@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
@@ -48,7 +49,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({ isOpen, on
         try {
             let finalArtworkUrl = playlist.artworkUrl;
             if (artworkFile) {
-                finalArtworkUrl = await api.uploadFile('playlists', artworkFile);
+                finalArtworkUrl = await api.uploadFile('Playlists', artworkFile);
             }
 
             await api.updatePlaylist(playlist.id, {

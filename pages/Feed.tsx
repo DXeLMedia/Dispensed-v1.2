@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { FeedItem as FeedItemType, User, Role } from '../types';
 import * as api from '../services/mockApi';
@@ -9,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { TrackPreview } from '../components/TrackPreview';
 import { useMediaPlayer } from '../contexts/MediaPlayerContext';
+import { TrackCard } from '../components/TrackCard';
 
 
 const FeedHeader = ({ unreadCount, role }: { unreadCount: number; role: Role | null }) => (
@@ -41,22 +41,10 @@ const FeedHeader = ({ unreadCount, role }: { unreadCount: number; role: Role | n
 
 const OriginalPostCard: React.FC<{ item: FeedItemType }> = ({ item }) => {
     const [user, setUser] = useState<User | null>(null);
-    const { playPlaylist } = useMediaPlayer();
 
     useEffect(() => {
         api.getUserById(item.userId).then(setUser);
     }, [item.userId]);
-
-    const handlePlayTrack = async () => {
-        if (item.relatedId) {
-            const track = await api.getTrackById(item.relatedId);
-            if (track && track.trackUrl) {
-                playPlaylist([track], 0);
-            } else {
-                alert("Track could not be played.");
-            }
-        }
-    };
 
     if (!user) {
         return <div className="border border-[var(--border)] rounded-lg p-4 h-64 animate-pulse bg-[var(--surface-2)]" />;
@@ -67,16 +55,7 @@ const OriginalPostCard: React.FC<{ item: FeedItemType }> = ({ item }) => {
             case 'new_mix':
                 return item.relatedId ? <TrackPreview playlistId={item.relatedId} /> : <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" />;
             case 'new_track':
-                return (
-                    <div className="relative group">
-                        <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <button onClick={handlePlayTrack} className="p-4 bg-lime-400/80 text-black rounded-full hover:bg-lime-400 scale-100 hover:scale-110 transition-transform">
-                                <IconPlay size={32} className="fill-current" />
-                            </button>
-                        </div>
-                    </div>
-                );
+                return item.relatedId ? <TrackCard trackId={item.relatedId} /> : (item.mediaUrl ? <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" /> : null);
             default:
                 return item.mediaUrl ? <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" /> : null;
         }
@@ -109,7 +88,6 @@ interface FeedCardProps {
 
 const FeedCard: React.FC<FeedCardProps> = ({ item, onRepostSuccess }) => {
     const { user: currentUser } = useAuth();
-    const { playPlaylist } = useMediaPlayer();
     
     // States for the main item (which could be a repost)
     const [author, setAuthor] = useState<User | null>(null);
@@ -144,17 +122,6 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, onRepostSuccess }) => {
             onRepostSuccess(newPost);
         }
         setIsReposting(false);
-    };
-
-    const handlePlayTrack = async () => {
-        if (item.relatedId) {
-            const track = await api.getTrackById(item.relatedId);
-            if (track && track.trackUrl) {
-                playPlaylist([track], 0);
-            } else {
-                alert("Track could not be played.");
-            }
-        }
     };
     
     if (!author) return <div className="bg-[var(--surface-1)] rounded-lg p-4 h-96 animate-pulse" />;
@@ -191,16 +158,7 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, onRepostSuccess }) => {
         switch (item.type) {
             case 'live_now': return <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" />;
             case 'new_mix': return item.relatedId ? <TrackPreview playlistId={item.relatedId} /> : <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" />;
-            case 'new_track': return (
-                <div className="relative group">
-                    <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <button onClick={handlePlayTrack} className="p-4 bg-lime-400/80 text-black rounded-full hover:bg-lime-400 scale-100 hover:scale-110 transition-transform">
-                            <IconPlay size={32} className="fill-current" />
-                        </button>
-                    </div>
-                </div>
-            );
+            case 'new_track': return item.relatedId ? <TrackCard trackId={item.relatedId} /> : (item.mediaUrl ? <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" /> : null);
             case 'new_review': return (
                 <div className="p-4 bg-[var(--surface-2)]/50">
                     <div className="flex gap-1 text-yellow-400 mb-2">

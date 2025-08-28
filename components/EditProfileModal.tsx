@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
@@ -121,7 +122,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
 
             let uploadedAvatarUrl = profileData.avatarUrl;
             if (avatarFile) {
-                uploadedAvatarUrl = await api.uploadFile('avatars', avatarFile);
+                uploadedAvatarUrl = await api.uploadFile('Avatars', avatarFile);
             }
 
             if (profileData.role === Role.DJ) {

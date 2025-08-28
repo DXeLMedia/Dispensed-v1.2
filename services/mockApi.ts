@@ -57,7 +57,7 @@ const PROFILE_QUERY_STRING = '*, dj_profiles:app_e255c3cdb5_dj_profiles(*), busi
 // =================================================================
 
 export const uploadFile = async (folder: string, file: File): Promise<string> => {
-    const bucket = 'ddj-dev-test';
+    const bucket = 'DDJ';
     const fileExt = file.name.split('.').pop();
     const fileName = `${uuidv4()}.${fileExt}`;
     const filePath = `${folder}/${fileName}`;
@@ -583,21 +583,35 @@ export const getFeedItems = async (): Promise<FeedItem[]> => {
         return [];
     }
     
-    // Efficiently get repost counts
-    const postIds = posts.map((p) => p.id).filter(Boolean);
-    if (postIds.length === 0) {
-        return posts.map((p) => mapPostToFeedItem(p, 0));
+    // FIX: A database schema mismatch was causing a crash when fetching repost counts.
+    // The following block now attempts to fetch counts but will fail gracefully
+    // if the 'original_post_id' column is missing, preventing a crash and allowing the feed to load.
+    // In this failure case, repost counts will appear as 0.
+    let repostCounts: Record<string, number> = {};
+    try {
+        const postIds = posts.map((p) => p.id).filter(Boolean);
+        if (postIds.length > 0) {
+            // This query fails if the column 'original_post_id' doesn't exist.
+            const { data: reposts, error: repostError } = await supabase
+                .from('app_e255c3cdb5_posts')
+                .select('original_post_id')
+                .in('original_post_id', postIds);
+            
+            if (repostError) {
+                // Log the expected error and continue without repost counts.
+                console.warn('Could not fetch repost counts, feature may be degraded:', repostError.message);
+            } else if (reposts) {
+                repostCounts = reposts.reduce((acc: Record<string, number>, { original_post_id }) => {
+                    if (original_post_id) acc[original_post_id] = (acc[original_post_id] || 0) + 1;
+                    return acc;
+                }, {} as Record<string, number>);
+            }
+        }
+    } catch (e) {
+        console.error("An unexpected error occurred while processing reposts:", e);
     }
 
-    const { data: reposts, error: repostError } = await supabase.from('app_e255c3cdb5_posts').select('original_post_id').in('original_post_id', postIds);
-    if (repostError) console.error('Error fetching repost counts:', repostError.message);
-    
-    const repostCounts = (reposts || []).reduce((acc: Record<string, number>, { original_post_id }) => {
-        if (original_post_id) acc[original_post_id] = (acc[original_post_id] || 0) + 1;
-        return acc;
-    }, {} as Record<string, number>);
-
-    return posts.map((p) => mapPostToFeedItem(p, repostCounts[p.id]));
+    return posts.map((p) => mapPostToFeedItem(p, repostCounts[p.id] || 0));
 };
 
 export const getFeedItemById = async (id: string): Promise<FeedItem | undefined> => {

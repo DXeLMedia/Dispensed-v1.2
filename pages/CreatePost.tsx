@@ -139,7 +139,7 @@ export const CreatePost = () => {
         try {
             let uploadedMediaUrl: string | undefined = undefined;
             if (mediaFile) {
-                uploadedMediaUrl = await api.uploadFile('posts', mediaFile);
+                uploadedMediaUrl = await api.uploadFile('Posts', mediaFile);
             }
 
             await api.addFeedItem({

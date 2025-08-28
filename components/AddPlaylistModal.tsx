@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
@@ -38,7 +39,7 @@ export const AddPlaylistModal: React.FC<AddPlaylistModalProps> = ({ isOpen, onCl
         try {
             let uploadedArtworkUrl = '';
             if (artworkFile) {
-                uploadedArtworkUrl = await api.uploadFile('playlists', artworkFile);
+                uploadedArtworkUrl = await api.uploadFile('Playlists', artworkFile);
             }
 
             await api.createPlaylist({

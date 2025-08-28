@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -71,7 +72,7 @@ export const CreateGig = () => {
     try {
         let uploadedFlyerUrl = '';
         if (flyerFile) {
-            uploadedFlyerUrl = await api.uploadFile('flyers', flyerFile);
+            uploadedFlyerUrl = await api.uploadFile('Flyers', flyerFile);
         }
 
         await api.addGig({

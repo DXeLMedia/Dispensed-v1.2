@@ -4,10 +4,11 @@ import { Gig, Role, Business } from '../types';
 import * as api from '../services/mockApi';
 import { useAuth } from '../hooks/useAuth';
 import { PageSpinner } from '../components/Spinner';
-import { IconMoreVertical, IconChevronLeft, IconChevronRight, IconCalendar, IconClock, IconStickyNote, IconSearch } from '../constants';
+import { IconMoreVertical, IconChevronLeft, IconChevronRight, IconCalendar, IconClock, IconStickyNote, IconSearch, IconStar } from '../constants';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { RatingModal } from '../components/RatingModal';
 
-const GigCard = ({ gig, venue, isHighlighted, highlightedRef }: { gig: Gig; venue?: Business; isHighlighted?: boolean; highlightedRef?: React.RefObject<HTMLDivElement> }) => {
+const GigCard = ({ gig, venue, isHighlighted, highlightedRef, onRateClick }: { gig: Gig; venue?: Business; isHighlighted?: boolean; highlightedRef?: React.RefObject<HTMLDivElement>; onRateClick: (gig: Gig) => void; }) => {
     let statusText: string;
     let statusStyle: string;
 
@@ -59,6 +60,16 @@ const GigCard = ({ gig, venue, isHighlighted, highlightedRef }: { gig: Gig; venu
                 <div className="flex justify-end items-center">
                      <p className="font-orbitron text-xl font-bold text-[var(--accent)]">R{gig.budget.toLocaleString()}</p>
                 </div>
+                {gig.status === 'Completed' && (
+                    <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                        <button
+                            onClick={() => onRateClick(gig)}
+                            className="w-full flex items-center justify-center gap-2 text-sm bg-yellow-400/20 text-yellow-300 font-semibold px-3 py-2.5 rounded-lg hover:bg-yellow-400/40"
+                        >
+                            <IconStar size={16} /> Rate Venue
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -78,6 +89,9 @@ export const MyGigs = () => {
     const [interestedGigs, setInterestedGigs] = useState<Gig[]>([]);
     const [completedGigs, setCompletedGigs] = useState<Gig[]>([]);
     const [venues, setVenues] = useState<Record<string, Business>>({});
+    
+    const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+    const [gigToRate, setGigToRate] = useState<Gig | null>(null);
 
     const highlightedGigId = useMemo(() => {
         const params = new URLSearchParams(location.search);
@@ -122,6 +136,25 @@ export const MyGigs = () => {
         };
         fetchData();
     }, [user, navigate]);
+    
+    const handleRateClick = (gig: Gig) => {
+        setGigToRate(gig);
+        setIsRatingModalOpen(true);
+    };
+
+    const handleSubmitReview = async (rating: number, comment: string) => {
+        if (!gigToRate || !gigToRate.business_user_id || !user) return;
+        
+        await api.submitReview({
+            authorId: user.id,
+            targetId: gigToRate.business_user_id,
+            rating,
+            comment,
+            gigId: gigToRate.id
+        });
+        
+        alert('Review submitted, thank you!');
+    };
 
     const activeMonths = useMemo(() => {
         const allGigs = [...bookedGigs, ...interestedGigs, ...completedGigs];
@@ -280,6 +313,7 @@ export const MyGigs = () => {
                                         venue={venues[gig.business_user_id]} 
                                         isHighlighted={gig.id === highlightedGigId}
                                         highlightedRef={gig.id === highlightedGigId ? highlightedRef : undefined}
+                                        onRateClick={handleRateClick}
                                     />
                                 ))}
                             </div>
@@ -295,6 +329,15 @@ export const MyGigs = () => {
             <Link to="/find-gigs" title="Find New Gigs" className="fixed bottom-6 right-6 md:bottom-10 md:right-10 bg-[var(--accent)] text-[var(--accent-text)] p-4 rounded-full shadow-lg shadow-[var(--accent)]/30 z-30 hover:bg-[var(--accent-hover)] transition-all transform hover:scale-110">
                 <IconSearch size={28} />
             </Link>
+            {gigToRate && venues[gigToRate.business_user_id] && (
+                <RatingModal
+                    isOpen={isRatingModalOpen}
+                    onClose={() => setIsRatingModalOpen(false)}
+                    onSubmit={handleSubmitReview}
+                    targetName={venues[gigToRate.business_user_id].name}
+                    targetType="Venue"
+                />
+            )}
         </div>
     );
 };

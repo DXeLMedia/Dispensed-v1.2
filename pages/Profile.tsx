@@ -77,7 +77,6 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitt
     const [isFollowing, setIsFollowing] = useState(false);
     const [activeTab, setActiveTab] = useState<'about' | 'media' | 'reviews'>('about');
     const [reviews, setReviews] = useState<EnrichedReview[]>([]);
-    const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
     const [tracks, setTracks] = useState<Track[]>([]);
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const { playPlaylist } = useMediaPlayer();
@@ -131,13 +130,6 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitt
                 navigate(`/messages/${newChat.id}`);
             }
         }
-    };
-    
-    const handleSubmitReview = async (rating: number, comment: string) => {
-        if (!currentUser) return;
-        await api.submitReview({ authorId: currentUser.id, targetId: dj.id, rating, comment });
-        await fetchReviews();
-        onReviewSubmitted(); // To refetch profile data
     };
 
     const handlePlayTrack = (trackIndex: number) => {
@@ -202,11 +194,10 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitt
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 gap-2">
-                        <button onClick={handleFollowToggle} className={`font-bold py-2 rounded-lg transition-colors ${(currentUser && 'following' in currentUser) ? (isFollowing ? 'bg-[var(--surface-2)] text-[var(--text-primary)]' : 'bg-[var(--accent)] text-[var(--accent-text)]') : 'bg-[var(--surface-2)]'}`} disabled={!currentUser || !('following' in currentUser)}>
+                        <button onClick={handleFollowToggle} className={`font-bold py-3 rounded-lg transition-colors ${(currentUser && 'following' in currentUser) ? (isFollowing ? 'bg-[var(--surface-2)] text-[var(--text-primary)]' : 'bg-[var(--accent)] text-[var(--accent-text)]') : 'bg-[var(--surface-2)]'}`} disabled={!currentUser || !('following' in currentUser)}>
                             {isFollowing ? 'Following' : 'Follow'}
                         </button>
-                        <button onClick={() => setIsRatingModalOpen(true)} className="bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-2 rounded-lg">Leave Review</button>
-                        <button onClick={handleMessage} className="col-span-2 bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-2 rounded-lg">Message</button>
+                        <button onClick={handleMessage} className="bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-3 rounded-lg">Message</button>
                     </div>
                 )}
             </div>
@@ -327,13 +318,6 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitt
                      )
                 )}
             </div>
-            <RatingModal 
-                isOpen={isRatingModalOpen}
-                onClose={() => setIsRatingModalOpen(false)}
-                onSubmit={handleSubmitReview}
-                targetName={dj.name}
-                targetType="DJ"
-            />
         </>
     )
 };
@@ -351,7 +335,6 @@ const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfil
     const [gigs, setGigs] = useState<Gig[]>([]);
     const [activeTab, setActiveTab] = useState<'about' | 'media' | 'reviews'>('about');
     const [reviews, setReviews] = useState<EnrichedReview[]>([]);
-    const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
 
     const fetchReviews = async () => {
         setReviews(await api.getReviewsForUser(business.id));
@@ -392,13 +375,6 @@ const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfil
         }
     };
     
-    const handleSubmitReview = async (rating: number, comment: string) => {
-        if (!currentUser) return;
-        await api.submitReview({ authorId: currentUser.id, targetId: business.id, rating, comment });
-        await fetchReviews();
-        onReviewSubmitted(); // To refetch profile data
-    };
-    
     const hasSocials = business.socials && Object.values(business.socials).some(Boolean);
 
     return (
@@ -430,11 +406,10 @@ const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfil
                     </div>
                 ) : (
                      <div className="grid grid-cols-2 gap-2">
-                        <button onClick={handleFollowToggle} className={`font-bold py-2 rounded-lg transition-colors ${(currentUser && 'following' in currentUser) ? (isFollowing ? 'bg-[var(--surface-2)] text-[var(--text-primary)]' : 'bg-[var(--accent)] text-[var(--accent-text)]') : 'bg-[var(--surface-2)]'}`} disabled={!currentUser || !('following' in currentUser)}>
+                        <button onClick={handleFollowToggle} className={`font-bold py-3 rounded-lg transition-colors ${(currentUser && 'following' in currentUser) ? (isFollowing ? 'bg-[var(--surface-2)] text-[var(--text-primary)]' : 'bg-[var(--accent)] text-[var(--accent-text)]') : 'bg-[var(--surface-2)]'}`} disabled={!currentUser || !('following' in currentUser)}>
                             {isFollowing ? 'Following' : 'Follow'}
                         </button>
-                        <button onClick={() => setIsRatingModalOpen(true)} className="bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-2 rounded-lg">Leave Review</button>
-                        <button onClick={handleMessage} className="col-span-2 bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-2 rounded-lg">Message</button>
+                        <button onClick={handleMessage} className="bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-3 rounded-lg">Message</button>
                     </div>
                 )}
             </div>
@@ -489,13 +464,6 @@ const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfil
                     <p className="text-center text-[var(--text-muted)] py-8">Media gallery for venues coming soon.</p>
                 )}
             </div>
-            <RatingModal 
-                isOpen={isRatingModalOpen}
-                onClose={() => setIsRatingModalOpen(false)}
-                onSubmit={handleSubmitReview}
-                targetName={business.name}
-                targetType="Venue"
-            />
         </>
     );
 };
