@@ -41,6 +41,76 @@ export type Database = {
         };
         Relationships: [];
       };
+      app_e255c3cdb5_social_links: {
+        Row: {
+          id: string;
+          user_id: string;
+          platform: string;
+          url: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          platform: string;
+          url: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          platform?: string;
+          url?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "app_e255c3cdb5_social_links_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "app_e255c3cdb5_user_profiles";
+            referencedColumns: ["user_id"];
+          }
+        ];
+      };
+      app_e255c3cdb5_tracks: {
+        Row: {
+          id: string;
+          artist_id: string;
+          title: string;
+          artwork_url: string | null;
+          track_url: string | null;
+          duration: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          artist_id: string;
+          title: string;
+          artwork_url?: string | null;
+          track_url?: string | null;
+          duration?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          artist_id?: string;
+          title?: string;
+          artwork_url?: string | null;
+          track_url?: string | null;
+          duration?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "app_e255c3cdb5_tracks_artist_id_fkey";
+            columns: ["artist_id"];
+            isOneToOne: false;
+            referencedRelation: "app_e255c3cdb5_user_profiles";
+            referencedColumns: ["user_id"];
+          }
+        ];
+      };
       app_e255c3cdb5_user_profiles: {
         Row: {
           user_id: string;
@@ -74,8 +144,6 @@ export type Database = {
           rating: number;
           reviews_count: number;
           tier: "Bronze" | "Silver" | "Gold Groove" | "Neon Legend";
-          socials: Json | null;
-          portfolio_tracks: Json | null;
           experience_years: number | null;
           equipment_owned: string[] | null;
           hourly_rate: number | null;
@@ -90,8 +158,6 @@ export type Database = {
           rating?: number;
           reviews_count?: number;
           tier: "Bronze" | "Silver" | "Gold Groove" | "Neon Legend";
-          socials?: Json | null;
-          portfolio_tracks?: Json | null;
           experience_years?: number | null;
           equipment_owned?: string[] | null;
           hourly_rate?: number | null;
@@ -106,8 +172,6 @@ export type Database = {
           rating?: number;
           reviews_count?: number;
           tier?: "Bronze" | "Silver" | "Gold Groove" | "Neon Legend";
-          socials?: Json | null;
-          portfolio_tracks?: Json | null;
           experience_years?: number | null;
           equipment_owned?: string[] | null;
           hourly_rate?: number | null;
@@ -124,7 +188,6 @@ export type Database = {
           description: string;
           rating: number;
           reviews_count: number;
-          socials: Json | null;
         };
         Insert: {
           user_id: string;
@@ -133,7 +196,6 @@ export type Database = {
           description: string;
           rating?: number;
           reviews_count?: number;
-          socials?: Json | null;
         };
         Update: {
           user_id?: string;
@@ -142,7 +204,6 @@ export type Database = {
           description?: string;
           rating?: number;
           reviews_count?: number;
-          socials?: Json | null;
         };
         Relationships: [];
       };
