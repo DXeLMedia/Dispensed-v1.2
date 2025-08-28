@@ -842,7 +842,7 @@ export const addTrackToPlaylist = async (playlistId: string, track: Track): Prom
 // =================================================================
 export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedReview[]> => {
     const { data, error } = await supabase.from('app_e255c3cdb5_reviews')
-        .select('*, author:app_e255c3cdb5_user_profiles!reviewer_id(user_id, display_name, avatar_url, user_type)')
+        .select('*, author:app_e255c3cdb5_user_profiles!app_e255c3cdb5_reviews_reviewer_id_fkey(user_id, display_name, avatar_url, user_type)')
         .eq('reviewee_id', revieweeId);
         
     if (error || !data) return [];
