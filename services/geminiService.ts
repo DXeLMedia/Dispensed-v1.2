@@ -39,6 +39,7 @@ export const generateGigDescription = async (
         thinkingConfig: { thinkingBudget: 0 }
       }
     });
+    // Correctly access response.text directly as per Gemini API guidelines.
     return response.text;
   } catch (error) {
     console.error("Error generating gig description with Gemini:", error);
@@ -98,6 +99,7 @@ export const findDJsWithAI = async (query: string, allDjs: DJ[]): Promise<string
             },
         });
 
+        // Correctly access response.text directly as per Gemini API guidelines.
         const jsonText = response.text.trim();
         const result = JSON.parse(jsonText);
 
@@ -111,4 +113,51 @@ export const findDJsWithAI = async (query: string, allDjs: DJ[]): Promise<string
         // Handle potential parsing errors or API failures
         return [];
     }
+};
+
+export const generateDjBio = async (
+  djName: string,
+  genres: string[],
+  location: string,
+  experience?: number,
+  equipment?: string[],
+  keywords?: string
+): Promise<string> => {
+  if (!process.env.API_KEY) {
+    return Promise.resolve(`Passionate DJ from ${location} spinning the best of ${genres.join(', ')}.`);
+  }
+
+  const prompt = `
+    Create a cool, engaging, and professional DJ bio for a profile page. The tone should be confident and exciting, suitable for Cape Town's underground music scene.
+    
+    Details:
+    - DJ Name: "${djName}"
+    - Key Genres: ${genres.join(', ')}
+    - Location: ${location}
+    ${experience ? `- Years of Experience: ${experience}` : ''}
+    ${equipment && equipment.length > 0 ? `- Owns Equipment: ${equipment.join(', ')}` : ''}
+    ${keywords ? `- Vibe/Keywords: ${keywords}` : ''}
+
+    Instructions:
+    - Write in the first person (e.g., "I am...").
+    - Keep it concise, around 3-5 sentences.
+    - Highlight the key genres and location.
+    - Weave in the experience and equipment naturally if provided.
+    - Do not use hashtags.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+       config: {
+        thinkingConfig: { thinkingBudget: 0 }
+      }
+    });
+    // Correctly access response.text directly as per Gemini API guidelines.
+    return response.text.trim();
+  } catch (error) {
+    console.error("Error generating DJ bio with Gemini:", error);
+    return `Passionate DJ from ${location} spinning the best of ${genres.join(', ')}. With ${experience || 'years'} of experience behind the decks, I'm ready to bring the energy.`;
+  }
 };

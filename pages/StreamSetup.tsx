@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -27,7 +28,8 @@ export const StreamSetup = () => {
                 userId: user.id,
                 title: `${user.name} is LIVE!`,
                 description: title,
-                imageUrl: user.avatarUrl,
+                mediaUrl: user.avatarUrl,
+                mediaType: 'image',
                 relatedId: newSession.id,
             });
 

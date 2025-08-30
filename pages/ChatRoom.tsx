@@ -66,10 +66,10 @@ export const ChatRoom = () => {
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || !chatId || !currentUser) return;
+        if (!newMessage.trim() || !chatId || !currentUser || !chat) return;
 
         setSending(true);
-        const sentMessage = await api.sendMessage(chatId, currentUser.id, newMessage.trim());
+        const sentMessage = await api.sendMessage(chat.otherParticipant.id, currentUser.id, newMessage.trim());
         
         if (sentMessage && chat) {
             setChat(prev => prev ? { ...prev, messages: [...prev.messages, sentMessage] } : null);
