@@ -1,5 +1,6 @@
 
 
+
 export enum Role {
   DJ = 'dj',
   Business = 'business',
@@ -56,7 +57,6 @@ export interface DJ extends User, Followable {
 
 export interface Business extends User, Followable {
   role: Role.Business;
-  name: string; // Formerly venueName, updated for consistency with User and DB schema
   location: string;
   description: string;
   rating: number;
@@ -70,6 +70,8 @@ export interface Business extends User, Followable {
 
 export interface Listener extends User, Followable {
     role: Role.Listener;
+    rating: number;
+    reviewsCount: number;
 }
 
 
@@ -108,6 +110,8 @@ export interface Playlist {
 export interface Message {
   id: string;
   senderId: string;
+  // FIX: Added recipientId to align with the database schema and application logic.
+  recipientId: string;
   text: string;
   timestamp: string;
 }
@@ -175,7 +179,7 @@ export interface StreamSession {
 export interface Review {
   id: string;
   authorId: string;
-  targetId: string; // The ID of the DJ or Business being reviewed
+  targetId: string; // The ID of the user being reviewed
   rating: number; // 1-5
   comment?: string;
   timestamp: string;

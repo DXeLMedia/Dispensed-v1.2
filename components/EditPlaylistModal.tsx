@@ -60,7 +60,12 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({ isOpen, on
             onClose();
         } catch (error) {
             console.error(error);
-            alert("Failed to update playlist.");
+            // FIX: Provide more specific user feedback for common RLS errors.
+            let message = "Failed to update playlist.";
+            if (error instanceof Error && error.message.includes('security policy')) {
+                message = 'Playlist update failed due to an artwork upload permission issue. Please contact support.';
+            }
+            alert(message);
         } finally {
             setIsSubmitting(false);
         }

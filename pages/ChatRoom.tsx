@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as api from '../services/mockApi';
@@ -69,7 +70,9 @@ export const ChatRoom = () => {
         if (!newMessage.trim() || !chatId || !currentUser || !chat) return;
 
         setSending(true);
-        const sentMessage = await api.sendMessage(chat.otherParticipant.id, currentUser.id, newMessage.trim());
+        // FIX: Swapped senderId and recipientId to match the API and satisfy RLS policy.
+        // The current user must be the sender.
+        const sentMessage = await api.sendMessage(currentUser.id, chat.otherParticipant.id, newMessage.trim());
         
         if (sentMessage && chat) {
             setChat(prev => prev ? { ...prev, messages: [...prev.messages, sentMessage] } : null);

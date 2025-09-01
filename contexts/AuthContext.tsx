@@ -1,10 +1,10 @@
-
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { User, Role, DJ, Business, Notification, UserSettings, Listener } from '../types';
+import { User, Role, DJ, Business, Notification, UserSettings, Listener, UserProfile } from '../types';
 import * as api from '../services/mockApi';
 import { useMediaPlayer } from './MediaPlayerContext';
 import { supabase } from '../services/supabaseClient';
 import { userAppUpdatesService } from '../services/userAppUpdatesService';
+import { useDemoMode } from '../hooks/useDemoMode';
 
 type FullUser = User | DJ | Business | Listener;
 
@@ -17,6 +17,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   signUp: (email: string, password: string, name: string, role: Role) => Promise<void>;
   signInWithGoogle: (role?: Role) => Promise<void>;
+  demoLogin: (role: Role) => Promise<void>;
   updateUser: (updatedUser: FullUser) => void;
   notifications: Notification[];
   unreadCount: number;
@@ -39,6 +40,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const { closePlayer } = useMediaPlayer();
   const [theme, setTheme] = useState<UserSettings['theme']>('electric_blue');
+  const { isDemoMode } = useDemoMode();
 
   const refreshNotifications = useCallback(async () => {
     if (user) {
@@ -94,6 +96,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 
   useEffect(() => {
+    if (isDemoMode) {
+      // In demo mode, we don't check Supabase session.
+      // Auth is handled by demoLogin.
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
+
     // Run once on mount to get current session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (session) {
@@ -105,6 +115,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (isDemoMode) return; // Ignore auth changes in demo mode
         if (event === 'SIGNED_OUT') {
             setUser(null);
         } else if (session && (!user || user.id !== session.user.id)) {
@@ -115,7 +126,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     );
 
     return () => subscription.unsubscribe();
-  }, [user, fetchUserProfile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDemoMode, fetchUserProfile]);
 
 
   useEffect(() => {
@@ -129,6 +141,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user, refreshNotifications]);
 
   const login = async (email: string, password: string) => {
+    if (isDemoMode) {
+        throw new Error("Login is disabled in Demo Mode.");
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -158,15 +174,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
-    if (user) {
+    if (!isDemoMode && user) {
         await userAppUpdatesService.syncActions(user.id);
     }
     closePlayer(); // Reset media player state
-    await supabase.auth.signOut();
+    if (!isDemoMode) {
+        await supabase.auth.signOut();
+    }
+    setUser(null);
     document.documentElement.className = 'theme-dark'; // Reset to default on logout
   };
 
   const signUp = async (email: string, password: string, name: string, role: Role) => {
+    if (isDemoMode) {
+        throw new Error("Sign up is disabled in Demo Mode.");
+    }
     const { error } = await api.signUpWithEmail(email, password, name, role);
     if (error) {
         throw error;
@@ -175,6 +197,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signInWithGoogle = async (role?: Role) => {
+    if (isDemoMode) {
+        throw new Error("Google Sign-In is disabled in Demo Mode.");
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -187,6 +212,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     // Supabase handles the redirect from here.
   };
+
+  const demoLogin = async (role: Role) => {
+    if (!isDemoMode) return;
+    setIsLoading(true);
+    const demoUser = await api.getDemoUserByRole(role);
+    if (demoUser) {
+        setUser(demoUser as FullUser);
+    } else {
+        throw new Error(`Could not find a demo user for role: ${role}`);
+    }
+    setIsLoading(false);
+  }
   
   const updateUser = (updatedUser: FullUser) => {
     setUser(updatedUser);
@@ -221,6 +258,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     signUp,
     signInWithGoogle,
+    demoLogin,
     updateUser,
     notifications,
     unreadCount,

@@ -1,11 +1,12 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import * as api from '../services/mockApi';
 import { Track, Playlist } from '../types';
 import { Spinner } from '../components/Spinner';
-import { IconArrowLeft, IconMusic, IconList, IconPlus, IconPlay, IconPlusCircle, IconPencil } from '../constants';
+import { IconArrowLeft, IconMusic, IconList, IconPlus, IconPlay, IconPlusCircle, IconPencil, IconTrash } from '../constants';
 import { AddTrackModal } from '../components/AddTrackModal';
 import { useMediaPlayer } from '../contexts/MediaPlayerContext';
 import { AddPlaylistModal } from '../components/AddPlaylistModal';
@@ -39,7 +40,7 @@ const Tabs = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (t
     </div>
 );
 
-const TrackItem = ({ track, onPlay, onAddToPlaylist }: { track: Track; onPlay: () => void; onAddToPlaylist: () => void; }) => (
+const TrackItem = ({ track, onPlay, onAddToPlaylist, onDelete }: { track: Track; onPlay: () => void; onAddToPlaylist: () => void; onDelete: () => void; }) => (
     <div className="w-full flex items-center gap-2 p-2 bg-zinc-900 border border-zinc-800 rounded-lg group hover:border-lime-400/50">
         <button onClick={onPlay} className="flex items-center gap-4 flex-1 text-left">
             <img src={track.artworkUrl} alt={track.title} className="w-12 h-12 rounded-md object-cover"/>
@@ -48,9 +49,14 @@ const TrackItem = ({ track, onPlay, onAddToPlaylist }: { track: Track; onPlay: (
                 <p className="text-sm text-zinc-400">{track.duration}</p>
             </div>
         </button>
-         <button onClick={onAddToPlaylist} title="Add to Playlist" className="p-2 text-zinc-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
-            <IconPlusCircle size={22} />
-        </button>
+         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={onAddToPlaylist} title="Add to Playlist" className="p-2 text-zinc-400 hover:text-white">
+                <IconPlusCircle size={22} />
+            </button>
+             <button onClick={onDelete} title="Delete Track" className="p-2 text-zinc-400 hover:text-red-500">
+                <IconTrash size={20} />
+            </button>
+        </div>
     </div>
 );
 
@@ -153,6 +159,18 @@ export const MediaManager = () => {
         setSelectedPlaylist(playlist);
         setIsEditPlaylistModalOpen(true);
     };
+
+    const handleDeleteTrack = async (trackToDelete: Track) => {
+        if (!user) return;
+        if (window.confirm(`Are you sure you want to delete "${trackToDelete.title}"? This action cannot be undone.`)) {
+            const success = await api.deleteTrack(user.id, trackToDelete.id);
+            if (success) {
+                fetchData(); // Refresh data
+            } else {
+                alert("Failed to delete track. Please try again.");
+            }
+        }
+    };
     
     if (!user) return null;
 
@@ -164,7 +182,13 @@ export const MediaManager = () => {
                 <div className="p-4 space-y-3 pb-24 relative">
                     {activeTab === 'tracks' && (
                         tracks.length > 0 ? tracks.map((t, index) => 
-                            <TrackItem key={t.id} track={t} onPlay={() => handlePlayTrack(index)} onAddToPlaylist={() => setSelectedTrack(t)}/>
+                            <TrackItem
+                                key={t.id}
+                                track={t}
+                                onPlay={() => handlePlayTrack(index)}
+                                onAddToPlaylist={() => setSelectedTrack(t)}
+                                onDelete={() => handleDeleteTrack(t)}
+                            />
                         )
                         : <p className="text-center text-zinc-500 pt-10">No tracks uploaded.</p>
                     )}

@@ -1,6 +1,7 @@
 
 
 import { supabase } from './supabaseClient';
+import * as demoApi from './mockApiDemo';
 import { 
     DJ, 
     Business, 
@@ -32,6 +33,12 @@ import { persistenceService } from './persistenceService';
 import { userAppUpdatesService } from './userAppUpdatesService';
 
 // =================================================================
+// SECTION: Demo Mode Router
+// =================================================================
+
+const isDemoModeEnabled = () => localStorage.getItem('isDemoMode') === 'true';
+
+// =================================================================
 // SECTION: Type Aliases & Constants
 // =================================================================
 
@@ -57,30 +64,32 @@ const PROFILE_QUERY_STRING = '*, dj_profiles:app_e255c3cdb5_dj_profiles(*), busi
 // =================================================================
 
 export const uploadFile = async (folder: string, file: File): Promise<string> => {
+    if (isDemoModeEnabled()) return demoApi.uploadFile(folder, file);
     const bucket = 'DDJ';
     const fileExt = file.name.split('.').pop();
-    // FIX: Corrected typo from uuidv4 to uuidvv4.
     const fileName = `${uuidvv4()}.${fileExt}`;
     const filePath = `${folder}/${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, file);
+    try {
+        const { error } = await supabase.storage.from(bucket).upload(filePath, file, {
+            contentType: file.type,
+            upsert: false,
+        });
 
-    if (uploadError) {
-        console.error('Error uploading file:', uploadError);
+        if (error) {
+            throw error;
+        }
+
+        const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filePath);
+        return publicUrl;
+        
+    } catch (uploadError: any) {
+        console.error('Error uploading file with Supabase client:', uploadError);
+        if (uploadError.message && (uploadError.message.includes('permission denied') || uploadError.message.includes('security policy'))) {
+            throw new Error('Upload failed due to security policy. Please check storage permissions.');
+        }
         throw uploadError;
     }
-
-    const { data } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath);
-        
-    if (!data || !data.publicUrl) {
-        throw new Error("Could not get public URL for uploaded file.");
-    }
-
-    return data.publicUrl;
 };
 
 
@@ -108,7 +117,7 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
         followers: 0,
     };
     
-    if (role === Role.DJ && data.dj_profiles) {
+    if (role === Role.DJ) {
         const djProfile = Array.isArray(data.dj_profiles) ? data.dj_profiles[0] : data.dj_profiles;
         return {
             ...baseUser,
@@ -129,7 +138,7 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
             travelRadius: djProfile?.travel_radius ?? undefined,
             availabilitySchedule: (djProfile?.availability_schedule as string) || undefined,
         };
-    } else if (role === Role.Business && data.business_profiles) {
+    } else if (role === Role.Business) {
         const businessProfile = Array.isArray(data.business_profiles) ? data.business_profiles[0] : data.business_profiles;
         return {
             ...baseUser,
@@ -145,6 +154,8 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
         return {
             ...baseUser,
             role: Role.Listener,
+            rating: 0,
+            reviewsCount: 0,
         };
     }
 }
@@ -187,7 +198,14 @@ const mapRowToGig = (gig: GigRow): Gig => ({
 // SECTION: User & Profile Management
 // =================================================================
 
+export const getDemoUserByRole = async (role: Role): Promise<UserProfile | null> => {
+    if (isDemoModeEnabled()) return demoApi.getDemoUserByRole(role);
+    return null; // This function is only for demo mode
+}
+
 export const getUserById = async (userId: string): Promise<UserProfile | undefined> => {
+    if (isDemoModeEnabled()) return demoApi.getUserById(userId);
+
     const { data, error } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select(PROFILE_QUERY_STRING)
@@ -197,7 +215,7 @@ export const getUserById = async (userId: string): Promise<UserProfile | undefin
         .maybeSingle();
     
     if (error || !data) {
-        if (error) console.error('Error fetching user profile:', error.message);
+        if (error) console.error('Error fetching user profile:', error);
         return undefined;
     }
 
@@ -210,22 +228,32 @@ export const getUserById = async (userId: string): Promise<UserProfile | undefin
     user.followers = followersResult.count ?? 0;
     user.following = (followingResult.data || []).map((f) => f.following_id);
 
+    if (user.role === Role.Listener) {
+        const reviews = await getReviewsForUser(userId);
+        user.reviewsCount = reviews.length;
+        if(reviews.length > 0) {
+            user.rating = reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length;
+        }
+    }
+
     return user;
 };
 
 export const getDJById = async (userId: string): Promise<DJ | undefined> => {
+    if (isDemoModeEnabled()) return demoApi.getDJById(userId);
     const profile = await getUserById(userId);
     return profile?.role === Role.DJ ? (profile as DJ) : undefined;
 };
 
 export const getDJs = async (): Promise<DJ[]> => {
+    if (isDemoModeEnabled()) return demoApi.getDJs();
     const { data: profiles, error } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select(PROFILE_QUERY_STRING)
         .eq('user_type', 'dj');
 
     if (error || !profiles) {
-        console.error("Error fetching DJs:", error?.message);
+        console.error("Error fetching DJs:", error);
         return [];
     }
     
@@ -233,13 +261,14 @@ export const getDJs = async (): Promise<DJ[]> => {
 };
 
 export const getBusinesses = async (): Promise<Business[]> => {
+    if (isDemoModeEnabled()) return demoApi.getBusinesses();
     const { data: profiles, error } = await supabase
         .from('app_e255c3cdb5_user_profiles')
         .select(PROFILE_QUERY_STRING)
         .eq('user_type', 'business');
 
     if (error || !profiles) {
-        console.error("Error fetching businesses:", error?.message);
+        console.error("Error fetching businesses:", error);
         return [];
     }
 
@@ -247,11 +276,13 @@ export const getBusinesses = async (): Promise<Business[]> => {
 };
 
 export const getBusinessById = async (userId: string): Promise<Business | undefined> => {
+    if (isDemoModeEnabled()) return demoApi.getBusinessById(userId);
     const profile = await getUserById(userId);
     return profile?.role === Role.Business ? profile as Business : undefined;
 }
 
 export const getTopDJs = async (): Promise<DJ[]> => {
+    if (isDemoModeEnabled()) return demoApi.getTopDJs();
     const { data: djProfiles, error } = await supabase
         .from('app_e255c3cdb5_dj_profiles')
         .select('*')
@@ -260,7 +291,7 @@ export const getTopDJs = async (): Promise<DJ[]> => {
         .limit(50);
         
     if (error || !djProfiles) {
-        console.error("Error fetching top DJs:", error?.message);
+        console.error("Error fetching top DJs:", error);
         return [];
     }
 
@@ -275,6 +306,7 @@ export const getTopDJs = async (): Promise<DJ[]> => {
 };
 
 export const getTopVenues = async (): Promise<Business[]> => {
+    if (isDemoModeEnabled()) return demoApi.getTopVenues();
     const { data: businessProfiles, error } = await supabase
         .from('app_e255c3cdb5_business_profiles')
         .select('*')
@@ -283,7 +315,7 @@ export const getTopVenues = async (): Promise<Business[]> => {
         .limit(50);
 
     if (error || !businessProfiles) {
-        console.error("Error fetching top Venues:", error?.message);
+        console.error("Error fetching top Venues:", error);
         return [];
     }
     const venues = await Promise.all(businessProfiles.map(async (businessProfile) => {
@@ -295,25 +327,22 @@ export const getTopVenues = async (): Promise<Business[]> => {
 };
 
 export const updateUserProfile = async (userId: string, data: Partial<UserProfile>): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.updateUserProfile(userId, data);
     userAppUpdatesService.logAction('UPDATE_USER_PROFILE', { userId, data });
-    const { name, avatarUrl, ...rest } = data;
-    
-    const userProfileData: Database['public']['Tables']['app_e255c3cdb5_user_profiles']['Update'] = {};
-    if (name !== undefined) userProfileData.display_name = name;
-    if (avatarUrl !== undefined) userProfileData.avatar_url = avatarUrl;
-    
-    let success = true;
 
-    if (Object.keys(userProfileData).length > 0) {
-        const { error } = await supabase.from('app_e255c3cdb5_user_profiles').update(userProfileData).eq('user_id', userId);
-        if (error) {
-            console.error('Error updating user profile:', error.message);
-            success = false;
-        }
+    const userProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_user_profiles']['Update'] = {};
+    if (data.name !== undefined) userProfileUpdate.display_name = data.name;
+    if (data.avatarUrl !== undefined) userProfileUpdate.avatar_url = data.avatarUrl;
+
+    // Use a PostgrestBuilder array to handle multiple potential updates
+    const updatePromises: any[] = [];
+
+    if (Object.keys(userProfileUpdate).length > 0) {
+        updatePromises.push(supabase.from('app_e255c3cdb5_user_profiles').update(userProfileUpdate).eq('user_id', userId));
     }
 
     if (data.role === Role.DJ) {
-        const djData = rest as Partial<DJ>;
+        const djData = data as Partial<DJ>;
         const djProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_dj_profiles']['Update'] = {};
         
         if (djData.bio !== undefined) djProfileUpdate.description = djData.bio;
@@ -324,19 +353,15 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
         if (djData.hourlyRate !== undefined) djProfileUpdate.hourly_rate = djData.hourlyRate;
         if (djData.travelRadius !== undefined) djProfileUpdate.travel_radius = djData.travelRadius;
         if (djData.equipmentOwned !== undefined) djProfileUpdate.equipment_owned = djData.equipmentOwned;
-        if (djData.availabilitySchedule !== undefined) djProfileUpdate.availability_schedule = djData.availabilitySchedule as unknown as string;
-        
+        if (djData.availabilitySchedule !== undefined) djProfileUpdate.availability_schedule = djData.availabilitySchedule as Json;
+
         if (Object.keys(djProfileUpdate).length > 0) {
-            const { error } = await supabase.from('app_e255c3cdb5_dj_profiles').update(djProfileUpdate).eq('user_id', userId);
-            if (error) {
-                console.error('Error updating DJ profile:', error.message);
-                success = false;
-            }
+            updatePromises.push(supabase.from('app_e255c3cdb5_dj_profiles').update(djProfileUpdate).eq('user_id', userId));
         }
     }
 
     if (data.role === Role.Business) {
-        const businessData = rest as Partial<Business>;
+        const businessData = data as Partial<Business>;
         const businessProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_business_profiles']['Update'] = {};
         if (businessData.name !== undefined) businessProfileUpdate.venue_name = businessData.name;
         if (businessData.description !== undefined) businessProfileUpdate.description = businessData.description;
@@ -344,19 +369,26 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
         if (businessData.socials !== undefined) businessProfileUpdate.socials = businessData.socials as Json;
 
         if (Object.keys(businessProfileUpdate).length > 0) {
-            const { error } = await supabase.from('app_e255c3cdb5_business_profiles').update(businessProfileUpdate).eq('user_id', userId);
-            if (error) {
-                console.error('Error updating business profile:', error.message);
-                success = false;
-            }
+            updatePromises.push(supabase.from('app_e255c3cdb5_business_profiles').update(businessProfileUpdate).eq('user_id', userId));
         }
     }
 
-    if(success) persistenceService.markDirty();
-    return success;
+    const results = await Promise.all(updatePromises);
+    const hasError = results.some(result => result.error);
+
+    if (hasError) {
+        results.forEach((result, index) => {
+            if (result.error) console.error(`Error in update operation #${index}:`, result.error);
+        });
+        return false;
+    }
+
+    persistenceService.markDirty();
+    return true;
 };
 
 export const updateUserSettings = async(userId: string, settings: Partial<UserSettings>): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.updateUserSettings(userId, settings);
     userAppUpdatesService.logAction('UPDATE_USER_SETTINGS', { userId, settings });
     const { error } = await supabase.from('app_e255c3cdb5_user_profiles').update({ settings: settings as Json }).eq('user_id', userId);
     if (!error) persistenceService.markDirty();
@@ -369,10 +401,11 @@ export const updateUserSettings = async(userId: string, settings: Partial<UserSe
 // =================================================================
 
 export const followUser = async (currentUserId: string, targetUserId: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.followUser(currentUserId, targetUserId);
     userAppUpdatesService.logAction('FOLLOW_USER', { currentUserId, targetUserId });
     const { error } = await supabase.from('app_e255c3cdb5_follows').insert({ follower_id: currentUserId, following_id: targetUserId });
     if (error) {
-        console.error("Error following user:", error.message);
+        console.error("Error following user:", error);
         return false;
     }
     persistenceService.markDirty();
@@ -380,10 +413,11 @@ export const followUser = async (currentUserId: string, targetUserId: string): P
 }
 
 export const unfollowUser = async (currentUserId: string, targetUserId: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.unfollowUser(currentUserId, targetUserId);
     userAppUpdatesService.logAction('UNFOLLOW_USER', { currentUserId, targetUserId });
     const { error } = await supabase.from('app_e255c3cdb5_follows').delete().match({ follower_id: currentUserId, following_id: targetUserId });
      if (error) {
-        console.error("Error unfollowing user:", error.message);
+        console.error("Error unfollowing user:", error);
         return false;
     }
     persistenceService.markDirty();
@@ -391,6 +425,7 @@ export const unfollowUser = async (currentUserId: string, targetUserId: string):
 }
 
 export const getFollowersForUser = async (userId: string): Promise<UserProfile[]> => {
+    if (isDemoModeEnabled()) return demoApi.getFollowersForUser(userId);
     const { data, error } = await supabase.from('app_e255c3cdb5_follows').select('follower_id').eq('following_id', userId);
     if (error || !data) return [];
     
@@ -402,6 +437,7 @@ export const getFollowersForUser = async (userId: string): Promise<UserProfile[]
 }
 
 export const getFollowingForUser = async (userId: string): Promise<UserProfile[]> => {
+    if (isDemoModeEnabled()) return demoApi.getFollowingForUser(userId);
     const { data, error } = await supabase.from('app_e255c3cdb5_follows').select('following_id').eq('follower_id', userId);
     if (error || !data) return [];
     
@@ -416,27 +452,31 @@ export const getFollowingForUser = async (userId: string): Promise<UserProfile[]
 // SECTION: Gig & Booking Management
 // =================================================================
 export const getGigById = async (id: string): Promise<Gig | undefined> => {
+    if (isDemoModeEnabled()) return demoApi.getGigById(id);
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').select('*').eq('id', id).single();
     if (error || !data) {
-        if (error && !error.message.includes('0 rows')) console.error('Error fetching gig by id:', error.message);
+        if (error && !error.message.includes('0 rows')) console.error('Error fetching gig by id:', error);
         return undefined;
     }
     return mapRowToGig(data);
 };
 
 export const getGigs = async (): Promise<Gig[]> => {
+    if (isDemoModeEnabled()) return demoApi.getGigs();
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').select('*');
-    if (error) console.error('Error fetching gigs:', error.message);
+    if (error) console.error('Error fetching gigs:', error);
     return (data || []).map(mapRowToGig);
 };
 
 export const getGigsForVenue = async (businessUserId: string): Promise<Gig[]> => {
+    if (isDemoModeEnabled()) return demoApi.getGigsForVenue(businessUserId);
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').select('*').eq('business_user_id', businessUserId);
-    if (error) console.error('Error fetching gigs for venue:', error.message);
+    if (error) console.error('Error fetching gigs for venue:', error);
     return (data || []).map(mapRowToGig);
 };
 
 export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig | null> => {
+    if (isDemoModeEnabled()) return demoApi.addGig(gigData);
     userAppUpdatesService.logAction('ADD_GIG', { gigData });
      const newGig: Database['public']['Tables']['app_e255c3cdb5_gigs']['Insert'] = { 
         title: gigData.title,
@@ -447,12 +487,15 @@ export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig |
         description: gigData.description,
         genres: gigData.genres,
         flyer_url: gigData.flyerUrl,
-        status: 'Open' 
+        status: 'Open',
+        // FIX: Initialize interest_count to prevent potential database errors if the
+        // column is not nullable and has no default value. This resolves the gig creation issue.
+        interest_count: 0,
     };
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').insert(newGig).select().single();
 
     if (error || !data) {
-        console.error('Error adding gig:', error?.message);
+        console.error('Error adding gig:', error);
         return null;
     }
     persistenceService.markDirty();
@@ -460,6 +503,7 @@ export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig |
 };
 
 export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promise<Gig | null> => {
+    if (isDemoModeEnabled()) return demoApi.updateGig(gigId, updatedData);
     userAppUpdatesService.logAction('UPDATE_GIG', { gigId, updatedData });
     const dbData: Database['public']['Tables']['app_e255c3cdb5_gigs']['Update'] = {};
     if (updatedData.title) dbData.title = updatedData.title;
@@ -474,7 +518,7 @@ export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promi
     
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').update(dbData).eq('id', gigId).select().single();
     if (error || !data) {
-        console.error('Error updating gig:', error?.message);
+        console.error('Error updating gig:', error);
         return null;
     }
     persistenceService.markDirty();
@@ -482,10 +526,11 @@ export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promi
 };
 
 export const expressInterestInGig = async (gigId: string, djUserId: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.expressInterestInGig(gigId, djUserId);
     userAppUpdatesService.logAction('EXPRESS_INTEREST_IN_GIG', { gigId, djUserId });
     const { error } = await supabase.from('app_e255c3cdb5_gig_applications').insert({ gig_id: gigId, dj_user_id: djUserId, status: 'pending' });
     if (error) {
-        console.error('Error expressing interest in gig:', error.message);
+        console.error('Error expressing interest in gig:', error);
         return false;
     }
     persistenceService.markDirty();
@@ -493,6 +538,7 @@ export const expressInterestInGig = async (gigId: string, djUserId: string): Pro
 };
 
 export const getInterestedDJsForGig = async (gigId: string): Promise<DJ[]> => {
+    if (isDemoModeEnabled()) return demoApi.getInterestedDJsForGig(gigId);
     const { data, error } = await supabase.from('app_e255c3cdb5_gig_applications').select('dj_user_id').eq('gig_id', gigId);
     if (error || !data) return [];
 
@@ -509,10 +555,11 @@ export const getInterestedDJsForGig = async (gigId: string): Promise<DJ[]> => {
 };
 
 export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: number): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.bookDJForGig(gigId, djUserId, agreedRate);
     userAppUpdatesService.logAction('BOOK_DJ_FOR_GIG', { gigId, djUserId, agreedRate });
     const { error: gigError } = await supabase.from('app_e255c3cdb5_gigs').update({ status: 'Booked', booked_dj_id: djUserId }).eq('id', gigId);
     if (gigError) {
-        console.error('Error updating gig status:', gigError.message);
+        console.error('Error updating gig status:', gigError);
         return false;
     }
 
@@ -521,7 +568,7 @@ export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: 
 
     const { error: bookingError } = await supabase.from('app_e255c3cdb5_bookings').insert({ gig_id: gigId, dj_user_id: djUserId, business_user_id: gig.business_user_id, agreed_rate: agreedRate });
     if (bookingError) {
-        console.error('Error creating booking:', bookingError.message);
+        console.error('Error creating booking:', bookingError);
         return false;
     }
     
@@ -530,20 +577,23 @@ export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: 
 };
 
 export const getInterestedGigsForDj = async (djId: string): Promise<Gig[]> => {
-  const { data, error } = await supabase.from('app_e255c3cdb5_gig_applications').select('gig_id').eq('dj_user_id', djId);
-  if (error || !data) return [];
-  const gigIds = data.map((d) => d.gig_id);
-  const { data: gigs, error: gigError } = await supabase.from('app_e255c3cdb5_gigs').select('*').in('id', gigIds);
-  return gigError ? [] : (gigs || []).map(mapRowToGig);
+    if (isDemoModeEnabled()) return demoApi.getInterestedGigsForDj(djId);
+    const { data, error } = await supabase.from('app_e255c3cdb5_gig_applications').select('gig_id').eq('dj_user_id', djId);
+    if (error || !data) return [];
+    const gigIds = data.map((d) => d.gig_id);
+    const { data: gigs, error: gigError } = await supabase.from('app_e255c3cdb5_gigs').select('*').in('id', gigIds);
+    return gigError ? [] : (gigs || []).map(mapRowToGig);
 }
 
 export const getBookedGigsForDj = async (djId: string): Promise<Gig[]> => {
+    if (isDemoModeEnabled()) return demoApi.getBookedGigsForDj(djId);
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').select('*').eq('booked_dj_id', djId).eq('status', 'Booked');
     if(error) return [];
     return (data || []).map(mapRowToGig);
 }
 
 export const getCompletedGigsForDj = async (djId: string): Promise<Gig[]> => {
+    if (isDemoModeEnabled()) return demoApi.getCompletedGigsForDj(djId);
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').select('*').eq('booked_dj_id', djId).eq('status', 'Completed');
     if(error) return [];
     return (data || []).map(mapRowToGig);
@@ -558,7 +608,7 @@ export const getCompletedGigsForDj = async (djId: string): Promise<Gig[]> => {
  * @param item The application-level FeedItem data.
  * @returns A valid string for the `type` column in the posts table.
  */
-const mapAppTypeToDb = (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'comments' | 'reposts'>): 'text' | 'image' | 'video' | 'playlist' | 'event' => {
+const mapAppTypeToDb = (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'comments' | 'reposts'>): 'text' | 'image' | 'video' | 'playlist' | 'event' | 'review' => {
     switch (item.type) {
         case 'user_post':
             if (item.mediaType === 'image') return 'image';
@@ -570,17 +620,19 @@ const mapAppTypeToDb = (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'com
         case 'gig_announcement':
         case 'live_now':
             return 'event';
-        case 'new_connection':
         case 'new_review':
+            return 'review';
+        case 'new_connection':
         default:
             return 'text';
     }
 };
 
 export const getFeedItems = async (): Promise<FeedItem[]> => {
+    if (isDemoModeEnabled()) return demoApi.getFeedItems();
     const { data: posts, error } = await supabase.from('app_e255c3cdb5_posts').select('*').order('created_at', { ascending: false });
     if (error || !posts) {
-        console.error('Error fetching posts:', error?.message);
+        console.error('Error fetching posts:', error);
         return [];
     }
     
@@ -600,7 +652,7 @@ export const getFeedItems = async (): Promise<FeedItem[]> => {
             
             if (repostError) {
                 // Log the expected error and continue without repost counts.
-                console.warn('Could not fetch repost counts, feature may be degraded:', repostError.message);
+                console.warn('Could not fetch repost counts, feature may be degraded:', repostError);
             } else if (reposts) {
                 repostCounts = reposts.reduce((acc: Record<string, number>, { original_post_id }) => {
                     if (original_post_id) acc[original_post_id] = (acc[original_post_id] || 0) + 1;
@@ -616,29 +668,49 @@ export const getFeedItems = async (): Promise<FeedItem[]> => {
 };
 
 export const getFeedItemById = async (id: string): Promise<FeedItem | undefined> => {
+    if (isDemoModeEnabled()) return demoApi.getFeedItemById(id);
     const { data, error } = await supabase.from('app_e255c3cdb5_posts').select('*').eq('id', id).single();
     if (error || !data) {
-        if (error && !error.message.includes('0 rows')) console.error('Error fetching post by id:', error.message);
+        if (error && !error.message.includes('0 rows')) console.error('Error fetching post by id:', error);
         return undefined;
     }
     return mapPostToFeedItem(data);
 };
 
 export const addFeedItem = async (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'comments' | 'reposts'>): Promise<FeedItem | null> => {
+    if (isDemoModeEnabled()) return demoApi.addFeedItem(item);
     userAppUpdatesService.logAction('ADD_FEED_ITEM', { item });
+
+    // The content for a review post is the review title itself, the description is the comment.
+    const content = item.type === 'new_review' ? item.title : item.description;
+
     const newPost: Database['public']['Tables']['app_e255c3cdb5_posts']['Insert'] = {
         user_id: item.userId,
-        content: item.description,
+        content: content,
         media_url: item.mediaUrl,
         media_type: item.mediaType,
         original_post_id: item.repostOf,
-        type: mapAppTypeToDb(item)
+        type: mapAppTypeToDb(item),
     };
+
+    // If it's a review, we add the review-specific data to the payload.
+    // This assumes the `posts` table has a JSONB column named `metadata` or similar.
+    // For this implementation, we'll send it as part of the main `content` or rely on the `type` column.
+    // A more robust solution would be a `metadata` JSONB column.
+    // For now, we will add rating and comment to the content.
+    if (item.type === 'new_review') {
+        newPost.content = JSON.stringify({
+            title: item.title,
+            comment: item.description,
+            rating: item.rating,
+            relatedId: item.relatedId,
+        });
+    }
     
     const { data, error } = await supabase.from('app_e255c3cdb5_posts').insert(newPost).select().single();
 
     if (error || !data) {
-        console.error('Error adding post:', error?.message);
+        console.error('Error adding post:', error);
         return null;
     }
     persistenceService.markDirty();
@@ -646,6 +718,7 @@ export const addFeedItem = async (item: Omit<FeedItem, 'id' | 'timestamp' | 'lik
 };
 
 export const repost = async (originalPostId: string, userId: string): Promise<FeedItem | null> => {
+    if (isDemoModeEnabled()) return demoApi.repost(originalPostId, userId);
     const originalPost = await getFeedItemById(originalPostId);
     if (!originalPost || originalPost.repostOf) {
         console.warn("Cannot repost a repost.");
@@ -662,6 +735,7 @@ export const repost = async (originalPostId: string, userId: string): Promise<Fe
 };
 
 export const getCommentsForPost = async (postId: string): Promise<EnrichedComment[]> => {
+    if (isDemoModeEnabled()) return demoApi.getCommentsForPost(postId);
     const { data, error } = await supabase.from('app_e255c3cdb5_post_comments')
         .select('*, author:app_e255c3cdb5_user_profiles!user_id(user_id, display_name, avatar_url, user_type)')
         .eq('post_id', postId)
@@ -669,9 +743,10 @@ export const getCommentsForPost = async (postId: string): Promise<EnrichedCommen
 
     if (error || !data) return [];
     
-    return data.map((comment) => {
-// FIX: Changed unsafe type assertion to `as unknown as UserProfileRow` to handle cases where Supabase type inference for joins is incorrect, preventing a TypeScript error.
-        const author = comment.author as unknown as UserProfileRow;
+    // FIX: The joined 'author' property is not part of the base CommentRow type from Supabase.
+    // We cast the author to `any` to access its properties from the joined user_profiles table.
+    return (data as any[]).map((comment) => {
+        const author: any = comment.author;
         if (!author) return null;
         return {
             id: comment.id,
@@ -690,10 +765,11 @@ export const getCommentsForPost = async (postId: string): Promise<EnrichedCommen
 };
 
 export const addCommentToPost = async (postId: string, userId: string, content: string): Promise<EnrichedComment | null> => {
+    if (isDemoModeEnabled()) return demoApi.addCommentToPost(postId, userId, content);
     userAppUpdatesService.logAction('ADD_COMMENT_TO_POST', { postId, userId, content });
     const { data, error } = await supabase.from('app_e255c3cdb5_post_comments').insert({ post_id: postId, user_id: userId, content }).select().single();
     if (error || !data) {
-        if(error) console.error('Error adding comment:', error.message);
+        if(error) console.error('Error adding comment:', error);
         return null;
     }
     const author = await getUserById(userId);
@@ -704,11 +780,12 @@ export const addCommentToPost = async (postId: string, userId: string, content: 
 };
 
 export const toggleLikePost = async (postId: string, userId: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.toggleLikePost(postId, userId);
     // This could be a single RPC call for atomicity, but this is simpler.
     const { data: like, error: selectError } = await supabase.from('app_e255c3cdb5_post_likes').select('id').eq('post_id', postId).eq('user_id', userId).maybeSingle();
 
     if (selectError) {
-        console.error('Error checking for like:', selectError.message);
+        console.error('Error checking for like:', selectError);
         return false;
     }
 
@@ -724,7 +801,7 @@ export const toggleLikePost = async (postId: string, userId: string): Promise<bo
     }
 
     if(finalError) {
-        console.error('Error toggling like:', finalError.message);
+        console.error('Error toggling like:', finalError);
         return false;
     }
     
@@ -736,6 +813,7 @@ export const toggleLikePost = async (postId: string, userId: string): Promise<bo
 // SECTION: Chat & Messages
 // =================================================================
 export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedChat[]> => {
+    if (isDemoModeEnabled()) return demoApi.getEnrichedChatsForUser(userId);
     // Note: This implementation can be slow with many messages. A better schema would have a `chats` table.
     const { data: messages, error } = await supabase.from('app_e255c3cdb5_messages').select('*').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).order('created_at', { ascending: true });
     if (error || !messages) return [];
@@ -760,7 +838,8 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
         const otherUserId = message.sender_id === userId ? message.recipient_id : message.sender_id;
         const chat = chatsMap.get(otherUserId);
         if (chat) {
-            chat.messages.push({ id: message.id, senderId: message.sender_id, text: message.content, timestamp: message.created_at });
+// FIX: The message object being created was missing the `recipientId` property required by the `Message` type.
+            chat.messages.push({ id: message.id, senderId: message.sender_id, recipientId: message.recipient_id, text: message.content, timestamp: message.created_at });
         }
     });
 
@@ -768,17 +847,20 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
 };
 
 export const sendMessage = async (senderId: string, recipientId: string, content: string): Promise<Message | null> => {
+    if (isDemoModeEnabled()) return demoApi.sendMessage(senderId, recipientId, content);
     userAppUpdatesService.logAction('SEND_MESSAGE', { senderId, recipientId, content });
     const { data, error } = await supabase.from('app_e255c3cdb5_messages').insert({ sender_id: senderId, recipient_id: recipientId, content }).select().single();
     if (error || !data) {
-        if(error) console.error('Error sending message:', error.message);
+        if(error) console.error('Error sending message:', error);
         return null;
     }
     persistenceService.markDirty();
-    return { id: data.id, senderId: data.sender_id, text: data.content, timestamp: data.created_at };
+    // FIX: The returned object was missing the `recipientId` property required by the `Message` type.
+    return { id: data.id, senderId: data.sender_id, recipientId: data.recipient_id, text: data.content, timestamp: data.created_at };
 };
 
 export const findChatByParticipants = async (userId1: string, userId2: string): Promise<Chat | null> => {
+  if (isDemoModeEnabled()) return demoApi.findChatByParticipants(userId1, userId2);
   // This is a "virtual" chat find. A real implementation would have a chats table.
   const { data, error } = await supabase.from('app_e255c3cdb5_messages').select('*').or(`(sender_id.eq.${userId1},recipient_id.eq.${userId2}),(sender_id.eq.${userId2},recipient_id.eq.${userId1})`).limit(1);
   if (error || !data || data.length === 0) return null;
@@ -786,12 +868,14 @@ export const findChatByParticipants = async (userId1: string, userId2: string): 
 };
 
 export const createChat = async (userId1: string, userId2: string): Promise<Chat | null> => {
+  if (isDemoModeEnabled()) return demoApi.createChat(userId1, userId2);
   userAppUpdatesService.logAction('CREATE_CHAT', { participants: [userId1, userId2] });
   persistenceService.markDirty();
   return { id: userId2, participants: [userId1, userId2], messages: [] };
 };
 
 export const getChatById = async (chatId: string): Promise<Chat | null> => {
+    if (isDemoModeEnabled()) return demoApi.getChatById(chatId);
     // This is a mock implementation based on the current schema. `chatId` is the other participant's ID.
     // This method is not truly fetching a chat "by its own ID".
     return { id: chatId, participants: ["a", "b"], messages: [] };
@@ -801,18 +885,20 @@ export const getChatById = async (chatId: string): Promise<Chat | null> => {
 // SECTION: Media (Tracks & Playlists)
 // =================================================================
 export const getTracksForDj = async (djUserId: string): Promise<Track[]> => {
+    if (isDemoModeEnabled()) return demoApi.getTracksForDj(djUserId);
     const { data, error } = await supabase.from('app_e255c3cdb5_dj_profiles').select('portfolio_tracks').eq('user_id', djUserId).single();
     if (error || !data) {
-        if(error) console.error('Error fetching tracks for DJ:', error.message);
+        if(error) console.error('Error fetching tracks for DJ:', error);
         return [];
     }
     return (data.portfolio_tracks as unknown as Track[] || []).filter(Boolean);
 };
 
 export const getPlaylistsForDj = async (djUserId: string): Promise<Playlist[]> => {
+    if (isDemoModeEnabled()) return demoApi.getPlaylistsForDj(djUserId);
     const { data, error } = await supabase.from('app_e255c3cdb5_playlists').select('*').eq('dj_user_id', djUserId);
     if (error) {
-        console.error('Error fetching playlists for DJ:', error.message);
+        console.error('Error fetching playlists for DJ:', error);
         return [];
     }
     return (data || []).map((p) => ({
@@ -825,6 +911,7 @@ export const getPlaylistsForDj = async (djUserId: string): Promise<Playlist[]> =
 };
 
 export const getPlaylistById = async (id: string): Promise<Playlist | null> => {
+    if (isDemoModeEnabled()) return demoApi.getPlaylistById(id);
     const { data, error } = await supabase.from('app_e255c3cdb5_playlists').select('*').eq('id', id).single();
     if (error || !data) return null;
     return {
@@ -837,12 +924,14 @@ export const getPlaylistById = async (id: string): Promise<Playlist | null> => {
 };
 
 export const getTrackById = async (id: string): Promise<Track | null> => {
+    if (isDemoModeEnabled()) return demoApi.getTrackById(id);
     // WARNING: Inefficient. See getTracksByIds for details.
     const tracks = await getTracksByIds([id]);
     return tracks[0] || null;
 };
 
 export const getTracksByIds = async (ids: string[]): Promise<Track[]> => {
+    if (isDemoModeEnabled()) return demoApi.getTracksByIds(ids);
     // WARNING: This is a highly inefficient implementation due to the database schema
     // storing tracks in a JSONB column on the `dj_profiles` table. It must scan
     // all DJ profiles to find tracks. A dedicated 'tracks' table with a foreign key
@@ -851,7 +940,7 @@ export const getTracksByIds = async (ids: string[]): Promise<Track[]> => {
     
     const { data, error } = await supabase.from('app_e255c3cdb5_dj_profiles').select('portfolio_tracks');
     if (error) {
-        console.error('Error fetching all tracks for ID lookup:', error.message);
+        console.error('Error fetching all tracks for ID lookup:', error);
         return [];
     }
     const allTracks = (data || []).flatMap((p) => (p.portfolio_tracks as unknown as Track[] || [])).filter(t => t && t.id);
@@ -860,12 +949,13 @@ export const getTracksByIds = async (ids: string[]): Promise<Track[]> => {
 };
 
 export const addTrack = async (userId: string, title: string, artworkUrl: string, trackUrl: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.addTrack(userId, title, artworkUrl, trackUrl);
     userAppUpdatesService.logAction('ADD_TRACK', { userId, title });
     // FIX: Corrected typo from uuidv4 to uuidvv4.
     const newTrack: Track = { id: uuidvv4(), artistId: userId, title, artworkUrl, trackUrl, duration: '3:30' }; // Mock duration
     const { error } = await supabase.rpc('add_track_to_portfolio', { dj_user_id_param: userId, new_track: newTrack as any });
     if (error) {
-        console.error('Error adding track to portfolio:', error.message);
+        console.error('Error adding track to portfolio:', error);
         return false;
     }
     persistenceService.markDirty();
@@ -873,10 +963,11 @@ export const addTrack = async (userId: string, title: string, artworkUrl: string
 };
 
 export const createPlaylist = async (playlistData: Omit<Playlist, 'id'>): Promise<Playlist | null> => {
+    if (isDemoModeEnabled()) return demoApi.createPlaylist(playlistData);
     userAppUpdatesService.logAction('CREATE_PLAYLIST', { playlistData });
     const { data, error } = await supabase.from('app_e255c3cdb5_playlists').insert({ dj_user_id: playlistData.creatorId, name: playlistData.name, artwork_url: playlistData.artworkUrl, tracks: [] }).select().single();
     if (error || !data) {
-        console.error('Error creating playlist:', error?.message);
+        console.error('Error creating playlist:', error);
         return null;
     }
     persistenceService.markDirty();
@@ -884,6 +975,7 @@ export const createPlaylist = async (playlistData: Omit<Playlist, 'id'>): Promis
 };
 
 export const updatePlaylist = async (playlistId: string, playlistData: Partial<Playlist>): Promise<Playlist | null> => {
+    if (isDemoModeEnabled()) return demoApi.updatePlaylist(playlistId, playlistData);
     userAppUpdatesService.logAction('UPDATE_PLAYLIST', { playlistId, playlistData });
     const dbUpdate: Database['public']['Tables']['app_e255c3cdb5_playlists']['Update'] = {};
     if (playlistData.name) dbUpdate.name = playlistData.name;
@@ -891,7 +983,7 @@ export const updatePlaylist = async (playlistId: string, playlistData: Partial<P
 
     const { data, error } = await supabase.from('app_e255c3cdb5_playlists').update(dbUpdate).eq('id', playlistId).select().single();
     if (error || !data) {
-        console.error('Error updating playlist:', error?.message);
+        console.error('Error updating playlist:', error);
         return null;
     }
     persistenceService.markDirty();
@@ -899,12 +991,75 @@ export const updatePlaylist = async (playlistId: string, playlistData: Partial<P
 };
 
 export const addTrackToPlaylist = async (playlistId: string, track: Track): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.addTrackToPlaylist(playlistId, track);
     userAppUpdatesService.logAction('ADD_TRACK_TO_PLAYLIST', { playlistId, trackId: track.id });
     const { error } = await supabase.rpc('add_track_to_playlist', { playlist_id_param: playlistId, new_track: track as any });
     if (error) {
-        console.error('Error adding track to playlist:', error.message);
+        console.error('Error adding track to playlist:', error);
         return false;
     }
+    persistenceService.markDirty();
+    return true;
+};
+
+export const deleteTrack = async (userId: string, trackId: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.deleteTrack(userId, trackId);
+    userAppUpdatesService.logAction('DELETE_TRACK', { userId, trackId });
+
+    // 1. Fetch current tracks from the DJ's portfolio
+    const { data: profile, error: fetchError } = await supabase
+        .from('app_e255c3cdb5_dj_profiles')
+        .select('portfolio_tracks')
+        .eq('user_id', userId)
+        .single();
+
+    if (fetchError || !profile) {
+        console.error('Error fetching DJ profile for track deletion:', fetchError);
+        return false;
+    }
+
+    // 2. Filter out the track from the portfolio
+    const currentTracks = (profile.portfolio_tracks as unknown as Track[] || []).filter(Boolean);
+    const updatedTracks = currentTracks.filter(track => track.id !== trackId);
+
+    // 3. Update the DJ profile with the new track list
+    const { error: updateError } = await supabase
+        .from('app_e255c3cdb5_dj_profiles')
+        .update({ portfolio_tracks: updatedTracks as any })
+        .eq('user_id', userId);
+
+    if (updateError) {
+        console.error('Error updating tracks after deletion:', updateError);
+        return false;
+    }
+
+    // 4. Fetch all user's playlists to clean them up
+    const { data: playlists, error: playlistError } = await supabase
+        .from('app_e255c3cdb5_playlists')
+        .select('id, tracks')
+        .eq('dj_user_id', userId);
+
+    if (playlistError) {
+        console.warn('Could not fetch playlists to clean up after track deletion:', playlistError);
+        // Continue, as the main deletion was successful.
+    }
+
+    if (playlists) {
+        const updatePromises = playlists.map(playlist => {
+            const playlistTracks = (playlist.tracks as unknown as Track[] || []).filter(Boolean);
+            if (playlistTracks.some(t => t.id === trackId)) {
+                const updatedPlaylistTracks = playlistTracks.filter(t => t.id !== trackId);
+                return supabase
+                    .from('app_e255c3cdb5_playlists')
+                    .update({ tracks: updatedPlaylistTracks as any })
+                    .eq('id', playlist.id);
+            }
+            return null;
+        }).filter(Boolean);
+
+        await Promise.all(updatePromises);
+    }
+
     persistenceService.markDirty();
     return true;
 };
@@ -913,22 +1068,49 @@ export const addTrackToPlaylist = async (playlistId: string, track: Track): Prom
 // SECTION: Reviews
 // =================================================================
 export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedReview[]> => {
-    const { data, error } = await supabase.from('app_e255c3cdb5_reviews')
-        .select('*, author:app_e255c3cdb5_user_profiles!reviewer_id(user_id, display_name, avatar_url, user_type)')
+    if (isDemoModeEnabled()) return demoApi.getReviewsForUser(revieweeId);
+
+    // Step 1: Fetch the raw reviews
+    const { data: reviewsData, error: reviewsError } = await supabase.from('app_e255c3cdb5_reviews')
+        .select('*')
         .eq('reviewee_id', revieweeId);
         
-    if (error || !data) return [];
+    if (reviewsError || !reviewsData || reviewsData.length === 0) {
+        if (reviewsError) console.error("Error fetching reviews:", reviewsError);
+        return [];
+    }
     
-// FIX: Added an explicit return type to the map function to guide TypeScript's inference and resolve a type predicate error in the subsequent filter.
-    return data.map((review): EnrichedReview | null => {
-// FIX: Changed unsafe type assertion to `as unknown as UserProfileRow` to handle cases where Supabase type inference for joins is incorrect, preventing a TypeScript error.
-        const author = review.author as unknown as UserProfileRow;
-        if (!author) return null;
+    // Step 2: Get unique author IDs from the reviews
+    const authorIds = [...new Set(reviewsData.map(r => r.reviewer_id))];
+    if (authorIds.length === 0) return [];
+
+    // Step 3: Fetch the user profiles for all authors in a single query
+    const { data: authorsData, error: authorsError } = await supabase.from('app_e255c3cdb5_user_profiles')
+        .select('user_id, display_name, avatar_url, user_type')
+        .in('user_id', authorIds);
+        
+    if (authorsError) {
+        console.error("Error fetching review authors:", authorsError);
+        return [];
+    }
+    
+    // Step 4: Create a map for quick author lookup
+    const authorsMap = new Map((authorsData || []).map(a => [a.user_id, a]));
+    
+    // Step 5: Join the data in the client
+    return reviewsData.map(review => {
+// FIX: Cast `author` to `any` to resolve properties not existing on type `unknown`.
+// This matches the pattern used in `getCommentsForPost` for handling related data.
+        const author: any = authorsMap.get(review.reviewer_id);
+        if (!author) return null; // Should not happen, but defensive
+        
         return {
             id: review.id,
             authorId: review.reviewer_id,
             targetId: review.reviewee_id,
             rating: review.rating,
+            // FIX: Replaced conditional spreading with explicit undefined assignment for optional properties.
+            // This resolves a subtle TypeScript type inference error when using a type predicate in the subsequent .filter().
             comment: review.comment || undefined,
             timestamp: review.created_at,
             gigId: review.gig_id || undefined,
@@ -939,17 +1121,67 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
                 role: author.user_type as Role,
             },
         };
-    }).filter((r): r is EnrichedReview => !!r);
+// FIX: A subtle TypeScript error was causing issues with type predicates.
+// Replacing the type predicate with a standard filter and a type assertion is a robust workaround.
+    }).filter(Boolean) as EnrichedReview[];
 };
 
 export const submitReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>): Promise<Review | null> => {
+    if (isDemoModeEnabled()) return demoApi.submitReview(reviewData);
     userAppUpdatesService.logAction('SUBMIT_REVIEW', { reviewData });
     const dbReview: Database['public']['Tables']['app_e255c3cdb5_reviews']['Insert'] = { reviewer_id: reviewData.authorId, reviewee_id: reviewData.targetId, rating: reviewData.rating, comment: reviewData.comment, gig_id: reviewData.gigId };
     const { data, error } = await supabase.from('app_e255c3cdb5_reviews').insert(dbReview).select().single();
     if (error || !data) {
-        console.error('Error submitting review:', error?.message);
+        console.error('Error submitting review:', error);
         return null;
     }
+    
+    // Re-fetch all reviews for the target user to ensure accurate recalculation.
+    // This is more robust than the previous read-modify-write pattern which could lead to race conditions.
+    const allReviews = await getReviewsForUser(reviewData.targetId);
+    const newReviewsCount = allReviews.length;
+    const newRating = newReviewsCount > 0
+        ? allReviews.reduce((sum, review) => sum + review.rating, 0) / newReviewsCount
+        : 0;
+
+    // We still need the user's role to know which table to update.
+    const targetUser = await getUserById(reviewData.targetId);
+    if (targetUser) {
+        if (targetUser.role === Role.DJ) {
+            const { error: updateError } = await supabase.from('app_e255c3cdb5_dj_profiles').update({ reviews_count: newReviewsCount, rating: newRating }).eq('user_id', reviewData.targetId);
+            if (updateError) console.error("Failed to update DJ profile after review:", updateError);
+        } else if (targetUser.role === Role.Business) {
+            const { error: updateError } = await supabase.from('app_e255c3cdb5_business_profiles').update({ reviews_count: newReviewsCount, rating: newRating }).eq('user_id', reviewData.targetId);
+            if (updateError) console.error("Failed to update Business profile after review:", updateError);
+        }
+    }
+    
+    // After successful review submission, create a feed item.
+    try {
+        const [author, target] = await Promise.all([
+            getUserById(reviewData.authorId),
+            getUserById(reviewData.targetId)
+        ]);
+
+        if (author && target) {
+            await addFeedItem({
+                type: 'new_review',
+                // The user ID for the feed item is the person who was reviewed.
+                userId: target.id,
+                title: `${author.name} left a new review for ${target.name}`,
+                description: reviewData.comment || `Rated ${reviewData.rating} out of 5 stars.`,
+                rating: reviewData.rating,
+                // Link the feed item back to the review itself.
+                relatedId: data.id, 
+            });
+        } else {
+             console.warn("Could not create review feed item: author or target user not found.");
+        }
+    } catch (feedError) {
+        console.error("Failed to create feed item for new review:", feedError);
+        // Do not block review submission if feed item creation fails.
+    }
+    
     persistenceService.markDirty();
     const { reviewer_id, reviewee_id, created_at, gig_id, ...rest } = data;
     return {
@@ -965,10 +1197,11 @@ export const submitReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>)
 // SECTION: Live Streams
 // =================================================================
 export const createStreamSession = async (djId: string, title: string): Promise<StreamSession> => {
+    if (isDemoModeEnabled()) return demoApi.createStreamSession(djId, title);
     userAppUpdatesService.logAction('CREATE_STREAM_SESSION', { djId, title });
     const { data, error } = await supabase.from('app_e255c3cdb5_stream_sessions').insert({ dj_user_id: djId, title, is_live: true }).select().single();
     if (error || !data) {
-        console.error("Error creating stream session:", error?.message);
+        console.error("Error creating stream session:", error);
         throw new Error("Could not create stream session.");
     }
     persistenceService.markDirty();
@@ -976,16 +1209,18 @@ export const createStreamSession = async (djId: string, title: string): Promise<
 };
 
 export const getStreamSessionById = async (sessionId: string): Promise<StreamSession | null> => {
+    if (isDemoModeEnabled()) return demoApi.getStreamSessionById(sessionId);
     const { data, error } = await supabase.from('app_e255c3cdb5_stream_sessions').select('*').eq('id', sessionId).single();
     if (error || !data) return null;
     return { id: data.id, djId: data.dj_user_id, title: data.title, isLive: data.is_live, listenerCount: data.listener_count };
 }
 
 export const endStreamSession = async (sessionId: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.endStreamSession(sessionId);
     userAppUpdatesService.logAction('END_STREAM_SESSION', { sessionId });
     const { error } = await supabase.from('app_e255c3cdb5_stream_sessions').update({ is_live: false }).eq('id', sessionId);
     if (error) {
-        console.error("Error ending stream session:", error.message);
+        console.error("Error ending stream session:", error);
         return false;
     }
     persistenceService.markDirty();
@@ -997,8 +1232,9 @@ export const endStreamSession = async (sessionId: string): Promise<boolean> => {
 // =================================================================
 
 export const getNotifications = async (userId: string): Promise<Notification[]> => {
+    if (isDemoModeEnabled()) return demoApi.getNotifications(userId);
     const { data, error } = await supabase.from('app_e255c3cdb5_notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-    if (error) console.error('Error fetching notifications:', error.message);
+    if (error) console.error('Error fetching notifications:', error);
     return ((data || []) as NotificationRow[]).map(n => ({
         id: n.id,
         userId: n.user_id,
@@ -1011,10 +1247,11 @@ export const getNotifications = async (userId: string): Promise<Notification[]> 
 };
 
 export const markAllAsRead = async (userId: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.markAllAsRead(userId);
     userAppUpdatesService.logAction('MARK_ALL_NOTIFICATIONS_AS_READ', { userId });
     const { error } = await supabase.from('app_e255c3cdb5_notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
     if (error) {
-        console.error('Error marking notifications as read:', error.message);
+        console.error('Error marking notifications as read:', error);
         return false;
     }
     persistenceService.markDirty();
@@ -1026,9 +1263,10 @@ export const markAllAsRead = async (userId: string): Promise<boolean> => {
 // =================================================================
 
 export const searchUsers = async (query: string): Promise<UserProfile[]> => {
+    if (isDemoModeEnabled()) return demoApi.searchUsers(query);
     if (!query) return [];
     const { data, error } = await supabase.from('app_e255c3cdb5_user_profiles').select(PROFILE_QUERY_STRING).ilike('display_name', `%${query.toLowerCase()}%`).limit(10);
-    if (error) console.error('Error searching users:', error.message);
+    if (error) console.error('Error searching users:', error);
     return (data || []).map((p) => mapJoinedDataToUserProfile(p as any));
 }
 
@@ -1036,23 +1274,26 @@ export const searchUsers = async (query: string): Promise<UserProfile[]> => {
 // SECTION: Auth & Profile Creation
 // =================================================================
 export const createDjProfile = async (userId: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return true; // In demo, profiles are pre-made
     userAppUpdatesService.logAction('CREATE_DJ_PROFILE', { userId });
     // FIX: Changed 'bio' to 'description' to match the actual database schema.
     const { error } = await supabase.from('app_e255c3cdb5_dj_profiles').upsert({ user_id: userId, genres: ['Electronic'], description: 'Newly joined DJ! Please update your bio.', location: 'Cape Town', tier: Tier.Bronze }, { onConflict: 'user_id' });
-    if (error) console.error("Error self-healing DJ profile:", error.message);
+    if (error) console.error("Error self-healing DJ profile:", error);
     else persistenceService.markDirty();
     return !error;
 };
 
 export const createBusinessProfile = async (userId: string, displayName: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return true; // In demo, profiles are pre-made
     userAppUpdatesService.logAction('CREATE_BUSINESS_PROFILE', { userId, displayName });
     const { error } = await supabase.from('app_e255c3cdb5_business_profiles').upsert({ user_id: userId, venue_name: displayName, location: 'Cape Town', description: 'A great place for music! Please update your description.' }, { onConflict: 'user_id' });
-    if (error) console.error("Error self-healing business profile:", error.message);
+    if (error) console.error("Error self-healing business profile:", error);
     else persistenceService.markDirty();
     return !error;
 };
 
 export const createUserProfile = async (user: any): Promise<UserProfile | null> => {
+    if (isDemoModeEnabled()) return null; // In demo, profiles are pre-made
     userAppUpdatesService.logAction('CREATE_USER_PROFILE', { userId: user.id, metadata: user.user_metadata });
     const userType = user.user_metadata?.user_type as Role;
     const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name;
@@ -1066,7 +1307,7 @@ export const createUserProfile = async (user: any): Promise<UserProfile | null> 
     const { data, error: userProfileError } = await supabase.from('app_e255c3cdb5_user_profiles').upsert({ user_id: user.id, user_type: userType, display_name: displayName, avatar_url: avatarUrl || `https://source.unsplash.com/random/200x200/?abstract` }, { onConflict: 'user_id' }).select().single();
     
     if (userProfileError || !data) {
-        if(userProfileError) console.error("Error upserting base user profile:", userProfileError.message);
+        if(userProfileError) console.error("Error upserting base user profile:", userProfileError);
         return null;
     }
 
@@ -1081,6 +1322,7 @@ export const createUserProfile = async (user: any): Promise<UserProfile | null> 
 };
 
 export const signUpWithEmail = async (email: string, password: string, name: string, role: Role) => {
+    if (isDemoModeEnabled()) return demoApi.signUpWithEmail(email, password, name, role);
     userAppUpdatesService.logAction('SIGN_UP_WITH_EMAIL', { email, name, role });
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: name, user_type: role, avatar_url: `https://source.unsplash.com/random/200x200/?abstract,${role}` } } });
     if (!error) persistenceService.markDirty();
@@ -1091,6 +1333,7 @@ export const signUpWithEmail = async (email: string, password: string, name: str
 // SECTION: Developer & Utility
 // =================================================================
 export const seedDatabase = async (): Promise<any> => {
+    if (isDemoModeEnabled()) return demoApi.seedDatabase();
     console.warn("seedDatabase is a developer tool and should not be used in production.");
     // This is a placeholder for a real seeding mechanism. A real implementation would likely
     // be a server-side function (RPC in Supabase) to avoid exposing table modification logic to the client.

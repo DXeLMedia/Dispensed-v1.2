@@ -52,7 +52,12 @@ export const AddPlaylistModal: React.FC<AddPlaylistModalProps> = ({ isOpen, onCl
             onClose();
         } catch (error) {
             console.error(error);
-            alert("Failed to create playlist.");
+            // FIX: Provide more specific user feedback for common RLS errors.
+            let message = "Failed to create playlist.";
+            if (error instanceof Error && error.message.includes('security policy')) {
+                message = 'Playlist creation failed due to an artwork upload permission issue. Please contact support.';
+            }
+            alert(message);
         } finally {
             setIsSubmitting(false);
         }

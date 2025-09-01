@@ -88,7 +88,12 @@ export const CreateGig = () => {
         alert('Gig created successfully!');
         navigate(`/venue/gigs`);
     } catch(err) {
-        alert('Failed to create gig.');
+        // FIX: Provide more specific user feedback for common RLS errors.
+        let message = 'Failed to create gig.';
+        if (err instanceof Error && err.message.includes('security policy')) {
+            message = 'Gig creation failed due to a storage permission issue. Please contact support.';
+        }
+        alert(message);
         console.error(err);
     } finally {
         setIsLoading(false);

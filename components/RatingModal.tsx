@@ -6,7 +6,7 @@ interface RatingModalProps {
     onClose: () => void;
     onSubmit: (rating: number, comment: string) => Promise<void>;
     targetName: string;
-    targetType: 'DJ' | 'Venue';
+    targetType: 'DJ' | 'Venue' | 'Listener';
 }
 
 export const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, onSubmit, targetName, targetType }) => {

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Gig, Role, Business } from '../types';
 import * as api from '../services/mockApi';
@@ -60,7 +61,7 @@ const GigCard = ({ gig, venue, isHighlighted, highlightedRef, onRateClick }: { g
                 <div className="flex justify-end items-center">
                      <p className="font-orbitron text-xl font-bold text-[var(--accent)]">R{gig.budget.toLocaleString()}</p>
                 </div>
-                {gig.status === 'Completed' && (
+                {(gig.status === 'Completed' || gig.status === 'Booked') && (
                     <div className="mt-4 pt-4 border-t border-[var(--border)]">
                         <button
                             onClick={() => onRateClick(gig)}
@@ -111,11 +112,16 @@ export const MyGigs = () => {
                 api.getInterestedGigsForDj(user.id),
                 api.getCompletedGigsForDj(user.id),
             ]);
+
+            // FIX: Explicitly filter out interested gigs if they are already booked or completed to prevent duplicates.
+            const confirmedIds = new Set([...booked.map(g => g.id), ...completed.map(g => g.id)]);
+            const pending = interested.filter(g => !confirmedIds.has(g.id));
+            
             setBookedGigs(booked);
-            setInterestedGigs(interested);
+            setInterestedGigs(pending);
             setCompletedGigs(completed);
 
-            const allGigs = [...booked, ...interested, ...completed];
+            const allGigs = [...booked, ...pending, ...completed];
             if (allGigs.length > 0) {
                 const monthStrings = [...new Set(allGigs.map(g => g.date.substring(0, 7)))].sort();
                 const latestMonth = monthStrings[monthStrings.length - 1];
@@ -165,11 +171,9 @@ export const MyGigs = () => {
 
     const monthGigs = useMemo(() => {
         const currentMonthString = currentMonth.toISOString().substring(0, 7);
-        const interestedWithStatus = interestedGigs.map(g => ({ ...g, status: 'Open' as const }));
-        const bookedWithStatus = bookedGigs.map(g => ({ ...g, status: 'Booked' as const }));
-        const completedWithStatus = completedGigs.map(g => ({ ...g, status: 'Completed' as const }));
+        const allGigs = [...interestedGigs, ...bookedGigs, ...completedGigs];
         
-        return [...interestedWithStatus, ...bookedWithStatus, ...completedWithStatus].filter(gig => {
+        return allGigs.filter(gig => {
             return gig.date.startsWith(currentMonthString);
         });
     }, [bookedGigs, interestedGigs, completedGigs, currentMonth]);

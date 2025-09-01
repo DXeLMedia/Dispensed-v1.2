@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { DJ, Business, Role, Track, Gig, Listener, Playlist, EnrichedReview } from '../types';
@@ -67,11 +68,11 @@ const MediaGridItem = ({ artworkUrl, name, onClick }: { artworkUrl: string, name
 interface DJProfileProps {
     dj: DJ;
     isOwnProfile: boolean;
-    onReviewSubmitted: () => void;
     onEditClick: () => void;
+    onLeaveReviewClick: () => void;
 }
 
-const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitted, onEditClick }) => {
+const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onEditClick, onLeaveReviewClick }) => {
     const { user: currentUser, updateUser } = useAuth();
     const navigate = useNavigate();
     const [isFollowing, setIsFollowing] = useState(false);
@@ -80,6 +81,9 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitt
     const [tracks, setTracks] = useState<Track[]>([]);
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const { playPlaylist } = useMediaPlayer();
+    
+    // FIX: Implement explicit business logic for who can leave a review.
+    const canLeaveReview = currentUser && !isOwnProfile && (currentUser.role === Role.Business || currentUser.role === Role.Listener);
     
     const fetchReviews = async () => {
       const reviewData = await api.getReviewsForUser(dj.id);
@@ -193,11 +197,21 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitt
                         </Link>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                        <button onClick={handleFollowToggle} className={`font-bold py-3 rounded-lg transition-colors ${(currentUser && 'following' in currentUser) ? (isFollowing ? 'bg-[var(--surface-2)] text-[var(--text-primary)]' : 'bg-[var(--accent)] text-[var(--accent-text)]') : 'bg-[var(--surface-2)]'}`} disabled={!currentUser || !('following' in currentUser)}>
-                            {isFollowing ? 'Following' : 'Follow'}
-                        </button>
-                        <button onClick={handleMessage} className="bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-3 rounded-lg">Message</button>
+                    <div className="space-y-2">
+                        {canLeaveReview && (
+                            <button
+                                onClick={onLeaveReviewClick}
+                                className="w-full bg-[var(--accent)] text-[var(--accent-text)] font-bold py-3 rounded-lg hover:bg-[var(--accent-hover)] transition-colors flex items-center justify-center gap-2"
+                            >
+                                <IconStar size={18} /> Leave a Review
+                            </button>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                            <button onClick={handleFollowToggle} className={`w-full font-bold py-3 rounded-lg transition-colors bg-[var(--surface-2)] text-[var(--text-primary)] hover:bg-[var(--border)]`} disabled={!currentUser || !('following' in currentUser)}>
+                                {isFollowing ? 'Following' : 'Follow'}
+                            </button>
+                            <button onClick={handleMessage} className="w-full bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-3 rounded-lg hover:bg-[var(--border)]">Message</button>
+                        </div>
                     </div>
                 )}
             </div>
@@ -325,16 +339,19 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onReviewSubmitt
 interface BusinessProfileProps {
     business: Business;
     isOwnProfile: boolean;
-    onReviewSubmitted: () => void;
     onEditClick: () => void;
+    onLeaveReviewClick: () => void;
 }
-const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfile, onReviewSubmitted, onEditClick }) => {
+const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfile, onEditClick, onLeaveReviewClick }) => {
     const { user: currentUser, updateUser } = useAuth();
     const navigate = useNavigate();
     const [isFollowing, setIsFollowing] = useState(false);
     const [gigs, setGigs] = useState<Gig[]>([]);
     const [activeTab, setActiveTab] = useState<'about' | 'media' | 'reviews'>('about');
     const [reviews, setReviews] = useState<EnrichedReview[]>([]);
+
+    // FIX: Implement explicit business logic for who can leave a review.
+    const canLeaveReview = currentUser && !isOwnProfile && (currentUser.role === Role.DJ || currentUser.role === Role.Listener);
 
     const fetchReviews = async () => {
         setReviews(await api.getReviewsForUser(business.id));
@@ -405,11 +422,21 @@ const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfil
                         </Link>
                     </div>
                 ) : (
-                     <div className="grid grid-cols-2 gap-2">
-                        <button onClick={handleFollowToggle} className={`font-bold py-3 rounded-lg transition-colors ${(currentUser && 'following' in currentUser) ? (isFollowing ? 'bg-[var(--surface-2)] text-[var(--text-primary)]' : 'bg-[var(--accent)] text-[var(--accent-text)]') : 'bg-[var(--surface-2)]'}`} disabled={!currentUser || !('following' in currentUser)}>
-                            {isFollowing ? 'Following' : 'Follow'}
-                        </button>
-                        <button onClick={handleMessage} className="bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-3 rounded-lg">Message</button>
+                     <div className="space-y-2">
+                        {canLeaveReview && (
+                            <button
+                                onClick={onLeaveReviewClick}
+                                className="w-full bg-[var(--accent)] text-[var(--accent-text)] font-bold py-3 rounded-lg hover:bg-[var(--accent-hover)] transition-colors flex items-center justify-center gap-2"
+                            >
+                                <IconStar size={18} /> Leave a Review
+                            </button>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                            <button onClick={handleFollowToggle} className={`w-full font-bold py-3 rounded-lg transition-colors bg-[var(--surface-2)] text-[var(--text-primary)] hover:bg-[var(--border)]`} disabled={!currentUser || !('following' in currentUser)}>
+                                {isFollowing ? 'Following' : 'Follow'}
+                            </button>
+                            <button onClick={handleMessage} className="w-full bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-3 rounded-lg hover:bg-[var(--border)]">Message</button>
+                        </div>
                     </div>
                 )}
             </div>
@@ -468,15 +495,102 @@ const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfil
     );
 };
 
+interface ListenerProfileProps {
+    listener: Listener;
+    isOwnProfile: boolean;
+    onLeaveReviewClick: () => void;
+}
+
+const ListenerProfile: React.FC<ListenerProfileProps> = ({ listener, isOwnProfile, onLeaveReviewClick }) => {
+    const { user: currentUser } = useAuth();
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState<'about' | 'reviews'>('about');
+    const [reviews, setReviews] = useState<EnrichedReview[]>([]);
+
+    const fetchReviews = async () => {
+        setReviews(await api.getReviewsForUser(listener.id));
+    };
+
+    useEffect(() => {
+        fetchReviews();
+    }, [listener.id]);
+
+    const handleMessage = async () => {
+        if (!currentUser) return;
+        const chat = await api.findChatByParticipants(currentUser.id, listener.id);
+        if (chat) {
+            navigate(`/messages/${chat.id}`);
+        } else {
+            const newChat = await api.createChat(currentUser.id, listener.id);
+            if (newChat) {
+                navigate(`/messages/${newChat.id}`);
+            }
+        }
+    };
+    
+    return (
+        <>
+            <div className="p-4 flex flex-col items-center text-center">
+                <Avatar src={listener.avatarUrl} alt={listener.name} size="xl" className="mb-4 border-4 border-[var(--surface-2)]" />
+                <h1 className="font-orbitron text-2xl font-bold text-[var(--text-primary)]">{listener.name}</h1>
+                <p className="text-[var(--text-secondary)] mt-1 capitalize">{listener.role}</p>
+            </div>
+
+            <div className="flex justify-around p-4 bg-[var(--surface-1)]/50">
+                <Stat value={listener.rating.toFixed(1)} label="Rating" />
+                <Stat value={listener.followers.toLocaleString()} label="Followers" to={`/profile/${listener.id}/connections?tab=followers`} />
+                <Stat value={listener.reviewsCount} label="Reviews" />
+            </div>
+
+            <div className="p-4">
+                {!isOwnProfile && currentUser && (
+                     <button onClick={handleMessage} className="w-full bg-[var(--surface-2)] text-[var(--text-primary)] font-bold py-3 rounded-lg hover:bg-[var(--border)] transition-colors">
+                        Message
+                    </button>
+                )}
+            </div>
+             <div className="flex p-1 bg-[var(--surface-2)] rounded-lg mx-4 my-2">
+                <button
+                onClick={() => setActiveTab('about')}
+                className={`w-1/2 p-2 rounded-md font-bold text-sm transition-colors ${activeTab === 'about' ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'text-[var(--text-secondary)]'}`}
+                >
+                About
+                </button>
+                <button
+                onClick={() => setActiveTab('reviews')}
+                className={`w-1/2 p-2 rounded-md font-bold text-sm transition-colors ${activeTab === 'reviews' ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'text-[var(--text-secondary)]'}`}
+                >
+                Reviews
+                </button>
+            </div>
+            
+            <div className="px-4 pb-4 space-y-4">
+                {activeTab === 'about' && (
+                    <div className="text-center text-[var(--text-muted)] py-8 px-4">
+                        <p>More features for listener profiles coming soon!</p>
+                    </div>
+                )}
+                {activeTab === 'reviews' && (
+                     reviews.length > 0 ? reviews.map(review => (
+                         <ReviewCard key={review.id} review={review} />
+                     )) : (
+                         <p className="text-center text-[var(--text-muted)] py-8">No reviews yet.</p>
+                     )
+                )}
+            </div>
+        </>
+    )
+};
 
 export const Profile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { user: currentUser, updateUser } = useAuth();
-  const [profileData, setProfileData] = useState<DJ | Business | null>(null);
+  const [profileData, setProfileData] = useState<DJ | Business | Listener | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
 
   const profileId = id === 'me' ? currentUser?.id : id;
 
@@ -485,11 +599,11 @@ export const Profile = () => {
     setLoading(true);
     const user = await api.getUserById(profileId);
     if (user?.role === Role.DJ) {
-      const djProfile = await api.getDJById(profileId);
-      setProfileData(djProfile || null);
+        setProfileData(await api.getDJById(profileId) || null);
     } else if (user?.role === Role.Business) {
-      const businessProfile = await api.getBusinessById(profileId);
-      setProfileData(businessProfile || null);
+        setProfileData(await api.getBusinessById(profileId) || null);
+    } else if (user?.role === Role.Listener) {
+        setProfileData(user || null);
     } else {
        setProfileData(null); 
     }
@@ -523,59 +637,69 @@ export const Profile = () => {
       
       // Also update auth context so navbar/etc updates
       if (profileId) {
-          const fullUpdatedProfile = profileData?.role === Role.DJ 
-              ? await api.getDJById(profileId)
-              : await api.getBusinessById(profileId);
+          const fullUpdatedProfile = await api.getUserById(profileId);
           if (fullUpdatedProfile) {
               updateUser(fullUpdatedProfile);
           }
       }
   };
   
+  const handleSubmitReview = async (rating: number, comment: string) => {
+    if (!profileData || !currentUser) return;
+    
+    await api.submitReview({
+        authorId: currentUser.id,
+        targetId: profileData.id,
+        rating,
+        comment,
+    });
+    
+    setIsRatingModalOpen(false);
+    await fetchProfile(); // Refreshes reviews count and list
+  };
+
   if (loading) return <PageSpinner />;
 
   const isOwnProfile = profileId === currentUser?.id;
 
   if (!profileData) {
-     if(id === 'me' && currentUser?.role === Role.Listener) {
-        return (
-            <div className="text-[var(--text-primary)] min-h-full pb-20">
-                <div className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-sm p-4 flex justify-between items-center border-b border-[var(--border)]">
-                    <button onClick={() => navigate(-1)}><IconArrowLeft size={22} /></button>
-                    <span className="font-semibold">My Profile</span>
-                    <div className="w-8"/>
-                </div>
-                <div className='p-4 text-center'>
-                    <Avatar src={currentUser!.avatarUrl} alt={currentUser!.name} size="xl" className="mx-auto mb-4 border-4 border-[var(--surface-2)]" />
-                    <h1 className="font-orbitron text-2xl font-bold text-[var(--text-primary)]">{currentUser!.name}</h1>
-                    <p className="text-[var(--text-secondary)] mt-1 capitalize">{currentUser!.role}</p>
-                     <div className="mt-8">
-                        <p className="text-[var(--text-muted)]">More profile features for listeners are coming soon!</p>
-                    </div>
-                </div>
-            </div>
-        );
-     }
      return <div className="text-center text-red-500 p-8">Profile not found.</div>;
+  }
+
+  const getTargetType = (): 'DJ' | 'Venue' | 'Listener' => {
+      if(profileData.role === Role.DJ) return 'DJ';
+      if(profileData.role === Role.Business) return 'Venue';
+      return 'Listener';
   }
 
   return (
     <div className="text-[var(--text-primary)] min-h-full pb-20">
       <div className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-sm p-4 flex justify-between items-center border-b border-[var(--border)]">
         <button onClick={() => navigate(-1)}><IconArrowLeft size={22} /></button>
-        <span className="font-semibold">{profileData.role === Role.DJ ? "DJ Profile" : "Venue Profile"}</span>
+        <span className="font-semibold">{profileData.role.charAt(0).toUpperCase() + profileData.role.slice(1)} Profile</span>
         { isOwnProfile && <Link to="/settings"><IconSettings size={22} /></Link> }
         { !isOwnProfile && <div className="w-8" /> }
       </div>
-      {profileData.role === Role.DJ && <DJProfile dj={profileData as DJ} isOwnProfile={isOwnProfile} onReviewSubmitted={fetchProfile} onEditClick={() => setIsEditModalOpen(true)} />}
-      {profileData.role === Role.Business && <BusinessProfile business={profileData as Business} isOwnProfile={isOwnProfile} onReviewSubmitted={fetchProfile} onEditClick={() => setIsEditModalOpen(true)} />}
+      {profileData.role === Role.DJ && <DJProfile dj={profileData as DJ} isOwnProfile={isOwnProfile} onEditClick={() => setIsEditModalOpen(true)} onLeaveReviewClick={() => setIsRatingModalOpen(true)} />}
+      {profileData.role === Role.Business && <BusinessProfile business={profileData as Business} isOwnProfile={isOwnProfile} onEditClick={() => setIsEditModalOpen(true)} onLeaveReviewClick={() => setIsRatingModalOpen(true)} />}
+      {profileData.role === Role.Listener && <ListenerProfile listener={profileData as Listener} isOwnProfile={isOwnProfile} onLeaveReviewClick={() => setIsRatingModalOpen(true)} />}
     
-      {isOwnProfile && (
+      {isOwnProfile && profileData.role !== Role.Listener && (
         <EditProfileModal 
             isOpen={isEditModalOpen}
             onClose={handleCloseEditModal}
             onProfileUpdated={handleProfileUpdate}
-            profileData={profileData}
+            profileData={profileData as DJ | Business}
+        />
+      )}
+
+      {!isOwnProfile && (
+        <RatingModal
+            isOpen={isRatingModalOpen}
+            onClose={() => setIsRatingModalOpen(false)}
+            onSubmit={handleSubmitReview}
+            targetName={profileData.name}
+            targetType={getTargetType()}
         />
       )}
     </div>

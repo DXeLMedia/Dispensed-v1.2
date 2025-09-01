@@ -121,7 +121,12 @@ export const EditGig = () => {
             alert('Gig updated successfully!');
             navigate(`/venue/gigs`);
         } catch (err) {
-            alert('Failed to update gig.');
+            // FIX: Provide more specific user feedback for common RLS errors.
+            let message = 'Failed to update gig.';
+            if (err instanceof Error && err.message.includes('security policy')) {
+                message = 'Gig update failed due to a storage permission issue. Please contact support.';
+            }
+            alert(message);
             console.error(err);
         } finally {
             setIsLoading(false);

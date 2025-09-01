@@ -1,6 +1,7 @@
 
+
 import React, { useState, useEffect } from 'react';
-import { Gig, DJ } from '../types';
+import { Gig, DJ, Role, Business } from '../types';
 import * as api from '../services/mockApi';
 import { useAuth } from '../hooks/useAuth';
 import { Spinner } from '../components/Spinner';
@@ -77,10 +78,15 @@ const GigManagementCard = ({ gig, onRateClick, onEditClick }: { gig: Gig & { boo
                         )}
                     </div>
                 </div>
-                 {(gig.status === 'Booked' || gig.status === 'Completed') && gig.bookedDjName && (
+                 {(gig.status === 'Booked' || gig.status === 'Completed') && gig.bookedDjId && (
                     <div className="mt-3 pt-3 border-t border-[var(--border)] flex justify-between items-center">
-                        <p className="text-sm text-[var(--text-secondary)]">DJ: <Link to={`/profile/${gig.bookedDjId}`} className="font-bold text-[var(--text-primary)] hover:underline">{gig.bookedDjName}</Link></p>
-                        {gig.status === 'Completed' && (
+                        <p className="text-sm text-[var(--text-secondary)]">
+                            DJ: {gig.bookedDjName ? 
+                                <Link to={`/profile/${gig.bookedDjId}`} className="font-bold text-[var(--text-primary)] hover:underline">{gig.bookedDjName}</Link>
+                                : <span className="text-[var(--text-muted)]">...</span>
+                            }
+                        </p>
+                        {(gig.status === 'Booked' || gig.status === 'Completed') && (
                             <button onClick={() => onRateClick(gig)} className="flex items-center gap-1.5 text-sm bg-yellow-400/20 text-yellow-300 font-semibold px-3 py-1.5 rounded-lg hover:bg-yellow-400/40">
                                 <IconStar size={16} /> Rate DJ
                             </button>
@@ -112,7 +118,20 @@ export const VenueGigs = () => {
         if(!user) return;
         setLoading(true);
         const data = await api.getGigsForVenue(user.id);
-        setAllGigs(data as (Gig & { bookedDjName?: string })[]);
+        
+        // Enrich gigs with booked DJ names for displaying in cards
+        const enrichedGigs = await Promise.all(
+            data.map(async (gig): Promise<Gig & { bookedDjName?: string }> => {
+                if (gig.bookedDjId) {
+                    const dj = await api.getDJById(gig.bookedDjId);
+                    // Add the DJ's name to the gig object for easy access
+                    return { ...gig, bookedDjName: dj ? dj.name : undefined };
+                }
+                return gig; // Return gig as is if no DJ is booked
+            })
+        );
+
+        setAllGigs(enrichedGigs);
         setLoading(false);
     }
 

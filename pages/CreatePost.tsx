@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
-import { IconArrowLeft, IconPaperclip, IconX } from '../constants';
+import * as gemini from '../services/geminiService';
+import { IconArrowLeft, IconPaperclip, IconX, IconSparkles } from '../constants';
 import { Spinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
 import { User } from '../types';
@@ -25,6 +26,10 @@ export const CreatePost = () => {
     const [tagQuery, setTagQuery] = useState<string | null>(null);
     const [tagResults, setTagResults] = useState<User[]>([]);
     const [tagLoading, setTagLoading] = useState(false);
+
+    // State for AI Assistant
+    const [aiTopic, setAiTopic] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
         if (tagQuery === null) {
@@ -152,12 +157,33 @@ export const CreatePost = () => {
             });
             navigate('/feed');
         } catch (err) {
-            alert('Failed to create post.');
+            // FIX: Provide more specific user feedback for common RLS errors.
+            let message = 'Failed to create post.';
+            if (err instanceof Error && err.message.includes('security policy')) {
+                message = 'Post creation failed due to a media upload permission issue. Please contact support.';
+            }
+            alert(message);
             console.error(err);
         } finally {
             setIsLoading(false);
         }
     };
+    
+    const handleGeneratePost = async () => {
+        if (!aiTopic.trim() || !user) return;
+
+        setIsGenerating(true);
+        try {
+            const draft = await gemini.generatePostContent(aiTopic, user.name, user.role);
+            setDescription(draft);
+        } catch (err) {
+            console.error(err);
+            alert("Failed to generate post content. Please try again.");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
 
     const canPost = (description.trim().length > 0 || !!mediaFile) && !isLoading;
 
@@ -185,6 +211,37 @@ export const CreatePost = () => {
                         placeholder="What's on your mind? Use @ to tag someone."
                         className="w-full h-32 p-2 bg-transparent text-white placeholder-zinc-500 focus:outline-none resize-none"
                     />
+                </div>
+
+                {/* --- AI Assistant Section --- */}
+                <div className="space-y-2">
+                    <label className="font-orbitron text-sm font-bold text-lime-400 flex items-center gap-2">
+                        <IconSparkles size={16} />
+                        AI Post Assistant
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                            type="text"
+                            value={aiTopic}
+                            onChange={(e) => setAiTopic(e.target.value)}
+                            placeholder="e.g., new techno mix, upcoming gig"
+                            className="flex-1 px-3 py-2 text-sm bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-lime-400"
+                            disabled={isGenerating}
+                        />
+                        <button 
+                            type="button" 
+                            onClick={handleGeneratePost}
+                            disabled={isGenerating || !aiTopic.trim()}
+                            className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed"
+                        >
+                            {isGenerating ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                            ) : (
+                                <IconSparkles size={16} />
+                            )}
+                            {isGenerating ? 'Generating...' : 'Generate Draft'}
+                        </button>
+                    </div>
                 </div>
 
                 {mediaPreview && (

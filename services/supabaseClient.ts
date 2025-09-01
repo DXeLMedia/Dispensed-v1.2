@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClientOptions } from '@supabase/supabase-js';
 import { Database } from './supabase';
 
 // Hardcoded Supabase credentials to ensure connection in the simple
@@ -13,11 +13,22 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Supabase credentials are not set.");
 }
 
+// Explicitly define client options to improve robustness in various environments.
+const options: SupabaseClientOptions<'public'> = {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  },
+};
+
+
 /**
  * The Supabase client instance.
  *
- * In a full TypeScript application, you would typically generate types from your database
- * schema and pass them to createClient for full type-safety, e.g., createClient<Database>(...).
+ * This instance is now created with explicit options to ensure consistent
+ * behavior, particularly for session management and storage, which can be a
+ * source of low-level network errors if not configured correctly for the
+ * execution environment.
  */
-// FIX: Added <Database> generic to createClient to enable TypeScript type safety for all Supabase operations.
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, options);

@@ -6,7 +6,7 @@ import * as api from '../services/mockApi';
 import { useAuth } from '../hooks/useAuth';
 import { FeedItem, EnrichedComment, User, Role } from '../types';
 import { PageSpinner, Spinner } from '../components/Spinner';
-import { IconArrowLeft, IconHeart, IconComment, IconRepeat, IconSend } from '../constants';
+import { IconArrowLeft, IconHeart, IconComment, IconRepeat, IconSend, IconStar } from '../constants';
 import { Avatar } from '../components/Avatar';
 import { CommentCard } from '../components/CommentCard';
 import { TrackPreview } from '../components/TrackPreview';
@@ -44,6 +44,15 @@ const PostContentView = ({ item, user }: { item: FeedItem, user: User }) => {
         switch (item.type) {
             case 'new_mix':
                 return item.relatedId ? <TrackPreview playlistId={item.relatedId} /> : (item.mediaUrl ? <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" /> : null);
+            case 'new_review':
+                return (
+                    <div className="p-4 bg-zinc-800/50">
+                        <div className="flex gap-1 text-yellow-400 mb-2">
+                            {[...Array(5)].map((_, i) => <IconStar key={i} size={18} fill={i < (item.rating || 0) ? 'currentColor' : 'none'} />)}
+                        </div>
+                        {item.description && <p className="text-zinc-300 font-semibold italic">"{item.description}"</p>}
+                    </div>
+                )
             case 'user_post':
                  return item.mediaUrl ? (
                     item.mediaType === 'video' ? (
@@ -69,7 +78,7 @@ const PostContentView = ({ item, user }: { item: FeedItem, user: User }) => {
                 </div>
             </div>
 
-            {item.description && (
+            {item.description && item.type !== 'new_review' && (
                 <div className="px-4 pb-4">
                     <p className="text-zinc-300 whitespace-pre-line">{item.description}</p>
                 </div>

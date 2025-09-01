@@ -66,7 +66,12 @@ export const AddTrackModal: React.FC<AddTrackModalProps> = ({ isOpen, onClose, o
             onClose();
         } catch (error) {
             console.error(error);
-            alert("Failed to add track. Please check the console for details.");
+            // FIX: Provide more specific user feedback for common RLS errors.
+            let message = "Failed to add track. Please check the console for details.";
+            if (error instanceof Error && error.message.includes('security policy')) {
+                message = 'Track upload failed due to a storage permission issue. Please contact support.';
+            }
+            alert(message);
         } finally {
             setIsSubmitting(false);
         }

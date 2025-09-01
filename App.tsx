@@ -1,4 +1,6 @@
 
+
+
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
@@ -150,11 +152,11 @@ const AppRoutes = () => {
             <Route path="/gigs" element={<ProtectedRoute roles={[Role.DJ]}><MyGigs /></ProtectedRoute>} />
             <Route path="/find-gigs" element={<ProtectedRoute roles={[Role.DJ]}><Gigs /></ProtectedRoute>} />
             <Route path="/discover" element={<ProtectedRoute roles={[Role.DJ, Role.Business, Role.Listener]}><DiscoverRouter /></ProtectedRoute>} />
-            <Route path="/create-gig" element={<ProtectedRoute roles={[Role.Business, Role.DJ]}><CreateGig /></ProtectedRoute>} />
+            <Route path="/create-gig" element={<ProtectedRoute roles={[Role.Business]}><CreateGig /></ProtectedRoute>} />
             <Route path="/edit-gig/:gigId" element={<ProtectedRoute roles={[Role.Business]}><EditGig /></ProtectedRoute>} />
             <Route path="/create-post" element={<ProtectedRoute roles={[Role.Business, Role.DJ]}><CreatePost /></ProtectedRoute>} />
-            <Route path="/messages" element={<ProtectedRoute roles={[Role.DJ, Role.Business]}><Messages /></ProtectedRoute>} />
-            <Route path="/messages/:chatId" element={<ProtectedRoute roles={[Role.DJ, Role.Business]}><ChatRoom /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute roles={[Role.DJ, Role.Business, Role.Listener]}><Messages /></ProtectedRoute>} />
+            <Route path="/messages/:chatId" element={<ProtectedRoute roles={[Role.DJ, Role.Business, Role.Listener]}><ChatRoom /></ProtectedRoute>} />
             <Route path="/venue/gigs" element={<ProtectedRoute roles={[Role.Business]}><VenueGigs /></ProtectedRoute>} />
             <Route path="/venue/gigs/:gigId/applicants" element={<ProtectedRoute roles={[Role.Business]}><GigApplicants /></ProtectedRoute>} />
             <Route path="/stream-setup" element={<ProtectedRoute roles={[Role.DJ]}><StreamSetup /></ProtectedRoute>} />

@@ -71,9 +71,31 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({ childr
     }, [volume]);
 
     const playPlaylist = useCallback((tracks: Track[], startIndex = 0) => {
-        setPlaylist(tracks);
-        setCurrentIndex(startIndex);
-        setCurrentTrack(tracks[startIndex]);
+        // Filter out any tracks that do not have a valid trackUrl.
+        const playableTracks = tracks.filter(t => t && t.trackUrl);
+    
+        if (playableTracks.length === 0) {
+            console.warn("Attempted to play a playlist with no playable tracks.", tracks);
+            alert("Sorry, the selected media is not available for playback right now.");
+            return;
+        }
+    
+        // If the originally selected track is playable, find its new index.
+        const originalStartTrack = tracks[startIndex];
+        let newStartIndex = -1;
+    
+        if (originalStartTrack) {
+            newStartIndex = playableTracks.findIndex(t => t.id === originalStartTrack.id);
+        }
+        
+        // If the original track was unplayable or couldn't be found, default to the first playable track.
+        if (newStartIndex === -1) {
+            newStartIndex = 0;
+        }
+    
+        setPlaylist(playableTracks);
+        setCurrentIndex(newStartIndex);
+        setCurrentTrack(playableTracks[newStartIndex]);
         setIsPlaying(true);
     }, []);
 

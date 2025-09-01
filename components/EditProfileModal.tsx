@@ -161,7 +161,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
             onProfileUpdated();
         } catch (error) {
             console.error(error);
-            alert("Failed to update profile.");
+            // FIX: Provide more specific user feedback for common RLS errors.
+            let message = "Failed to update profile.";
+            if (error instanceof Error && error.message.includes('security policy')) {
+                message = "Profile update failed due to a permission issue. Please contact support about storage policies.";
+            }
+            alert(message);
         } finally {
             setIsSubmitting(false);
         }

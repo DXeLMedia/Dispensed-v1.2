@@ -1,7 +1,7 @@
 
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { DJ } from '../types';
+import { DJ, Role } from '../types';
 
 if (!process.env.API_KEY) {
   console.warn("API_KEY environment variable not set for Gemini. AI features will be disabled.");
@@ -44,7 +44,12 @@ export const generateGigDescription = async (
   } catch (error) {
     console.error("Error generating gig description with Gemini:", error);
     // Fallback to a template if the API fails
-    return `Get ready for ${title} at ${venueName}! Featuring the best of ${genres.join(', ')}. ${keywords}. It's going to be an epic night!`;
+    let fallback = `Get ready for ${title} at ${venueName}! Featuring the best of ${genres.join(', ')}.`;
+    if (keywords) {
+      fallback += ` Get ready for a night of ${keywords} vibes.`;
+    }
+    fallback += ` It's going to be an epic night!`;
+    return fallback;
   }
 };
 
@@ -99,9 +104,12 @@ export const findDJsWithAI = async (query: string, allDjs: DJ[]): Promise<string
             },
         });
 
-        // Correctly access response.text directly as per Gemini API guidelines.
-        const jsonText = response.text.trim();
-        const result = JSON.parse(jsonText);
+        // FIX: The Gemini API returns a JSON string in `response.text` when a JSON mime type is requested. It must be parsed manually.
+        const resultText = response.text;
+        if (!resultText) {
+          return [];
+        }
+        const result = JSON.parse(resultText) as { dj_ids: string[] };
 
         if (result && Array.isArray(result.dj_ids)) {
             return result.dj_ids;
@@ -159,5 +167,45 @@ export const generateDjBio = async (
   } catch (error) {
     console.error("Error generating DJ bio with Gemini:", error);
     return `Passionate DJ from ${location} spinning the best of ${genres.join(', ')}. With ${experience || 'years'} of experience behind the decks, I'm ready to bring the energy.`;
+  }
+};
+
+export const generatePostContent = async (
+  topic: string,
+  userName: string,
+  userRole: Role
+): Promise<string> => {
+  if (!process.env.API_KEY) {
+    return Promise.resolve(`Excited to announce: ${topic}! #capetownmusic #${userRole === Role.DJ ? 'djlife' : 'livemusic'}`);
+  }
+
+  const prompt = `
+    You are a social media manager for the underground music scene in Cape Town. Your tone is cool, engaging, and authentic.
+    A user wants to create a post. Generate a short, punchy post for them.
+
+    Details:
+    - Author Name: ${userName}
+    - Author Role: ${userRole}
+    - Post Topic / Keywords: "${topic}"
+
+    Instructions:
+    - Write the post from the user's perspective (first person: "I'm excited to...", "My new...", "We're hosting...").
+    - Keep it concise, around 2-4 sentences.
+    - End the post with 2-3 relevant, on-brand hashtags (e.g., #CapeTownTechno, #DeepHouseSA, #UndergroundSounds, #GigAlert). Do not use generic hashtags like #music or #love.
+    - Do not wrap the output in quotes.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        thinkingConfig: { thinkingBudget: 0 }
+      }
+    });
+    return response.text.trim();
+  } catch (error) {
+    console.error("Error generating post content with Gemini:", error);
+    return `Excited to announce: ${topic}! #capetownmusic #${userRole === Role.DJ ? 'djlife' : 'livemusic'}`;
   }
 };

@@ -4,6 +4,7 @@ import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { MediaPlayerProvider } from './contexts/MediaPlayerContext';
 import { PersistenceProvider } from './contexts/PersistenceContext';
+import { DemoModeProvider } from './contexts/DemoModeContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -15,9 +16,11 @@ root.render(
   <React.StrictMode>
     <PersistenceProvider>
       <MediaPlayerProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
+        <DemoModeProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </DemoModeProvider>
       </MediaPlayerProvider>
     </PersistenceProvider>
   </React.StrictMode>

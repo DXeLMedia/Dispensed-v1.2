@@ -1,3 +1,5 @@
+
+
 import React, { useEffect, useState } from 'react';
 import { FeedItem as FeedItemType, User, Role } from '../types';
 import * as api from '../services/mockApi';
@@ -64,15 +66,15 @@ const OriginalPostCard: React.FC<{ item: FeedItemType }> = ({ item }) => {
     return (
         <Link to={`/post/${item.id}`} className="block bg-[var(--surface-1)] rounded-lg overflow-hidden border border-[var(--border)]">
             <div className="p-4 flex items-center gap-3">
-                <Avatar src={user.avatarUrl} alt={user.name} size="md" />
+                <Avatar src={user.avatarUrl} alt={user.name} size="sm" />
                 <div>
-                    <p className="font-bold text-[var(--text-primary)] hover:underline">{user.name}</p>
+                    <p className="font-bold text-sm text-[var(--text-primary)] hover:underline">{user.name}</p>
                     <p className="text-xs text-[var(--text-secondary)]">{item.timestamp}</p>
                 </div>
             </div>
             {item.description && (
                 <div className="px-4 pb-4">
-                    <p className="text-[var(--text-secondary)] whitespace-pre-line">{item.description}</p>
+                    <p className="text-sm text-[var(--text-secondary)] whitespace-pre-line">{item.description}</p>
                 </div>
             )}
             <CardContent />
@@ -102,6 +104,8 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, onRepostSuccess }) => {
         api.getUserById(item.userId).then(setAuthor);
         if (item.repostOf) {
             api.getFeedItemById(item.repostOf).then(setOriginalPost);
+        } else {
+            setOriginalPost(null);
         }
     }, [item]);
 
@@ -120,11 +124,28 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, onRepostSuccess }) => {
         const newPost = await api.repost(originalPostId, currentUser.id);
         if (newPost) {
             onRepostSuccess(newPost);
+        } else {
+            alert("You can't repost a repost.");
         }
         setIsReposting(false);
     };
     
     if (!author) return <div className="bg-[var(--surface-1)] rounded-lg p-4 h-96 animate-pulse" />;
+
+    const renderCardActions = (postToGetRepostCountFrom: FeedItemType) => (
+        <div className="flex justify-around items-center p-2 text-[var(--text-secondary)] border-t border-[var(--border)]">
+            <button onClick={handleLike} className={`flex items-center gap-2 p-2 rounded-md transition-colors ${isLiked ? 'text-[var(--accent)]' : 'hover:text-[var(--accent)]'}`}>
+              <IconHeart size={20} fill={isLiked ? 'currentColor' : 'none'} /> 
+              <span className="text-sm">{likeCount}</span>
+            </button>
+            <Link to={`/post/${item.id}`} className="flex items-center gap-2 hover:text-[var(--accent)] p-2 rounded-md transition-colors">
+              <IconComment size={20} /> <span className="text-sm">{item.comments}</span>
+            </Link>
+            <button onClick={handleRepost} disabled={isReposting} className="flex items-center gap-2 hover:text-[var(--accent)] p-2 rounded-md transition-colors disabled:opacity-50">
+              <IconRepeat size={20} /> <span className="text-sm">{postToGetRepostCountFrom.reposts}</span>
+            </button>
+        </div>
+    );
 
     if (item.repostOf) {
         if (!originalPost) return <div className="bg-[var(--surface-1)] rounded-lg p-4 h-96 animate-pulse" />;
@@ -135,21 +156,10 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, onRepostSuccess }) => {
                     <IconRepeat size={14} className="inline-block mr-2" />
                     <Link to={`/profile/${author.id}`} className="font-bold hover:underline">{author.name}</Link> reposted
                 </div>
-                <div className="mx-4 mb-2">
+                <div className="mx-4 mb-4">
                     <OriginalPostCard item={originalPost} />
                 </div>
-                 <div className="flex justify-around items-center p-2 text-[var(--text-secondary)] border-t border-[var(--border)]">
-                    <button onClick={handleLike} className={`flex items-center gap-2 p-2 rounded-md transition-colors ${isLiked ? 'text-[var(--accent)]' : 'hover:text-[var(--accent)]'}`}>
-                      <IconHeart size={20} fill={isLiked ? 'currentColor' : 'none'} /> 
-                      <span className="text-sm">{likeCount}</span>
-                    </button>
-                    <Link to={`/post/${item.id}`} className="flex items-center gap-2 hover:text-[var(--accent)] p-2 rounded-md transition-colors">
-                      <IconComment size={20} /> <span className="text-sm">{item.comments}</span>
-                    </Link>
-                    <button onClick={handleRepost} disabled={isReposting} className="flex items-center gap-2 hover:text-[var(--accent)] p-2 rounded-md transition-colors disabled:opacity-50">
-                      <IconRepeat size={20} /> <span className="text-sm">{item.reposts}</span>
-                    </button>
-                </div>
+                 {renderCardActions(originalPost)}
             </div>
         )
     }
@@ -216,18 +226,7 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, onRepostSuccess }) => {
             
             <Link to={`/post/${item.id}`}><CardContent /></Link>
 
-            <div className="flex justify-around items-center p-2 text-[var(--text-secondary)] border-t border-[var(--border)]">
-                <button onClick={handleLike} className={`flex items-center gap-2 p-2 rounded-md transition-colors ${isLiked ? 'text-[var(--accent)]' : 'hover:text-[var(--accent)]'}`}>
-                    <IconHeart size={20} fill={isLiked ? 'currentColor' : 'none'} /> 
-                    <span className="text-sm">{likeCount}</span>
-                </button>
-                <Link to={`/post/${item.id}`} className="flex items-center gap-2 hover:text-[var(--accent)] p-2 rounded-md transition-colors">
-                    <IconComment size={20} /> <span className="text-sm">{item.comments}</span>
-                </Link>
-                <button onClick={handleRepost} disabled={isReposting} className="flex items-center gap-2 hover:text-[var(--accent)] p-2 rounded-md transition-colors disabled:opacity-50">
-                    <IconRepeat size={20} /> <span className="text-sm">{item.reposts}</span>
-                </button>
-            </div>
+            {renderCardActions(item)}
         </div>
     );
 };
@@ -257,7 +256,16 @@ export const Feed = () => {
     }, []);
 
     const handleNewRepost = (newPost: FeedItemType) => {
-        setFeedItems(prevItems => [newPost, ...prevItems]);
+        setFeedItems(prevItems => {
+            const originalPostId = newPost.repostOf!;
+            const updatedItems = prevItems.map(item => {
+                if (item.id === originalPostId) {
+                    return { ...item, reposts: item.reposts + 1 };
+                }
+                return item;
+            });
+            return [newPost, ...updatedItems];
+        });
     };
 
     return (

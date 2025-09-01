@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { NavLink, useNavigate, useMatch, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -57,6 +58,7 @@ const ListenerNavMobile = () => (
     <>
         <MobileNavItem to="/feed" icon={<IconHome size={22} />} label="Feed" />
         <MobileNavItem to="/discover" icon={<IconSearch size={22} />} label="Discover" />
+        <MobileNavItem to="/messages" icon={<IconMessages size={22} />} label="Inbox" />
         <MobileNavItem to="/leaderboard" icon={<IconTrophy size={22} />} label="Ranks" />
         <MobileNavItem to="/profile/me" icon={<IconProfile size={22} />} label="Profile" />
     </>
@@ -74,10 +76,8 @@ export const BottomNav = () => {
       }
   }
 
-  const navItemsCount = role === Role.Listener ? 4 : 5;
-
   return (
-    <nav className={`grid grid-cols-${navItemsCount} h-16 bg-[var(--surface-1)]/80 backdrop-blur-sm border-t border-[var(--border)] z-30 md:hidden`}>
+    <nav className="grid grid-cols-5 h-16 bg-[var(--surface-1)]/80 backdrop-blur-sm border-t border-[var(--border)] z-30 md:hidden">
       {renderNav()}
     </nav>
   );
@@ -127,6 +127,7 @@ const ListenerNavDesktop = () => (
     <>
         <DesktopNavItem to="/feed" icon={<IconHome size={22} />} label="Feed" />
         <DesktopNavItem to="/discover" icon={<IconSearch size={22} />} label="Discover" />
+        <DesktopNavItem to="/messages" icon={<IconMessages size={22} />} label="Inbox" />
         <DesktopNavItem to="/leaderboard" icon={<IconTrophy size={22} />} label="Leaderboard" />
     </>
 );
