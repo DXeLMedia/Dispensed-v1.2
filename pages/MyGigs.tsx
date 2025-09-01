@@ -1,7 +1,5 @@
 
 
-
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Gig, Role, Business } from '../types';
 import * as api from '../services/mockApi';
@@ -118,11 +116,19 @@ export const MyGigs = () => {
 
         const fetchData = async () => {
             setLoading(true);
-            const [booked, interested, completed] = await Promise.all([
+            // FIX: Destructuring from Promise.all can sometimes fail type inference.
+            // By awaiting the Promise.all into a single variable and then assigning
+            // to explicitly typed constants, we ensure the types are correctly carried through,
+            // preventing a cascade of `unknown` types in dependent hooks.
+            const promiseResults = await Promise.all([
                 api.getBookedGigsForDj(user.id),
                 api.getInterestedGigsForDj(user.id),
                 api.getCompletedGigsForDj(user.id),
             ]);
+            const booked: Gig[] = promiseResults[0];
+            const interested: Gig[] = promiseResults[1];
+            const completed: Gig[] = promiseResults[2];
+
 
             // FIX: Explicitly filter out interested gigs if they are already booked or completed to prevent duplicates.
             const confirmedIds = new Set([...booked.map(g => g.id), ...completed.map(g => g.id)]);
@@ -173,14 +179,16 @@ export const MyGigs = () => {
         alert('Review submitted, thank you!');
     };
 
-    const activeMonths = useMemo(() => {
+    // FIX: Add explicit return type to useMemo to avoid type inference issues.
+    const activeMonths = useMemo((): string[] => {
         const allGigs = [...bookedGigs, ...interestedGigs, ...completedGigs];
         if (allGigs.length === 0) return [];
         const monthStrings = allGigs.map(g => g.date.substring(0, 7)); // 'YYYY-MM'
         return [...new Set(monthStrings)].sort((a, b) => a.localeCompare(b));
     }, [bookedGigs, interestedGigs, completedGigs]);
 
-    const monthGigs = useMemo(() => {
+    // FIX: Add explicit return type to useMemo to avoid type inference issues.
+    const monthGigs = useMemo((): Gig[] => {
         const currentMonthString = currentMonth.toISOString().substring(0, 7);
         const allGigs = [...interestedGigs, ...bookedGigs, ...completedGigs];
         
@@ -189,14 +197,22 @@ export const MyGigs = () => {
         });
     }, [bookedGigs, interestedGigs, completedGigs, currentMonth]);
     
-    const filteredMonthGigs = useMemo(() => {
+    // FIX: Add explicit return type to useMemo to avoid type inference issues.
+    const filteredMonthGigs = useMemo((): Gig[] => {
         if (filter === 'all') return monthGigs;
         if (filter === 'confirmed') return monthGigs.filter(g => g.status === 'Booked' || g.status === 'Completed');
         if (filter === 'pending') return monthGigs.filter(g => g.status === 'Open');
         return [];
     }, [monthGigs, filter]);
 
-    const stats = useMemo(() => {
+    const stats = useMemo((): {
+        total: number;
+        confirmed: number;
+        pending: number;
+        earnings: number;
+        earningsLabel: string;
+        earningsColor: string;
+    } => {
         const confirmedGigs = monthGigs.filter(g => g.status === 'Booked' || g.status === 'Completed');
         const pendingGigs = monthGigs.filter(g => g.status === 'Open');
         
@@ -231,16 +247,19 @@ export const MyGigs = () => {
         };
     }, [monthGigs, filter]);
 
-    const groupedGigs = useMemo(() => {
-        const sorted = [...filteredMonthGigs].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        return sorted.reduce((acc, gig) => {
+    // FIX: Replaced a for-loop with a correctly-typed .reduce() to group gigs by date.
+    // This resolves a subtle TypeScript issue where the inferred type was 'unknown'.
+    // FIX: Add an explicit return type to the `useMemo` hook for `groupedGigs`. This resolves a cascading TypeScript type inference issue that was causing other variables in the component to be inferred as `unknown`, leading to spurious errors.
+    const groupedGigs = useMemo((): Record<string, Gig[]> => {
+        const sorted = [...filteredMonthGigs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return sorted.reduce<Record<string, Gig[]>>((acc, gig) => {
             const date = new Date(gig.date).toISOString().split('T')[0];
             if (!acc[date]) {
                 acc[date] = [];
             }
             acc[date].push(gig);
             return acc;
-        }, {} as Record<string, Gig[]>);
+        }, {});
     }, [filteredMonthGigs]);
 
     useEffect(() => {
@@ -306,7 +325,7 @@ export const MyGigs = () => {
                 <div className="flex gap-2">
                     { (['all', 'pending', 'confirmed'] as const).map(f => (
                         <button key={f} onClick={() => setFilter(f)} className={`flex-1 p-2.5 rounded-full font-bold text-sm transition-colors duration-200 ${filter === f ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--border)]'}`}>
-                           <span className="capitalize">{f}</span> <span className={`text-xs opacity-75 px-1.5 py-0.5 rounded-full ${filter === f ? 'bg-black/20' : 'bg-[var(--surface-1)]'}`}>{f === 'all' ? stats.total : f === 'pending' ? stats.pending : stats.confirmed}</span>
+                           <span className="capitalize">{f}</span> <span className={`text-xs opacity-75 px-1.5 py-0.5 rounded-full ${filter === f ? 'bg-black/20' : 'bg-[var(--surface-1)]'}`}>{f === 'all' ? stats.total : f === 'pending' ? stats.pending : f === 'confirmed' ? stats.confirmed}</span>
                         </button>
                     ))}
                 </div>

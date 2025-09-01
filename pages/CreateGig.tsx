@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -7,10 +6,12 @@ import * as api from '../services/mockApi';
 import * as gemini from '../services/geminiService';
 import { Spinner } from '../components/Spinner';
 import { IconSparkles, IconArrowLeft, IconPhoto, IconX } from '../constants';
+import { usePersistence } from '../hooks/usePersistence';
 
 export const CreateGig = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { showToast } = usePersistence();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -22,6 +23,7 @@ export const CreateGig = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [flyerFile, setFlyerFile] = useState<File | null>(null);
   const [flyerPreview, setFlyerPreview] = useState<string | null>(null);
+  const [isGeneratingFlyer, setIsGeneratingFlyer] = useState(false);
 
   if (!user) {
       navigate('/login');
@@ -39,7 +41,7 @@ export const CreateGig = () => {
 
   const handleGenerateDescription = async () => {
     if (!title || !user.name || genres.length === 0) {
-      alert("Please fill in Title and select at least one Genre to generate a description.");
+      showToast("Please fill in Title and select at least one Genre.", 'error');
       return;
     }
     setIsGenerating(true);
@@ -48,9 +50,40 @@ export const CreateGig = () => {
       setDescription(generatedDesc);
     } catch (error) {
       console.error("Failed to generate description:", error);
-      alert("Could not generate description at this time.");
+      showToast("Could not generate description at this time.", 'error');
     } finally {
       setIsGenerating(false);
+    }
+  };
+  
+  const handleGenerateFlyer = async () => {
+    if (!title || genres.length === 0) {
+      showToast("Please provide a Title and at least one Genre.", 'error');
+      return;
+    }
+    setIsGeneratingFlyer(true);
+    setFlyerPreview(null); // Clear previous preview
+    setFlyerFile(null);
+
+    try {
+      const base64Image = await gemini.generateGigFlyer(title, user.name, genres, keywords);
+      if (base64Image) {
+        const dataUrl = `data:image/jpeg;base64,${base64Image}`;
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], 'ai-flyer.jpeg', { type: 'image/jpeg' });
+        
+        setFlyerFile(file);
+        setFlyerPreview(dataUrl);
+        showToast("AI Flyer generated successfully!", 'success');
+      } else {
+        throw new Error("AI model did not return an image.");
+      }
+    } catch (error) {
+      console.error("Failed to generate flyer:", error);
+      showToast("Could not generate flyer. Please try again.", 'error');
+    } finally {
+      setIsGeneratingFlyer(false);
     }
   };
 
@@ -85,7 +118,7 @@ export const CreateGig = () => {
             description,
             flyerUrl: uploadedFlyerUrl,
         });
-        alert('Gig created successfully!');
+        showToast('Gig created successfully!', 'success');
         navigate(`/venue/gigs`);
     } catch(err) {
         // FIX: Provide more specific user feedback for common RLS errors.
@@ -93,7 +126,7 @@ export const CreateGig = () => {
         if (err instanceof Error && err.message.includes('security policy')) {
             message = 'Gig creation failed due to a storage permission issue. Please contact support.';
         }
-        alert(message);
+        showToast(message, 'error');
         console.error(err);
     } finally {
         setIsLoading(false);
@@ -117,24 +150,48 @@ export const CreateGig = () => {
 
         <div>
             <label className="block text-sm font-medium text-zinc-300 mb-2">Event Flyer</label>
-            {flyerPreview ? (
-                <div className="relative">
-                <img src={flyerPreview} alt="Flyer preview" className="w-full rounded-lg object-cover aspect-[4/3]" />
-                <button
+             <div className="relative aspect-[4/3] w-full bg-zinc-800 rounded-lg border-2 border-dashed border-zinc-700 flex items-center justify-center overflow-hidden">
+                {isGeneratingFlyer && (
+                <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-20">
+                    <Spinner />
+                    <p className="mt-2 text-sm text-zinc-300">Generating your flyer...</p>
+                </div>
+                )}
+                {flyerPreview ? (
+                <>
+                    <img src={flyerPreview} alt="Flyer preview" className="w-full h-full object-cover" />
+                    <button
                     type="button"
                     onClick={() => { setFlyerPreview(null); setFlyerFile(null); }}
-                    className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white hover:bg-black/80"
-                >
+                    className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white hover:bg-black/80 z-10"
+                    >
                     <IconX size={18} />
-                </button>
-                </div>
-            ) : (
-                <label htmlFor="flyer-upload" className="cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-zinc-700 rounded-lg hover:border-lime-400 hover:bg-zinc-800 transition-colors">
-                <IconPhoto size={32} className="text-zinc-500" />
-                <p className="text-sm text-zinc-400 mt-2">Click to upload a flyer</p>
-                <input id="flyer-upload" type="file" className="hidden" accept="image/*" onChange={handleFlyerChange} />
+                    </button>
+                </>
+                ) : (
+                !isGeneratingFlyer && (
+                    <div className="text-center">
+                    <IconPhoto size={32} className="text-zinc-500 mx-auto" />
+                    <p className="text-sm text-zinc-400 mt-2">Upload or generate a flyer</p>
+                    </div>
+                )
+                )}
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+                <label htmlFor="flyer-upload" className={`cursor-pointer text-center text-sm font-bold bg-zinc-700 text-white py-2.5 rounded-lg hover:bg-zinc-600 transition-colors ${isGeneratingFlyer || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                Upload
                 </label>
-            )}
+                <input id="flyer-upload" type="file" className="hidden" accept="image/*" onChange={handleFlyerChange} disabled={isGeneratingFlyer || isLoading} />
+                <button
+                type="button"
+                onClick={handleGenerateFlyer}
+                disabled={isGeneratingFlyer || isGenerating || isLoading}
+                className="flex items-center justify-center gap-2 text-sm font-bold bg-lime-500/20 text-lime-300 py-2.5 rounded-lg hover:bg-lime-500/30 transition-colors disabled:opacity-50"
+                >
+                <IconSparkles size={16} />
+                Generate with AI
+                </button>
+            </div>
         </div>
         
         <div className="grid grid-cols-2 gap-4">

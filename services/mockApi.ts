@@ -1,5 +1,4 @@
 
-
 import { supabase } from './supabaseClient';
 import * as demoApi from './mockApiDemo';
 import { 
@@ -228,12 +227,16 @@ export const getUserById = async (userId: string): Promise<UserProfile | undefin
     user.followers = followersResult.count ?? 0;
     user.following = (followingResult.data || []).map((f) => f.following_id);
 
-    if (user.role === Role.Listener) {
+    // FIX: Actively calculate rating and review counts for all user roles that support them.
+    // This ensures that the displayed data is always accurate and derived directly from
+    // the reviews, bypassing potentially stale counts in the profile tables.
+    if (user.role === Role.DJ || user.role === Role.Business || user.role === Role.Listener) {
         const reviews = await getReviewsForUser(userId);
-        user.reviewsCount = reviews.length;
-        if(reviews.length > 0) {
-            user.rating = reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length;
-        }
+        const reviewsCount = reviews.length;
+        const rating = reviewsCount > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviewsCount : 0;
+        
+        user.reviewsCount = reviewsCount;
+        user.rating = rating;
     }
 
     return user;
@@ -1015,6 +1018,24 @@ export const addTrackToPlaylist = async (playlistId: string, track: Track): Prom
         console.error('Error adding track to playlist:', error);
         return false;
     }
+    persistenceService.markDirty();
+    return true;
+};
+
+export const deletePlaylist = async (playlistId: string, userId: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.deletePlaylist(playlistId, userId);
+    userAppUpdatesService.logAction('DELETE_PLAYLIST', { playlistId, userId });
+
+    const { error } = await supabase
+        .from('app_e255c3cdb5_playlists')
+        .delete()
+        .match({ id: playlistId, dj_user_id: userId });
+
+    if (error) {
+        console.error('Error deleting playlist:', error);
+        return false;
+    }
+
     persistenceService.markDirty();
     return true;
 };

@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +11,7 @@ import { useMediaPlayer } from '../contexts/MediaPlayerContext';
 import { AddPlaylistModal } from '../components/AddPlaylistModal';
 import { AddToPlaylistModal } from '../components/AddToPlaylistModal';
 import { EditPlaylistModal } from '../components/EditPlaylistModal';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 const Header = () => {
     const navigate = useNavigate();
@@ -74,8 +72,9 @@ interface PlaylistItemProps {
   playlist: Playlist;
   onPlay: () => void;
   onEdit: () => void;
+  onDelete: () => void;
 }
-const PlaylistItem: React.FC<PlaylistItemProps> = ({ playlist, onPlay, onEdit }) => (
+const PlaylistItem: React.FC<PlaylistItemProps> = ({ playlist, onPlay, onEdit, onDelete }) => (
     <div className="w-full flex items-center gap-2 p-2 bg-zinc-900 border border-zinc-800 rounded-lg group hover:border-lime-400/50">
         <button onClick={onPlay} className="flex items-center gap-4 flex-1 text-left">
             <div className="relative w-12 h-12 rounded-md overflow-hidden flex-shrink-0">
@@ -89,9 +88,14 @@ const PlaylistItem: React.FC<PlaylistItemProps> = ({ playlist, onPlay, onEdit })
                 <p className="text-sm text-zinc-400">{playlist.trackIds.length} {playlist.trackIds.length === 1 ? 'track' : 'tracks'}</p>
             </div>
         </button>
-         <button onClick={onEdit} title="Edit Playlist" className="p-2 text-zinc-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
-            <IconPencil size={20} />
-        </button>
+        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={onEdit} title="Edit Playlist" className="p-2 text-zinc-400 hover:text-white">
+                <IconPencil size={20} />
+            </button>
+            <button onClick={onDelete} title="Delete Playlist" className="p-2 text-zinc-400 hover:text-red-500">
+                <IconTrash size={20} />
+            </button>
+        </div>
     </div>
 );
 
@@ -108,6 +112,11 @@ export const MediaManager = () => {
     const [isEditPlaylistModalOpen, setIsEditPlaylistModalOpen] = useState(false);
     const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
     const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+
+    const [trackToDelete, setTrackToDelete] = useState<Track | null>(null);
+    const [isDeletingTrack, setIsDeletingTrack] = useState(false);
+    const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
+    const [isDeletingPlaylist, setIsDeletingPlaylist] = useState(false);
 
     const { playPlaylist } = useMediaPlayer();
 
@@ -175,15 +184,37 @@ export const MediaManager = () => {
         setIsEditPlaylistModalOpen(true);
     };
 
-    const handleDeleteTrack = async (trackToDelete: Track) => {
-        if (!user) return;
-        if (window.confirm(`Are you sure you want to delete "${trackToDelete.title}"? This action cannot be undone.`)) {
-            const success = await api.deleteTrack(user.id, trackToDelete.id);
-            if (success) {
-                fetchData(); // Refresh data
-            } else {
-                alert("Failed to delete track. Please try again.");
-            }
+    const handleDeleteTrackClick = (track: Track) => {
+        setTrackToDelete(track);
+    };
+
+    const confirmDeleteTrack = async () => {
+        if (!trackToDelete || !user) return;
+        setIsDeletingTrack(true);
+        const success = await api.deleteTrack(user.id, trackToDelete.id);
+        setIsDeletingTrack(false);
+        setTrackToDelete(null);
+        if (success) {
+            fetchData();
+        } else {
+            alert("Failed to delete track. Please try again.");
+        }
+    };
+
+    const handleDeletePlaylistClick = (playlist: Playlist) => {
+        setPlaylistToDelete(playlist);
+    };
+
+    const confirmDeletePlaylist = async () => {
+        if (!playlistToDelete || !user) return;
+        setIsDeletingPlaylist(true);
+        const success = await api.deletePlaylist(playlistToDelete.id, user.id);
+        setIsDeletingPlaylist(false);
+        setPlaylistToDelete(null);
+        if (success) {
+            fetchData();
+        } else {
+            alert("Failed to delete playlist. Please try again.");
         }
     };
     
@@ -202,13 +233,21 @@ export const MediaManager = () => {
                                 track={t}
                                 onPlay={() => handlePlayTrack(index)}
                                 onAddToPlaylist={() => setSelectedTrack(t)}
-                                onDelete={() => handleDeleteTrack(t)}
+                                onDelete={() => handleDeleteTrackClick(t)}
                             />
                         )
                         : <p className="text-center text-zinc-500 pt-10">No tracks uploaded.</p>
                     )}
                     {activeTab === 'playlists' && (
-                        playlists.length > 0 ? playlists.map(p => <PlaylistItem key={p.id} playlist={p} onPlay={() => handlePlayPlaylist(p)} onEdit={() => handleEditPlaylistClick(p)} />)
+                        playlists.length > 0 ? playlists.map(p => 
+                            <PlaylistItem 
+                                key={p.id} 
+                                playlist={p} 
+                                onPlay={() => handlePlayPlaylist(p)} 
+                                onEdit={() => handleEditPlaylistClick(p)} 
+                                onDelete={() => handleDeletePlaylistClick(p)}
+                            />
+                        )
                         : <p className="text-center text-zinc-500 pt-10">No playlists created.</p>
                     )}
 
@@ -237,6 +276,34 @@ export const MediaManager = () => {
                 onClose={() => setIsEditPlaylistModalOpen(false)}
                 onPlaylistUpdated={fetchData}
                 playlist={selectedPlaylist}
+            />
+            <ConfirmationModal
+                isOpen={!!trackToDelete}
+                onClose={() => setTrackToDelete(null)}
+                onConfirm={confirmDeleteTrack}
+                title="Delete Track"
+                message={
+                    <>
+                        Are you sure you want to permanently delete{' '}
+                        <strong className="text-[var(--text-primary)]">{trackToDelete?.title}</strong>?
+                        This action cannot be undone.
+                    </>
+                }
+                isConfirming={isDeletingTrack}
+            />
+            <ConfirmationModal
+                isOpen={!!playlistToDelete}
+                onClose={() => setPlaylistToDelete(null)}
+                onConfirm={confirmDeletePlaylist}
+                title="Delete Playlist"
+                message={
+                    <>
+                        Are you sure you want to permanently delete the playlist{' '}
+                        <strong className="text-[var(--text-primary)]">{playlistToDelete?.name}</strong>?
+                        This will not delete the tracks within it.
+                    </>
+                }
+                isConfirming={isDeletingPlaylist}
             />
         </div>
     )

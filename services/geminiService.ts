@@ -209,3 +209,45 @@ export const generatePostContent = async (
     return `Excited to announce: ${topic}! #capetownmusic #${userRole === Role.DJ ? 'djlife' : 'livemusic'}`;
   }
 };
+
+export const generateGigFlyer = async (
+  title: string,
+  venueName: string,
+  genres: string[],
+  keywords: string
+): Promise<string | null> => {
+  if (!process.env.API_KEY) {
+    console.warn("API_KEY not set. AI flyer generation disabled.");
+    return null;
+  }
+
+  const prompt = `
+    Create a cool, abstract, visually striking event flyer for an underground electronic music gig in Cape Town.
+    - Event Name: "${title}"
+    - Venue: "${venueName}"
+    - Music Genres: ${genres.join(', ')}
+    - Vibe/Keywords: ${keywords}
+    - Do not include any actual text in the image. The design should be purely graphical and abstract, suitable for text to be overlaid later.
+    - The style should be modern, edgy, and minimalist, using a dark, neon-infused color palette. Think distorted typography-like shapes (but not actual letters), grainy textures, and bold, simple geometric forms.
+  `;
+
+  try {
+    const response = await ai.models.generateImages({
+      model: 'imagen-4.0-generate-001',
+      prompt: prompt,
+      config: {
+        numberOfImages: 1,
+        outputMimeType: 'image/jpeg',
+        aspectRatio: '4:3', // Matching the UI aspect ratio
+      },
+    });
+
+    if (response.generatedImages && response.generatedImages.length > 0) {
+      return response.generatedImages[0].image.imageBytes;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error generating gig flyer with Gemini:", error);
+    return null;
+  }
+};

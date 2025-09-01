@@ -1,5 +1,4 @@
 
-
 import { DJ, Business, Gig, Track, Playlist, Role, UserProfile, Notification, Message, Review, FeedItem, Comment as PostComment, User, EnrichedReview, EnrichedComment, StreamSession, UserSettings, EnrichedChat, Chat, Tier, Listener, NotificationType } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -377,6 +376,13 @@ export const addTrackToPlaylist = async (playlistId: string, track: Track): Prom
     }
     return Promise.resolve(true);
 }
+
+export const deletePlaylist = async (playlistId: string, userId: string): Promise<boolean> => {
+    const initialLength = PLAYLISTS.length;
+    PLAYLISTS = PLAYLISTS.filter(p => !(p.id === playlistId && p.creatorId === userId));
+    return Promise.resolve(PLAYLISTS.length < initialLength);
+};
+
 export const deleteTrack = async (userId: string, trackId: string): Promise<boolean> => {
     // Remove from global TRACKS array
     TRACKS = TRACKS.filter(t => t.id !== trackId);
