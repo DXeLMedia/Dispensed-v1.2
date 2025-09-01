@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as api from '../services/mockApi';
@@ -21,7 +23,12 @@ const Header = ({ user, onBack }: { user: User, onBack: () => void }) => (
     </div>
 );
 
-const MessageBubble = ({ message, isOwnMessage }: { message: Message, isOwnMessage: boolean }) => (
+// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
+interface MessageBubbleProps {
+  message: Message;
+  isOwnMessage: boolean;
+}
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage }) => (
     <div className={`flex items-end gap-2 my-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
         <div className={`max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl px-4 py-2 rounded-2xl ${isOwnMessage ? 'bg-lime-500 text-black rounded-br-lg' : 'bg-zinc-800 text-white rounded-bl-lg'}`}>
             <p className="break-words">{message.text}</p>

@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { User, Role } from '../types';
@@ -8,7 +9,11 @@ import { Spinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
 import { IconArrowLeft } from '../constants';
 
-const UserRow = ({ user }: { user: User }) => (
+// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
+interface UserRowProps {
+  user: User;
+}
+const UserRow: React.FC<UserRowProps> = ({ user }) => (
     <Link to={`/profile/${user.id}`} className="flex items-center gap-4 p-3 hover:bg-zinc-800 rounded-lg transition-colors">
         <Avatar src={user.avatarUrl} alt={user.name} />
         <div>

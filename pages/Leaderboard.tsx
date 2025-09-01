@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { DJ, Business, Role } from '../types';
 import * as api from '../services/mockApi';
@@ -44,7 +45,12 @@ const getRankColor = (rank: number) => {
     return 'border-[var(--border)]';
 };
 
-const LeaderboardItem = ({ item, rank }: { item: DJ | Business; rank: number }) => {
+// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
+interface LeaderboardItemProps {
+  item: DJ | Business;
+  rank: number;
+}
+const LeaderboardItem: React.FC<LeaderboardItemProps> = ({ item, rank }) => {
   const isDJ = item.role === Role.DJ;
   const linkTo = isDJ ? `/profile/${item.id}` : `/profile/${item.id}`;
 

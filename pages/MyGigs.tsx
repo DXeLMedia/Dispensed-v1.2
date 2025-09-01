@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Gig, Role, Business } from '../types';
 import * as api from '../services/mockApi';
@@ -9,7 +11,16 @@ import { IconMoreVertical, IconChevronLeft, IconChevronRight, IconCalendar, Icon
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { RatingModal } from '../components/RatingModal';
 
-const GigCard = ({ gig, venue, isHighlighted, highlightedRef, onRateClick }: { gig: Gig; venue?: Business; isHighlighted?: boolean; highlightedRef?: React.RefObject<HTMLDivElement>; onRateClick: (gig: Gig) => void; }) => {
+// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
+interface GigCardProps {
+  gig: Gig;
+  venue?: Business;
+  isHighlighted?: boolean;
+  highlightedRef?: React.RefObject<HTMLDivElement>;
+  onRateClick: (gig: Gig) => void;
+}
+
+const GigCard: React.FC<GigCardProps> = ({ gig, venue, isHighlighted, highlightedRef, onRateClick }) => {
     let statusText: string;
     let statusStyle: string;
 

@@ -636,36 +636,53 @@ export const getFeedItems = async (): Promise<FeedItem[]> => {
         return [];
     }
     
-    // FIX: A database schema mismatch was causing a crash when fetching repost counts.
-    // The following block now attempts to fetch counts but will fail gracefully
-    // if the 'original_post_id' column is missing, preventing a crash and allowing the feed to load.
-    // In this failure case, repost counts will appear as 0.
-    let repostCounts: Record<string, number> = {};
-    try {
-        const postIds = posts.map((p) => p.id).filter(Boolean);
-        if (postIds.length > 0) {
-            // This query fails if the column 'original_post_id' doesn't exist.
-            const { data: reposts, error: repostError } = await supabase
-                .from('app_e255c3cdb5_posts')
-                .select('original_post_id')
-                .in('original_post_id', postIds);
-            
-            if (repostError) {
-                // Log the expected error and continue without repost counts.
-                console.warn('Could not fetch repost counts, feature may be degraded:', repostError);
-            } else if (reposts) {
-                repostCounts = reposts.reduce((acc: Record<string, number>, { original_post_id }) => {
-                    if (original_post_id) acc[original_post_id] = (acc[original_post_id] || 0) + 1;
-                    return acc;
-                }, {} as Record<string, number>);
-            }
-        }
-    } catch (e) {
-        console.error("An unexpected error occurred while processing reposts:", e);
+    if (posts.length === 0) {
+        return [];
     }
+    
+    const postIds = posts.map((p) => p.id);
 
-    return posts.map((p) => mapPostToFeedItem(p, repostCounts[p.id] || 0));
+    // Concurrently fetch all likes, comments, and reposts for the loaded posts.
+    // This is more efficient than a separate query for each post (N+1 problem).
+    const [likesResult, commentsResult, repostsResult] = await Promise.all([
+        supabase.from('app_e255c3cdb5_post_likes').select('post_id').in('post_id', postIds),
+        supabase.from('app_e255c3cdb5_post_comments').select('post_id').in('post_id', postIds),
+        // This query finds all posts that are reposts of the posts we fetched.
+        supabase.from('app_e255c3cdb5_posts').select('original_post_id').in('original_post_id', postIds).not('original_post_id', 'is', null)
+    ]);
+    
+    // Tally the counts from the results.
+    const likesCounts = (likesResult.data || []).reduce((acc: Record<string, number>, { post_id }) => {
+        if(post_id) acc[post_id] = (acc[post_id] || 0) + 1;
+        return acc;
+    }, {});
+
+    const commentsCounts = (commentsResult.data || []).reduce((acc: Record<string, number>, { post_id }) => {
+        if(post_id) acc[post_id] = (acc[post_id] || 0) + 1;
+        return acc;
+    }, {});
+    
+    const repostCounts = (repostsResult.data || []).reduce((acc: Record<string, number>, { original_post_id }) => {
+        if (original_post_id) {
+            acc[original_post_id] = (acc[original_post_id] || 0) + 1;
+        }
+        return acc;
+    }, {});
+    
+    // Map over the original posts, enriching them with the live counts we just calculated.
+    return posts.map((p) => {
+        // We create a temporary PostRow with the fresh counts. This ensures the UI displays
+        // up-to-date numbers, bypassing potentially stale data in the `likes_count` and
+        // `comments_count` columns.
+        const postWithFreshCounts: PostRow = {
+            ...p,
+            likes_count: likesCounts[p.id] || 0,
+            comments_count: commentsCounts[p.id] || 0,
+        };
+        return mapPostToFeedItem(postWithFreshCounts, repostCounts[p.id] || 0);
+    });
 };
+
 
 export const getFeedItemById = async (id: string): Promise<FeedItem | undefined> => {
     if (isDemoModeEnabled()) return demoApi.getFeedItemById(id);

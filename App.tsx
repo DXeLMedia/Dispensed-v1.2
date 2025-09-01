@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
@@ -38,11 +39,8 @@ import { usePersistence } from './hooks/usePersistence';
 import { NotificationToast } from './components/NotificationToast';
 
 
-interface AppContainerProps {
-    children: React.ReactNode;
-}
-
-const AppContainer = ({ children }: AppContainerProps) => {
+// FIX: Changed to use React.PropsWithChildren to correctly type component with children.
+const AppContainer = ({ children }: React.PropsWithChildren<{}>) => {
     const location = useLocation();
     const { currentTrack } = useMediaPlayer();
     const { isDirty, toast, hideToast } = usePersistence();
@@ -84,12 +82,12 @@ const AppContainer = ({ children }: AppContainerProps) => {
     )
 }
 
+// FIX: Changed to use React.PropsWithChildren to correctly type component with children.
 interface ProtectedRouteProps {
-    children: React.ReactNode;
     roles: Role[];
 }
 
-const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, roles }: React.PropsWithChildren<ProtectedRouteProps>) => {
     const { isAuthenticated, isLoading, role } = useAuth();
     
     if (isLoading) {
@@ -107,7 +105,8 @@ const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
     return <>{children}</>;
 };
 
-const AuthenticatedRoute = ({ children } : { children: React.ReactNode }) => {
+// FIX: Changed to use React.PropsWithChildren to correctly type component with children.
+const AuthenticatedRoute = ({ children } : React.PropsWithChildren<{}>) => {
     const { isAuthenticated, isLoading } = useAuth();
     if (isLoading) return <PageSpinner />;
 

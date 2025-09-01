@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { EnrichedChat } from '../types';
 import * as api from '../services/mockApi';
@@ -22,7 +23,11 @@ const Header = () => {
     );
 }
 
-const ChatPreview = ({ chat }: { chat: EnrichedChat }) => (
+// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
+interface ChatPreviewProps {
+  chat: EnrichedChat;
+}
+const ChatPreview: React.FC<ChatPreviewProps> = ({ chat }) => (
     <Link to={`/messages/${chat.id}`} className="flex items-center gap-4 p-3 hover:bg-zinc-800 rounded-lg transition-colors">
         <Avatar src={chat.otherParticipant.avatarUrl} alt={chat.otherParticipant.name} size="md" />
         <div className="flex-1 overflow-hidden">

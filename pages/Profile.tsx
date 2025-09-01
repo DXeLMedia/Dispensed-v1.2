@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { DJ, Business, Role, Track, Gig, Listener, Playlist, EnrichedReview } from '../types';
@@ -50,7 +52,14 @@ const ProfileTabs = ({ activeTab, setActiveTab }: { activeTab: string; setActive
   </div>
 );
 
-const MediaGridItem = ({ artworkUrl, name, onClick }: { artworkUrl: string, name: string, onClick: () => void }) => {
+// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
+interface MediaGridItemProps {
+  artworkUrl: string;
+  name: string;
+  onClick: () => void;
+}
+
+const MediaGridItem: React.FC<MediaGridItemProps> = ({ artworkUrl, name, onClick }) => {
     return (
         <button onClick={onClick} className="relative aspect-square bg-[var(--surface-2)] rounded-lg overflow-hidden group">
             <img src={artworkUrl} alt={name} className="w-full h-full object-cover" />

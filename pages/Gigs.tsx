@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { Gig, Business, Role } from '../types';
 import * as api from '../services/mockApi';
@@ -7,7 +8,13 @@ import { IconMapPin, IconClock } from '../constants';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
-const GigCard = ({ gig, onInterestSent }: { gig: Gig; onInterestSent: (gigId: string) => void; }) => {
+// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
+interface GigCardProps {
+  gig: Gig;
+  onInterestSent: (gigId: string) => void;
+}
+
+const GigCard: React.FC<GigCardProps> = ({ gig, onInterestSent }) => {
   const [venue, setVenue] = useState<Business | undefined>(undefined);
   const { user } = useAuth();
   const [isSending, setIsSending] = useState(false);

@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -40,7 +42,14 @@ const Tabs = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (t
     </div>
 );
 
-const TrackItem = ({ track, onPlay, onAddToPlaylist, onDelete }: { track: Track; onPlay: () => void; onAddToPlaylist: () => void; onDelete: () => void; }) => (
+// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
+interface TrackItemProps {
+  track: Track;
+  onPlay: () => void;
+  onAddToPlaylist: () => void;
+  onDelete: () => void;
+}
+const TrackItem: React.FC<TrackItemProps> = ({ track, onPlay, onAddToPlaylist, onDelete }) => (
     <div className="w-full flex items-center gap-2 p-2 bg-zinc-900 border border-zinc-800 rounded-lg group hover:border-lime-400/50">
         <button onClick={onPlay} className="flex items-center gap-4 flex-1 text-left">
             <img src={track.artworkUrl} alt={track.title} className="w-12 h-12 rounded-md object-cover"/>
@@ -60,7 +69,13 @@ const TrackItem = ({ track, onPlay, onAddToPlaylist, onDelete }: { track: Track;
     </div>
 );
 
-const PlaylistItem = ({ playlist, onPlay, onEdit }: { playlist: Playlist; onPlay: () => void; onEdit: () => void; }) => (
+// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
+interface PlaylistItemProps {
+  playlist: Playlist;
+  onPlay: () => void;
+  onEdit: () => void;
+}
+const PlaylistItem: React.FC<PlaylistItemProps> = ({ playlist, onPlay, onEdit }) => (
     <div className="w-full flex items-center gap-2 p-2 bg-zinc-900 border border-zinc-800 rounded-lg group hover:border-lime-400/50">
         <button onClick={onPlay} className="flex items-center gap-4 flex-1 text-left">
             <div className="relative w-12 h-12 rounded-md overflow-hidden flex-shrink-0">

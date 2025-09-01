@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import { Gig, DJ, Role, Business } from '../types';
 import * as api from '../services/mockApi';
@@ -42,7 +44,13 @@ const Tabs = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (t
     </div>
 );
 
-const GigManagementCard = ({ gig, onRateClick, onEditClick }: { gig: Gig & { bookedDjName?: string }; onRateClick: (gig: Gig & { bookedDjName?: string }) => void; onEditClick: (gigId: string) => void; }) => {
+// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
+interface GigManagementCardProps {
+  gig: Gig & { bookedDjName?: string };
+  onRateClick: (gig: Gig & { bookedDjName?: string }) => void;
+  onEditClick: (gigId: string) => void;
+}
+const GigManagementCard: React.FC<GigManagementCardProps> = ({ gig, onRateClick, onEditClick }) => {
 
     const cardContent = (
          <div className="bg-[var(--surface-1)] border border-[var(--border)] rounded-lg overflow-hidden transition-colors duration-200 hover:border-[var(--accent)]">
