@@ -1,5 +1,6 @@
 
 
+
 import React, { useEffect, useState } from 'react';
 import { EnrichedChat } from '../types';
 import * as api from '../services/mockApi';
@@ -23,7 +24,6 @@ const Header = () => {
     );
 }
 
-// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
 interface ChatPreviewProps {
   chat: EnrichedChat;
 }

@@ -14,7 +14,7 @@ interface DJCardProps {
 }
 
 const DJCard: React.FC<DJCardProps> = ({ dj }) => (
-  <Link to={`/profile/${dj.id}`} className="block bg-[var(--surface-1)] border border-[var(--border)] rounded-lg p-4 hover:border-[var(--accent)] transition-colors duration-200">
+  <Link to={`/profile/${dj.id}`} className="block bg-[var(--surface-1)] border border-[var(--border)] rounded-lg p-4 hover:border-[var(--accent)] transition-colors duration-200 animate-pop-in">
     <div className="flex items-center gap-4">
       <Avatar src={dj.avatarUrl} alt={dj.name} size="lg" />
       <div className="flex-1 min-w-0">

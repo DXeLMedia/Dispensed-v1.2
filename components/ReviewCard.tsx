@@ -10,7 +10,7 @@ interface ReviewCardProps {
 
 export const ReviewCard: React.FC<ReviewCardProps> = ({ review }) => {
     return (
-        <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800">
+        <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800 animate-pop-in">
             <div className="flex items-start gap-3">
                 <Link to={`/profile/${review.author.id}`}>
                     <Avatar src={review.author.avatarUrl} alt={review.author.name} size="md" />

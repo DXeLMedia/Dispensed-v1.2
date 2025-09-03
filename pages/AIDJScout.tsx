@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { DJ } from '../types';
 import * as gemini from '../services/geminiService';
@@ -10,7 +11,7 @@ import { IconStar, IconMapPin } from '../constants';
 
 // Re-using DJCard logic from DiscoverDJs but as a local component to avoid prop-drilling or context
 const DJCard: React.FC<{ dj: DJ }> = ({ dj }) => (
-  <Link to={`/profile/${dj.id}`} className="block bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:border-lime-400 transition-colors duration-200 animate-fade-in">
+  <Link to={`/profile/${dj.id}`} className="block bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:border-lime-400 transition-colors duration-200 animate-pop-in">
     <div className="flex items-center gap-4">
       <Avatar src={dj.avatarUrl} alt={dj.name} size="lg" />
       <div className="flex-1 min-w-0">

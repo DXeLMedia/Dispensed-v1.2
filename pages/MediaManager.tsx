@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -40,7 +42,6 @@ const Tabs = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (t
     </div>
 );
 
-// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
 interface TrackItemProps {
   track: Track;
   onPlay: () => void;
@@ -67,7 +68,6 @@ const TrackItem: React.FC<TrackItemProps> = ({ track, onPlay, onAddToPlaylist, o
     </div>
 );
 
-// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
 interface PlaylistItemProps {
   playlist: Playlist;
   onPlay: () => void;

@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { DJ, Business, Role } from '../types';
 import * as api from '../services/mockApi';
@@ -45,7 +46,6 @@ const getRankColor = (rank: number) => {
     return 'border-[var(--border)]';
 };
 
-// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
 interface LeaderboardItemProps {
   item: DJ | Business;
   rank: number;
@@ -55,7 +55,7 @@ const LeaderboardItem: React.FC<LeaderboardItemProps> = ({ item, rank }) => {
   const linkTo = isDJ ? `/profile/${item.id}` : `/profile/${item.id}`;
 
   return (
-    <Link to={linkTo} className={`block bg-[var(--surface-1)] border-2 rounded-lg p-3 hover:bg-[var(--surface-2)] transition-all duration-200 shadow-lg ${getRankColor(rank)}`}>
+    <Link to={linkTo} className={`block bg-[var(--surface-1)] border-2 rounded-lg p-3 hover:bg-[var(--surface-2)] transition-all duration-200 shadow-lg ${getRankColor(rank)} animate-pop-in`}>
       <div className="flex items-center gap-4">
         <div className={`font-orbitron text-2xl font-bold w-10 text-center ${rank < 3 ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>
           {getRankMedal(rank)}

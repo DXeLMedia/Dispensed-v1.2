@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -121,7 +122,6 @@ export const CreateGig = () => {
         showToast('Gig created successfully!', 'success');
         navigate(`/venue/gigs`);
     } catch(err) {
-        // FIX: Provide more specific user feedback for common RLS errors.
         let message = 'Failed to create gig.';
         if (err instanceof Error && err.message.includes('security policy')) {
             message = 'Gig creation failed due to a storage permission issue. Please contact support.';

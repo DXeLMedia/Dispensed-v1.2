@@ -2,6 +2,7 @@
 
 
 
+
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
@@ -39,7 +40,6 @@ import { usePersistence } from './hooks/usePersistence';
 import { NotificationToast } from './components/NotificationToast';
 
 
-// FIX: Changed to use React.PropsWithChildren to correctly type component with children.
 const AppContainer = ({ children }: React.PropsWithChildren<{}>) => {
     const location = useLocation();
     const { currentTrack } = useMediaPlayer();
@@ -82,7 +82,6 @@ const AppContainer = ({ children }: React.PropsWithChildren<{}>) => {
     )
 }
 
-// FIX: Changed to use React.PropsWithChildren to correctly type component with children.
 interface ProtectedRouteProps {
     roles: Role[];
 }
@@ -105,7 +104,6 @@ const ProtectedRoute = ({ children, roles }: React.PropsWithChildren<ProtectedRo
     return <>{children}</>;
 };
 
-// FIX: Changed to use React.PropsWithChildren to correctly type component with children.
 const AuthenticatedRoute = ({ children } : React.PropsWithChildren<{}>) => {
     const { isAuthenticated, isLoading } = useAuth();
     if (isLoading) return <PageSpinner />;

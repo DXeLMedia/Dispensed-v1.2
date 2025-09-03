@@ -1,5 +1,6 @@
 
 
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { User, Role } from '../types';
@@ -9,7 +10,6 @@ import { Spinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
 import { IconArrowLeft } from '../constants';
 
-// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
 interface UserRowProps {
   user: User;
 }

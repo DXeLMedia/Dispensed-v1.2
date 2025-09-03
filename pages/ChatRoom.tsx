@@ -2,6 +2,7 @@
 
 
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as api from '../services/mockApi';
@@ -23,7 +24,6 @@ const Header = ({ user, onBack }: { user: User, onBack: () => void }) => (
     </div>
 );
 
-// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
 interface MessageBubbleProps {
   message: Message;
   isOwnMessage: boolean;
@@ -77,8 +77,6 @@ export const ChatRoom = () => {
         if (!newMessage.trim() || !chatId || !currentUser || !chat) return;
 
         setSending(true);
-        // FIX: Swapped senderId and recipientId to match the API and satisfy RLS policy.
-        // The current user must be the sender.
         const sentMessage = await api.sendMessage(currentUser.id, chat.otherParticipant.id, newMessage.trim());
         
         if (sentMessage && chat) {

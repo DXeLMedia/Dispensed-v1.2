@@ -1,5 +1,6 @@
 
 
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { DJ, Role } from '../types';
 
@@ -39,7 +40,6 @@ export const generateGigDescription = async (
         thinkingConfig: { thinkingBudget: 0 }
       }
     });
-    // Correctly access response.text directly as per Gemini API guidelines.
     return response.text;
   } catch (error) {
     console.error("Error generating gig description with Gemini:", error);
@@ -104,8 +104,7 @@ export const findDJsWithAI = async (query: string, allDjs: DJ[]): Promise<string
             },
         });
 
-        // FIX: The Gemini API returns a JSON string in `response.text` when a JSON mime type is requested. It must be parsed manually.
-        const resultText = response.text;
+        const resultText = response.text.trim();
         if (!resultText) {
           return [];
         }
@@ -162,7 +161,6 @@ export const generateDjBio = async (
         thinkingConfig: { thinkingBudget: 0 }
       }
     });
-    // Correctly access response.text directly as per Gemini API guidelines.
     return response.text.trim();
   } catch (error) {
     console.error("Error generating DJ bio with Gemini:", error);

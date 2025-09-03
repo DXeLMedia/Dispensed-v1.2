@@ -94,11 +94,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return fullProfile;
   }, []);
 
+  const logout = useCallback(async () => {
+    if (!isDemoMode && user) {
+        await userAppUpdatesService.syncActions(user.id);
+    }
+    closePlayer(); // Reset media player state
+    if (!isDemoMode) {
+        await supabase.auth.signOut();
+    }
+    setUser(null);
+    document.documentElement.className = 'theme-dark'; // Reset to default on logout
+  }, [isDemoMode, user, closePlayer]);
+
 
   useEffect(() => {
     if (isDemoMode) {
-      // In demo mode, we don't check Supabase session.
-      // Auth is handled by demoLogin.
+      // If we switch to demo mode while logged in, log out.
+      if (user) {
+        logout();
+      }
       setUser(null);
       setIsLoading(false);
       return;
@@ -126,8 +140,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     );
 
     return () => subscription.unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDemoMode, fetchUserProfile]);
+  }, [isDemoMode, fetchUserProfile, user, logout]);
 
 
   useEffect(() => {
@@ -171,18 +184,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // to the login form to display a message.
       throw new Error('Login successful, but your profile could not be found. Please contact support.');
     }
-  };
-
-  const logout = async () => {
-    if (!isDemoMode && user) {
-        await userAppUpdatesService.syncActions(user.id);
-    }
-    closePlayer(); // Reset media player state
-    if (!isDemoMode) {
-        await supabase.auth.signOut();
-    }
-    setUser(null);
-    document.documentElement.className = 'theme-dark'; // Reset to default on logout
   };
 
   const signUp = async (email: string, password: string, name: string, role: Role) => {

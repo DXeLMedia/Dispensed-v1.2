@@ -2,6 +2,7 @@
 
 
 
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { DJ, Business, Role, Track, Gig, Listener, Playlist, EnrichedReview } from '../types';
@@ -52,7 +53,6 @@ const ProfileTabs = ({ activeTab, setActiveTab }: { activeTab: string; setActive
   </div>
 );
 
-// FIX: Changed component to use React.FC and a props interface to fix TypeScript error with `key` prop.
 interface MediaGridItemProps {
   artworkUrl: string;
   name: string;
@@ -91,7 +91,6 @@ const DJProfile: React.FC<DJProfileProps> = ({ dj, isOwnProfile, onEditClick, on
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const { playPlaylist } = useMediaPlayer();
     
-    // FIX: Implement explicit business logic for who can leave a review.
     const canLeaveReview = currentUser && !isOwnProfile && (currentUser.role === Role.Business || currentUser.role === Role.Listener);
     
     const fetchReviews = async () => {
@@ -359,7 +358,6 @@ const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfil
     const [activeTab, setActiveTab] = useState<'about' | 'media' | 'reviews'>('about');
     const [reviews, setReviews] = useState<EnrichedReview[]>([]);
 
-    // FIX: Implement explicit business logic for who can leave a review.
     const canLeaveReview = currentUser && !isOwnProfile && (currentUser.role === Role.DJ || currentUser.role === Role.Listener);
 
     const fetchReviews = async () => {

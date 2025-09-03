@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import * as api from '../services/mockApi';
@@ -31,7 +32,7 @@ interface ApplicantCardProps {
 
 const ApplicantCard: React.FC<ApplicantCardProps> = ({ dj, isBooked, isGigOpen, onBook, isBooking }) => {
     return (
-        <div className={`bg-[var(--surface-1)] border border-[var(--border)] rounded-lg p-3 transition-all ${isBooked ? 'border-[var(--accent)]' : ''}`}>
+        <div className={`bg-[var(--surface-1)] border border-[var(--border)] rounded-lg p-3 transition-all animate-pop-in ${isBooked ? 'border-[var(--accent)]' : ''}`}>
             <div className="flex items-center gap-3">
                  <Link to={`/profile/${dj.id}`}>
                     <Avatar src={dj.avatarUrl} alt={dj.name} />

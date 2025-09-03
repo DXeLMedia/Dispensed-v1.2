@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -157,7 +156,6 @@ export const CreatePost = () => {
             });
             navigate('/feed');
         } catch (err) {
-            // FIX: Provide more specific user feedback for common RLS errors.
             let message = 'Failed to create post.';
             if (err instanceof Error && err.message.includes('security policy')) {
                 message = 'Post creation failed due to a media upload permission issue. Please contact support.';

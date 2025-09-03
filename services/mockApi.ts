@@ -54,8 +54,6 @@ type GigRow = Database['public']['Tables']['app_e255c3cdb5_gigs']['Row'];
  * Common select string for user profiles to ensure consistent data fetching.
  * Joins the user_profiles table with dj_profiles and business_profiles.
  */
-// FIX: Removed !inner to use left joins. This allows profiles for all roles (DJ, Business, Listener)
-// to be fetched correctly, as listeners do not have entries in the other tables.
 const PROFILE_QUERY_STRING = '*, dj_profiles:app_e255c3cdb5_dj_profiles(*), business_profiles:app_e255c3cdb5_business_profiles(*)';
 
 // =================================================================
@@ -122,7 +120,6 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
             ...baseUser,
             role: Role.DJ,
             genres: djProfile?.genres || [],
-            // FIX: Map the 'description' column from the DB to the app's 'bio' property.
             bio: djProfile?.description || '',
             location: djProfile?.location || '',
             rating: djProfile?.rating || 0,
@@ -209,8 +206,6 @@ export const getUserById = async (userId: string): Promise<UserProfile | undefin
         .from('app_e255c3cdb5_user_profiles')
         .select(PROFILE_QUERY_STRING)
         .eq('user_id', userId)
-        // FIX: Use .maybeSingle() to prevent crashing when no user is found.
-        // This allows the self-healing profile creation logic to proceed.
         .maybeSingle();
     
     if (error || !data) {
@@ -227,9 +222,6 @@ export const getUserById = async (userId: string): Promise<UserProfile | undefin
     user.followers = followersResult.count ?? 0;
     user.following = (followingResult.data || []).map((f) => f.following_id);
 
-    // FIX: Actively calculate rating and review counts for all user roles that support them.
-    // This ensures that the displayed data is always accurate and derived directly from
-    // the reviews, bypassing potentially stale counts in the profile tables.
     if (user.role === Role.DJ || user.role === Role.Business || user.role === Role.Listener) {
         const reviews = await getReviewsForUser(userId);
         const reviewsCount = reviews.length;
@@ -356,7 +348,7 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
         if (djData.hourlyRate !== undefined) djProfileUpdate.hourly_rate = djData.hourlyRate;
         if (djData.travelRadius !== undefined) djProfileUpdate.travel_radius = djData.travelRadius;
         if (djData.equipmentOwned !== undefined) djProfileUpdate.equipment_owned = djData.equipmentOwned;
-        if (djData.availabilitySchedule !== undefined) djProfileUpdate.availability_schedule = djData.availabilitySchedule as Json;
+        if (djData.availabilitySchedule !== undefined) djProfileUpdate.availability_schedule = djData.availabilitySchedule;
 
         if (Object.keys(djProfileUpdate).length > 0) {
             updatePromises.push(supabase.from('app_e255c3cdb5_dj_profiles').update(djProfileUpdate).eq('user_id', userId));
@@ -491,8 +483,6 @@ export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig |
         genres: gigData.genres,
         flyer_url: gigData.flyerUrl,
         status: 'Open',
-        // FIX: Initialize interest_count to prevent potential database errors if the
-        // column is not nullable and has no default value. This resolves the gig creation issue.
         interest_count: 0,
     };
     const { data, error } = await supabase.from('app_e255c3cdb5_gigs').insert(newGig).select().single();
@@ -763,8 +753,6 @@ export const getCommentsForPost = async (postId: string): Promise<EnrichedCommen
 
     if (error || !data) return [];
     
-    // FIX: The joined 'author' property is not part of the base CommentRow type from Supabase.
-    // We cast the author to `any` to access its properties from the joined user_profiles table.
     return (data as any[]).map((comment) => {
         const author: any = comment.author;
         if (!author) return null;
@@ -858,7 +846,6 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
         const otherUserId = message.sender_id === userId ? message.recipient_id : message.sender_id;
         const chat = chatsMap.get(otherUserId);
         if (chat) {
-// FIX: The message object being created was missing the `recipientId` property required by the `Message` type.
             chat.messages.push({ id: message.id, senderId: message.sender_id, recipientId: message.recipient_id, text: message.content, timestamp: message.created_at });
         }
     });
@@ -875,7 +862,6 @@ export const sendMessage = async (senderId: string, recipientId: string, content
         return null;
     }
     persistenceService.markDirty();
-    // FIX: The returned object was missing the `recipientId` property required by the `Message` type.
     return { id: data.id, senderId: data.sender_id, recipientId: data.recipient_id, text: data.content, timestamp: data.created_at };
 };
 
@@ -971,7 +957,6 @@ export const getTracksByIds = async (ids: string[]): Promise<Track[]> => {
 export const addTrack = async (userId: string, title: string, artworkUrl: string, trackUrl: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.addTrack(userId, title, artworkUrl, trackUrl);
     userAppUpdatesService.logAction('ADD_TRACK', { userId, title });
-    // FIX: Corrected typo from uuidv4 to uuidvv4.
     const newTrack: Track = { id: uuidvv4(), artistId: userId, title, artworkUrl, trackUrl, duration: '3:30' }; // Mock duration
     const { error } = await supabase.rpc('add_track_to_portfolio', { dj_user_id_param: userId, new_track: newTrack as any });
     if (error) {
@@ -1136,9 +1121,7 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
     const authorsMap = new Map((authorsData || []).map(a => [a.user_id, a]));
     
     // Step 5: Join the data in the client
-    return reviewsData.map(review => {
-// FIX: Cast `author` to `any` to resolve properties not existing on type `unknown`.
-// This matches the pattern used in `getCommentsForPost` for handling related data.
+    return (reviewsData.map(review => {
         const author: any = authorsMap.get(review.reviewer_id);
         if (!author) return null; // Should not happen, but defensive
         
@@ -1147,8 +1130,6 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
             authorId: review.reviewer_id,
             targetId: review.reviewee_id,
             rating: review.rating,
-            // FIX: Replaced conditional spreading with explicit undefined assignment for optional properties.
-            // This resolves a subtle TypeScript type inference error when using a type predicate in the subsequent .filter().
             comment: review.comment || undefined,
             timestamp: review.created_at,
             gigId: review.gig_id || undefined,
@@ -1159,9 +1140,7 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
                 role: author.user_type as Role,
             },
         };
-// FIX: A subtle TypeScript error was causing issues with type predicates.
-// Replacing the type predicate with a standard filter and a type assertion is a robust workaround.
-    }).filter(Boolean) as EnrichedReview[];
+    }).filter(Boolean) as EnrichedReview[]);
 };
 
 export const submitReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>): Promise<Review | null> => {
@@ -1314,7 +1293,6 @@ export const searchUsers = async (query: string): Promise<UserProfile[]> => {
 export const createDjProfile = async (userId: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return true; // In demo, profiles are pre-made
     userAppUpdatesService.logAction('CREATE_DJ_PROFILE', { userId });
-    // FIX: Changed 'bio' to 'description' to match the actual database schema.
     const { error } = await supabase.from('app_e255c3cdb5_dj_profiles').upsert({ user_id: userId, genres: ['Electronic'], description: 'Newly joined DJ! Please update your bio.', location: 'Cape Town', tier: Tier.Bronze }, { onConflict: 'user_id' });
     if (error) console.error("Error self-healing DJ profile:", error);
     else persistenceService.markDirty();

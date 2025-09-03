@@ -1,5 +1,6 @@
 
 
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
@@ -66,7 +67,6 @@ export const AddTrackModal: React.FC<AddTrackModalProps> = ({ isOpen, onClose, o
             onClose();
         } catch (error) {
             console.error(error);
-            // FIX: Provide more specific user feedback for common RLS errors.
             let message = "Failed to add track. Please check the console for details.";
             if (error instanceof Error && error.message.includes('security policy')) {
                 message = 'Track upload failed due to a storage permission issue. Please contact support.';
@@ -112,11 +112,4 @@ export const AddTrackModal: React.FC<AddTrackModalProps> = ({ isOpen, onClose, o
                         </div>
                     </div>
                     
-                    <button type="submit" disabled={isSubmitting} className="w-full p-3 bg-lime-400 text-black font-bold rounded-lg hover:bg-lime-300 transition-colors disabled:bg-zinc-600">
-                        {isSubmitting ? <Spinner /> : 'Upload Track'}
-                    </button>
-                </form>
-            </div>
-        </div>
-    );
-};
+                    <button type="submit" disabled={isSubmitting} className="w-full p-3 bg-lime-400 text-black font-bold rounded
