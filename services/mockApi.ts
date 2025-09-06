@@ -60,23 +60,40 @@ const PROFILE_QUERY_STRING = '*, dj_profiles:app_e255c3cdb5_dj_profiles(*), busi
 // SECTION: Notification Service
 // =================================================================
 
+const getNotificationTitle = (type: NotificationType): string => {
+    switch (type) {
+        case NotificationType.Message: return "New Message";
+        case NotificationType.BookingRequest: return "New Gig Interest";
+        case NotificationType.EventUpdate: return "Event Updated";
+        case NotificationType.NewFollower: return "New Follower";
+        case NotificationType.BookingConfirmed: return "Booking Confirmed";
+        case NotificationType.GigFilled: return "Gig Filled";
+        case NotificationType.NewReview: return "New Review";
+        case NotificationType.NewComment: return "New Comment on Your Post";
+        case NotificationType.Repost: return "Your Post was Reposted";
+        default: return "New Notification";
+    }
+}
+
 const createNotification = async (
     userId: string,
     type: NotificationType,
-    text: string,
+    message: string,
     relatedId?: string
 ): Promise<void> => {
     if (isDemoModeEnabled()) {
-        await demoApi.createNotification(userId, type, text, relatedId);
+        await demoApi.createNotification(userId, type, message, relatedId);
         return;
     }
     
+    const title = getNotificationTitle(type);
+
     const { error } = await supabase.from('app_e255c3cdb5_notifications').insert({
         user_id: userId,
-        type: type,
-        text: text,
+        notification_type: type,
+        title: title,
+        message: message,
         related_id: relatedId,
-        timestamp: new Date().toISOString(),
     });
     if (error) {
         console.error('Error creating notification:', error);
@@ -230,26 +247,51 @@ export const getDemoUserByRole = async (role: Role): Promise<UserProfile | null>
 export const getUserById = async (userId: string): Promise<UserProfile | undefined> => {
     if (isDemoModeEnabled()) return demoApi.getUserById(userId);
 
-    const { data, error } = await supabase
+    // Fetch base profile first
+    const { data: profileData, error: profileError } = await supabase
         .from('app_e255c3cdb5_user_profiles')
-        .select(PROFILE_QUERY_STRING)
+        .select('*')
         .eq('user_id', userId)
         .maybeSingle();
     
-    if (error || !data) {
-        if (error) console.error('Error fetching user profile:', error);
+    if (profileError || !profileData) {
+        if (profileError) console.error('Error fetching user profile (base):', profileError.message, profileError);
         return undefined;
     }
 
+    // Sequentially fetch role-specific profile details
+    const role = profileData.user_type as Role;
+    let djProfileData: DjProfileRow | null = null;
+    let businessProfileData: BusinessProfileRow | null = null;
+
+    if (role === Role.DJ) {
+        const { data, error } = await supabase.from('app_e255c3cdb5_dj_profiles').select('*').eq('user_id', userId).maybeSingle();
+        if (error) console.error('Error fetching DJ profile details:', error.message, error);
+        djProfileData = data;
+    } else if (role === Role.Business) {
+        const { data, error } = await supabase.from('app_e255c3cdb5_business_profiles').select('*').eq('user_id', userId).maybeSingle();
+        if (error) console.error('Error fetching Business profile details:', error.message, error);
+        businessProfileData = data;
+    }
+
+    // Manually construct the object shape that mapJoinedDataToUserProfile expects
+    const combinedData = {
+        ...profileData,
+        dj_profiles: djProfileData,
+        business_profiles: businessProfileData,
+    };
+
+    // Fetch follow stats
     const [followersResult, followingResult] = await Promise.all([
         supabase.from('app_e255c3cdb5_follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
         supabase.from('app_e255c3cdb5_follows').select('following_id').eq('follower_id', userId),
     ]);
 
-    const user = mapJoinedDataToUserProfile(data as any);
+    const user = mapJoinedDataToUserProfile(combinedData as any);
     user.followers = followersResult.count ?? 0;
     user.following = (followingResult.data || []).map((f) => f.following_id);
 
+    // Enrich with review data
     if (user.role === Role.DJ || user.role === Role.Business || user.role === Role.Listener) {
         const reviews = await getReviewsForUser(userId);
         const reviewsCount = reviews.length;
@@ -1007,7 +1049,7 @@ export const getTracksForDj = async (djUserId: string): Promise<Track[]> => {
     if (isDemoModeEnabled()) return demoApi.getTracksForDj(djUserId);
     const { data, error } = await supabase.from('app_e255c3cdb5_dj_profiles').select('portfolio_tracks').eq('user_id', djUserId).maybeSingle();
     if (error || !data) {
-        if(error) console.error('Error fetching tracks for DJ:', error);
+        if(error && error.code !== 'PGRST116') console.error('Error fetching tracks for DJ:', error);
         return [];
     }
     return (data.portfolio_tracks as unknown as Track[] || []).filter(Boolean);
@@ -1212,7 +1254,7 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
         .eq('reviewee_id', revieweeId);
         
     if (reviewsError || !reviewsData || reviewsData.length === 0) {
-        if (reviewsError) console.error("Error fetching reviews:", reviewsError);
+        if (reviewsError) console.error("Error fetching reviews:", reviewsError.message, reviewsError);
         return [];
     }
     
@@ -1226,7 +1268,7 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
         .in('user_id', authorIds);
         
     if (authorsError) {
-        console.error("Error fetching review authors:", authorsError);
+        console.error("Error fetching review authors:", authorsError.message, authorsError);
         return [];
     }
     
@@ -1370,14 +1412,15 @@ export const endStreamSession = async (sessionId: string): Promise<boolean> => {
 export const getNotifications = async (userId: string): Promise<Notification[]> => {
     if (isDemoModeEnabled()) return demoApi.getNotifications(userId);
     const { data, error } = await supabase.from('app_e255c3cdb5_notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-    if (error) console.error('Error fetching notifications:', error);
+    if (error) console.error('Error fetching notifications:', error.message, error);
     return ((data || []) as NotificationRow[]).map(n => ({
         id: n.id,
         userId: n.user_id,
-        type: n.type as NotificationType,
-        text: n.text,
-        timestamp: n.timestamp,
-        read: n.is_read,
+        type: n.notification_type as NotificationType,
+        title: n.title,
+        message: n.message,
+        timestamp: n.created_at,
+        read: n.is_read ?? false,
         relatedId: n.related_id || undefined,
     }));
 };

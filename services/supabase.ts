@@ -404,31 +404,31 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
-          type: string;
-          text: string;
-          timestamp: string;
-          is_read: boolean;
+          title: string;
+          message: string;
+          notification_type: string;
           related_id: string | null;
+          is_read: boolean | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
-          type: string;
-          text: string;
-          timestamp: string;
-          is_read?: boolean;
+          title: string;
+          message: string;
+          notification_type: string;
           related_id?: string | null;
+          is_read?: boolean | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           user_id?: string;
-          type?: string;
-          text?: string;
-          timestamp?: string;
-          is_read?: boolean;
+          title?: string;
+          message?: string;
+          notification_type?: string;
           related_id?: string | null;
+          is_read?: boolean | null;
           created_at?: string;
         };
         Relationships: [];

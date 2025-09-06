@@ -81,8 +81,9 @@ export const Notifications = () => {
                         <Link to={getLinkForNotification(notif)} key={notif.id} className={`p-4 flex gap-4 hover:bg-zinc-800 transition-colors ${!notif.read ? 'bg-lime-900/40' : ''}`}>
                             <NotificationIcon type={notif.type} />
                             <div className="flex-1">
-                                <p className="text-zinc-200">{notif.text}</p>
-                                <p className="text-xs text-zinc-400 mt-1">{notif.timestamp}</p>
+                                <p className="font-bold text-white">{notif.title}</p>
+                                <p className="text-zinc-300">{notif.message}</p>
+                                <p className="text-xs text-zinc-400 mt-1">{new Date(notif.timestamp).toLocaleString()}</p>
                             </div>
                         </Link>
                     )) : <p className="text-center text-zinc-500 pt-20">No notifications yet.</p>}

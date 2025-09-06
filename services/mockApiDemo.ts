@@ -1,4 +1,5 @@
 
+
 import { DJ, Business, Gig, Track, Playlist, Role, UserProfile, Notification, Message, Review, FeedItem, Comment as PostComment, User, EnrichedReview, EnrichedComment, StreamSession, UserSettings, EnrichedChat, Chat, Tier, Listener, NotificationType } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -104,25 +105,41 @@ let REVIEWS: EnrichedReview[] = [
 ];
 
 export let NOTIFICATIONS: Notification[] = [
-    { id: 'notif-1', userId: 'dj-1', type: NotificationType.NewFollower, text: 'RaveRaccoon started following you.', timestamp: '1 day ago', read: false, relatedId: 'listener-1' },
-    { id: 'notif-2', userId: 'dj-2', type: NotificationType.BookingRequest, text: 'Sunset Terrace has a new gig available that matches your profile.', timestamp: '2 days ago', read: true, relatedId: 'gig-2' },
+    { id: 'notif-1', userId: 'dj-1', type: NotificationType.NewFollower, title: 'New Follower', message: 'RaveRaccoon started following you.', timestamp: '1 day ago', read: false, relatedId: 'listener-1' },
+    { id: 'notif-2', userId: 'dj-2', type: NotificationType.BookingRequest, title: 'New Gig Opportunity', message: 'Sunset Terrace has a new gig available that matches your profile.', timestamp: '2 days ago', read: true, relatedId: 'gig-2' },
 ];
 
 // =================================================================
 // SECTION: API Function Implementations
 // =================================================================
 
+const getNotificationTitle = (type: NotificationType): string => {
+    switch (type) {
+        case NotificationType.Message: return "New Message";
+        case NotificationType.BookingRequest: return "New Gig Interest";
+        case NotificationType.EventUpdate: return "Event Updated";
+        case NotificationType.NewFollower: return "New Follower";
+        case NotificationType.BookingConfirmed: return "Booking Confirmed";
+        case NotificationType.GigFilled: return "Gig Filled";
+        case NotificationType.NewReview: return "New Review";
+        case NotificationType.NewComment: return "New Comment on Your Post";
+        case NotificationType.Repost: return "Your Post was Reposted";
+        default: return "New Notification";
+    }
+}
+
 export const createNotification = async (
     userId: string,
     type: NotificationType,
-    text: string,
+    message: string,
     relatedId?: string
 ): Promise<void> => {
     NOTIFICATIONS.unshift({
         id: uuidv4(),
         userId,
         type,
-        text,
+        title: getNotificationTitle(type),
+        message,
         relatedId,
         timestamp: new Date().toISOString(),
         read: false,

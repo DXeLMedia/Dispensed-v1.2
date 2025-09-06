@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, Role, DJ, Business, Notification, UserSettings, Listener, UserProfile, NotificationType } from '../types';
 import * as api from '../services/mockApi';
@@ -35,14 +36,14 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Define the shape of the notification row from the database
+// Define the shape of the notification row from the database, matching the screenshot
 type NotificationRow = {
   id: string;
   user_id: string;
-  type: string;
-  text: string;
-  timestamp: string;
-  is_read: boolean;
+  title: string;
+  message: string;
+  notification_type: string;
+  is_read: boolean | null;
   related_id: string | null;
   created_at: string;
 };
@@ -178,14 +179,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 const appNotif: Notification = {
                     id: newNotif.id,
                     userId: newNotif.user_id,
-                    type: newNotif.type as NotificationType,
-                    text: newNotif.text,
-                    timestamp: newNotif.timestamp,
-                    read: newNotif.is_read,
+                    type: newNotif.notification_type as NotificationType,
+                    title: newNotif.title,
+                    message: newNotif.message,
+                    timestamp: newNotif.created_at,
+                    read: newNotif.is_read ?? false,
                     relatedId: newNotif.related_id || undefined,
                 };
 
-                showToast(appNotif.text, 'success');
+                showToast(appNotif.message, 'success');
                 refreshNotifications();
             }
         )

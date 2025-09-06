@@ -1,6 +1,8 @@
 
 
 
+
+
 export enum Role {
   DJ = 'dj',
   Business = 'business',
@@ -144,7 +146,8 @@ export interface Notification {
   id: string;
   userId: string;
   type: NotificationType;
-  text: string;
+  title: string;
+  message: string;
   timestamp: string;
   read: boolean;
   relatedId?: string; // e.g., messageId, gigId, postId
