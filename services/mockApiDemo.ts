@@ -103,7 +103,7 @@ let REVIEWS: EnrichedReview[] = [
     { id: 'rev-1', authorId: 'listener-1', targetId: 'dj-1', rating: 5, comment: 'DJ Helix never disappoints. Best techno DJ in town!', timestamp: '1 week ago', gigId: 'gig-3', author: USERS.find(u => u.id === 'listener-1')! }
 ];
 
-let NOTIFICATIONS: Notification[] = [
+export let NOTIFICATIONS: Notification[] = [
     { id: 'notif-1', userId: 'dj-1', type: NotificationType.NewFollower, text: 'RaveRaccoon started following you.', timestamp: '1 day ago', read: false, relatedId: 'listener-1' },
     { id: 'notif-2', userId: 'dj-2', type: NotificationType.BookingRequest, text: 'Sunset Terrace has a new gig available that matches your profile.', timestamp: '2 days ago', read: true, relatedId: 'gig-2' },
 ];
@@ -111,6 +111,24 @@ let NOTIFICATIONS: Notification[] = [
 // =================================================================
 // SECTION: API Function Implementations
 // =================================================================
+
+export const createNotification = async (
+    userId: string,
+    type: NotificationType,
+    text: string,
+    relatedId?: string
+): Promise<void> => {
+    NOTIFICATIONS.unshift({
+        id: uuidv4(),
+        userId,
+        type,
+        text,
+        relatedId,
+        timestamp: new Date().toISOString(),
+        read: false,
+    });
+    return Promise.resolve();
+};
 
 export const getDemoUserByRole = async (role: Role): Promise<UserProfile | null> => {
     return Promise.resolve(USERS.find(u => u.role === role) || null);

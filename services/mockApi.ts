@@ -57,6 +57,34 @@ type GigRow = Database['public']['Tables']['app_e255c3cdb5_gigs']['Row'];
 const PROFILE_QUERY_STRING = '*, dj_profiles:app_e255c3cdb5_dj_profiles(*), business_profiles:app_e255c3cdb5_business_profiles(*)';
 
 // =================================================================
+// SECTION: Notification Service
+// =================================================================
+
+const createNotification = async (
+    userId: string,
+    type: NotificationType,
+    text: string,
+    relatedId?: string
+): Promise<void> => {
+    if (isDemoModeEnabled()) {
+        await demoApi.createNotification(userId, type, text, relatedId);
+        return;
+    }
+    
+    const { error } = await supabase.from('app_e255c3cdb5_notifications').insert({
+        user_id: userId,
+        type: type,
+        text: text,
+        related_id: relatedId,
+        timestamp: new Date().toISOString(),
+    });
+    if (error) {
+        console.error('Error creating notification:', error);
+    }
+};
+
+
+// =================================================================
 // SECTION: Storage Service
 // =================================================================
 
@@ -404,6 +432,17 @@ export const followUser = async (currentUserId: string, targetUserId: string): P
         return false;
     }
     persistenceService.markDirty();
+
+    // Create notification
+    const follower = await getUserById(currentUserId);
+    if (follower) {
+        await createNotification(
+            targetUserId,
+            NotificationType.NewFollower,
+            `${follower.name} started following you.`,
+            currentUserId
+        );
+    }
     return true;
 }
 
@@ -527,6 +566,18 @@ export const expressInterestInGig = async (gigId: string, djUserId: string): Pro
         return false;
     }
     persistenceService.markDirty();
+
+    // Create notification
+    const dj = await getDJById(djUserId);
+    const gig = await getGigById(gigId);
+    if (dj && gig) {
+        await createNotification(
+            gig.business_user_id,
+            NotificationType.BookingRequest,
+            `${dj.name} is interested in your gig: "${gig.title}".`,
+            gigId
+        );
+    }
     return true;
 };
 
@@ -566,6 +617,30 @@ export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: 
     }
     
     persistenceService.markDirty();
+
+    // Create notifications
+    const business = await getBusinessById(gig.business_user_id);
+    if (business) {
+        // For the booked DJ
+        await createNotification(
+            djUserId,
+            NotificationType.BookingConfirmed,
+            `You've been booked for "${gig.title}" by ${business.name}!`,
+            gigId
+        );
+        // For unsuccessful applicants
+        const interestedDJs = await getInterestedDJsForGig(gigId);
+        for (const dj of interestedDJs) {
+            if (dj.id !== djUserId) {
+                 await createNotification(
+                    dj.id,
+                    NotificationType.GigFilled,
+                    `The gig "${gig.title}" has been filled. Better luck next time!`,
+                    gigId
+                );
+            }
+        }
+    }
     return true;
 };
 
@@ -735,13 +810,27 @@ export const repost = async (originalPostId: string, userId: string): Promise<Fe
         return null;
     }
 
-    return addFeedItem({
+    const newPost = await addFeedItem({
         userId,
         type: 'user_post',
         title: '',
         description: '',
         repostOf: originalPostId,
     });
+
+    // Create notification
+    if (newPost) {
+        const reposter = await getUserById(userId);
+        if (reposter && originalPost.userId !== userId) {
+            await createNotification(
+                originalPost.userId,
+                NotificationType.Repost,
+                `${reposter.name} reposted your post.`,
+                originalPostId
+            );
+        }
+    }
+    return newPost;
 };
 
 export const getCommentsForPost = async (postId: string): Promise<EnrichedComment[]> => {
@@ -784,6 +873,18 @@ export const addCommentToPost = async (postId: string, userId: string, content: 
     if (!author) return null;
     
     persistenceService.markDirty();
+
+    // Create notification
+    const post = await getFeedItemById(postId);
+    if (post && post.userId !== userId) { // Don't notify on self-comment
+        await createNotification(
+            post.userId,
+            NotificationType.NewComment,
+            `${author.name} commented on your post.`,
+            postId
+        );
+    }
+
     return { id: data.id, postId, authorId: userId, text: data.content, timestamp: data.created_at, author };
 };
 
@@ -862,6 +963,18 @@ export const sendMessage = async (senderId: string, recipientId: string, content
         return null;
     }
     persistenceService.markDirty();
+
+    // Create notification
+    const sender = await getUserById(senderId);
+    if (sender) {
+        await createNotification(
+            recipientId,
+            NotificationType.Message,
+            `${sender.name} sent you a message.`,
+            senderId // The "chatId" in this app is the other user's ID
+        );
+    }
+
     return { id: data.id, senderId: data.sender_id, recipientId: data.recipient_id, text: data.content, timestamp: data.created_at };
 };
 
@@ -1173,7 +1286,7 @@ export const submitReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>)
         }
     }
     
-    // After successful review submission, create a feed item.
+    // After successful review submission, create a feed item and notification.
     try {
         const [author, target] = await Promise.all([
             getUserById(reviewData.authorId),
@@ -1191,6 +1304,12 @@ export const submitReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>)
                 // Link the feed item back to the review itself.
                 relatedId: data.id, 
             });
+            await createNotification(
+                reviewData.targetId,
+                NotificationType.NewReview,
+                `${author.name} left a ${reviewData.rating}-star review for you.`,
+                target.id // Link to their own profile
+            );
         } else {
              console.warn("Could not create review feed item: author or target user not found.");
         }

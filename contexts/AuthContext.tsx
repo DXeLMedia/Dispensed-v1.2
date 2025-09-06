@@ -1,10 +1,12 @@
+
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { User, Role, DJ, Business, Notification, UserSettings, Listener, UserProfile } from '../types';
+import { User, Role, DJ, Business, Notification, UserSettings, Listener, UserProfile, NotificationType } from '../types';
 import * as api from '../services/mockApi';
 import { useMediaPlayer } from './MediaPlayerContext';
 import { supabase } from '../services/supabaseClient';
 import { userAppUpdatesService } from '../services/userAppUpdatesService';
 import { useDemoMode } from '../hooks/useDemoMode';
+import { usePersistence } from '../hooks/usePersistence';
 
 type FullUser = User | DJ | Business | Listener;
 
@@ -33,6 +35,18 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Define the shape of the notification row from the database
+type NotificationRow = {
+  id: string;
+  user_id: string;
+  type: string;
+  text: string;
+  timestamp: string;
+  is_read: boolean;
+  related_id: string | null;
+  created_at: string;
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<FullUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +55,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { closePlayer } = useMediaPlayer();
   const [theme, setTheme] = useState<UserSettings['theme']>('electric_blue');
   const { isDemoMode } = useDemoMode();
+  const { showToast } = usePersistence();
 
   const refreshNotifications = useCallback(async () => {
     if (user) {
@@ -141,6 +156,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return () => subscription.unsubscribe();
   }, [isDemoMode, fetchUserProfile, user, logout]);
+
+  // Real-time notification listener
+  useEffect(() => {
+    if (isDemoMode || !user) {
+        return;
+    }
+
+    const channel = supabase
+        .channel(`notifications:${user.id}`)
+        .on<NotificationRow>(
+            'postgres_changes',
+            {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'app_e255c3cdb5_notifications',
+                filter: `user_id=eq.${user.id}`,
+            },
+            (payload) => {
+                const newNotif = payload.new;
+                const appNotif: Notification = {
+                    id: newNotif.id,
+                    userId: newNotif.user_id,
+                    type: newNotif.type as NotificationType,
+                    text: newNotif.text,
+                    timestamp: newNotif.timestamp,
+                    read: newNotif.is_read,
+                    relatedId: newNotif.related_id || undefined,
+                };
+
+                showToast(appNotif.text, 'success');
+                refreshNotifications();
+            }
+        )
+        .subscribe();
+
+    return () => {
+        supabase.removeChannel(channel);
+    };
+}, [user, isDemoMode, showToast, refreshNotifications]);
 
 
   useEffect(() => {

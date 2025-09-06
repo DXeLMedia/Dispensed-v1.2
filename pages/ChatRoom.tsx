@@ -1,8 +1,4 @@
 
-
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as api from '../services/mockApi';
@@ -11,10 +7,20 @@ import { Chat, Message, User } from '../types';
 import { PageSpinner, Spinner } from '../components/Spinner';
 import { IconArrowLeft, IconSend, IconPaperclip, IconSmile } from '../constants';
 import { Avatar } from '../components/Avatar';
+import { supabase } from '../services/supabaseClient';
 
 interface EnrichedChatWithParticipant extends Chat {
     otherParticipant: User;
 }
+
+// Define the shape of the message row from the database
+type MessageRow = {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  content: string;
+  created_at: string;
+};
 
 const Header = ({ user, onBack }: { user: User, onBack: () => void }) => (
     <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm p-4 flex items-center border-b border-zinc-800">
@@ -53,20 +59,66 @@ export const ChatRoom = () => {
             return;
         }
 
-        api.getChatById(chatId).then(data => {
-            if (data && data.participants.includes(currentUser.id)) {
-                const otherId = data.participants.find(p => p !== currentUser.id)!;
-                api.getUserById(otherId).then(otherUser => {
-                    if(otherUser) {
-                        setChat({ ...data, otherParticipant: otherUser });
-                    }
-                     setLoading(false);
+        const fetchChatData = async () => {
+            setLoading(true);
+            const enrichedChats = await api.getEnrichedChatsForUser(currentUser.id);
+            const currentChat = enrichedChats.find(c => c.id === chatId);
+
+            if (currentChat) {
+                setChat({
+                    id: currentChat.id,
+                    participants: currentChat.participants,
+                    messages: currentChat.messages,
+                    otherParticipant: currentChat.otherParticipant,
                 });
-            } else {
-                 setLoading(false);
             }
-        });
+            setLoading(false);
+        }
+        fetchChatData();
+
     }, [chatId, currentUser, navigate]);
+    
+    // Real-time message listener
+    useEffect(() => {
+        if (!chat || !currentUser) return;
+    
+        const channel = supabase
+            .channel(`messages:${currentUser.id}:${chat.id}`)
+            .on<MessageRow>(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'app_e255c3cdb5_messages',
+                    filter: `or(and(sender_id.eq.${currentUser.id},recipient_id.eq.${chat.otherParticipant.id}),and(sender_id.eq.${chat.otherParticipant.id},recipient_id.eq.${currentUser.id}))`,
+                },
+                (payload) => {
+                    const newMessageRow = payload.new;
+                    const appMessage: Message = {
+                        id: newMessageRow.id,
+                        senderId: newMessageRow.sender_id,
+                        recipientId: newMessageRow.recipient_id,
+                        text: newMessageRow.content,
+                        timestamp: newMessageRow.created_at,
+                    };
+
+                    // Only add the message if it's from the other participant to avoid duplicates
+                    if (appMessage.senderId !== currentUser.id) {
+                        setChat(prev => {
+                            if (!prev || prev.messages.some(m => m.id === appMessage.id)) {
+                                return prev;
+                            }
+                            return { ...prev, messages: [...prev.messages, appMessage] };
+                        });
+                    }
+                }
+            )
+            .subscribe();
+    
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [chat, currentUser]);
 
      useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -77,11 +129,32 @@ export const ChatRoom = () => {
         if (!newMessage.trim() || !chatId || !currentUser || !chat) return;
 
         setSending(true);
-        const sentMessage = await api.sendMessage(currentUser.id, chat.otherParticipant.id, newMessage.trim());
+        // Optimistic update
+        const tempId = `temp_${Date.now()}`;
+        const optimisticMessage: Message = {
+            id: tempId,
+            senderId: currentUser.id,
+            recipientId: chat.otherParticipant.id,
+            text: newMessage.trim(),
+            timestamp: new Date().toISOString(),
+        };
+        setChat(prev => prev ? { ...prev, messages: [...prev.messages, optimisticMessage] } : null);
+        setNewMessage('');
         
+        const sentMessage = await api.sendMessage(currentUser.id, chat.otherParticipant.id, optimisticMessage.text);
+        
+        // Replace optimistic message with real one from the server
         if (sentMessage && chat) {
-            setChat(prev => prev ? { ...prev, messages: [...prev.messages, sentMessage] } : null);
-            setNewMessage('');
+            setChat(prev => prev ? {
+                ...prev,
+                messages: prev.messages.map(m => m.id === tempId ? sentMessage : m)
+            } : null);
+        } else {
+            // Revert on failure
+            setChat(prev => prev ? {
+                ...prev,
+                messages: prev.messages.filter(m => m.id !== tempId)
+            } : null);
         }
         setSending(false);
     };

@@ -112,11 +112,4 @@ export const AddTrackModal: React.FC<AddTrackModalProps> = ({ isOpen, onClose, o
                         </div>
                     </div>
                     
-                    <button type="submit" disabled={isSubmitting} className="w-full p-3 bg-lime-400 text-black font-bold rounded-lg hover:bg-lime-300 transition-colors disabled:bg-zinc-600">
-                        {isSubmitting ? <Spinner /> : 'Upload Track'}
-                    </button>
-                </form>
-            </div>
-        </div>
-    );
-};
+                    <button type="submit" disabled={isSubmitting} className="w-full p-3 bg-lime-400 text-black font-bold rounded
