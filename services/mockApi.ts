@@ -1005,7 +1005,7 @@ export const getChatById = async (chatId: string): Promise<Chat | null> => {
 // =================================================================
 export const getTracksForDj = async (djUserId: string): Promise<Track[]> => {
     if (isDemoModeEnabled()) return demoApi.getTracksForDj(djUserId);
-    const { data, error } = await supabase.from('app_e255c3cdb5_dj_profiles').select('portfolio_tracks').eq('user_id', djUserId).single();
+    const { data, error } = await supabase.from('app_e255c3cdb5_dj_profiles').select('portfolio_tracks').eq('user_id', djUserId).maybeSingle();
     if (error || !data) {
         if(error) console.error('Error fetching tracks for DJ:', error);
         return [];

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as api from '../services/mockApi';
 import { useAuth } from '../hooks/useAuth';
-import { Chat, Message, User } from '../types';
+import { Chat, Message, User, EnrichedChat } from '../types';
 import { PageSpinner, Spinner } from '../components/Spinner';
 import { IconArrowLeft, IconSend, IconPaperclip, IconSmile } from '../constants';
 import { Avatar } from '../components/Avatar';
@@ -62,7 +62,27 @@ export const ChatRoom = () => {
         const fetchChatData = async () => {
             setLoading(true);
             const enrichedChats = await api.getEnrichedChatsForUser(currentUser.id);
-            const currentChat = enrichedChats.find(c => c.id === chatId);
+            let currentChat: EnrichedChat | undefined | null = enrichedChats.find(c => c.id === chatId);
+
+            // If chat is not found (i.e., it's a new, empty chat), create a virtual one.
+            if (!currentChat) {
+                const otherParticipant = await api.getUserById(chatId);
+                if (otherParticipant) {
+                    // The User type is a subset of UserProfile, so this is safe.
+                    const otherParticipantAsUser: User = {
+                        id: otherParticipant.id,
+                        name: otherParticipant.name,
+                        avatarUrl: otherParticipant.avatarUrl,
+                        role: otherParticipant.role,
+                    };
+                    currentChat = {
+                        id: otherParticipant.id,
+                        participants: [currentUser.id, otherParticipant.id],
+                        messages: [],
+                        otherParticipant: otherParticipantAsUser,
+                    };
+                }
+            }
 
             if (currentChat) {
                 setChat({
