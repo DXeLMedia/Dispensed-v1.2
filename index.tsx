@@ -6,6 +6,16 @@ import { MediaPlayerProvider } from './contexts/MediaPlayerContext';
 import { PersistenceProvider } from './contexts/PersistenceContext';
 import { DemoModeProvider } from './contexts/DemoModeContext';
 
+// CORS fix
+try {
+  const res = await fetch(
+    "https://ivhqfwktgaoktdxqznhx.supabase.co/functions/v1/cors-proxy"
+  );
+  await res.text(); // now CORS‑allowed
+} catch (error) {
+  console.warn('CORS proxy fetch failed, this might cause issues with Supabase Storage.', error);
+}
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
