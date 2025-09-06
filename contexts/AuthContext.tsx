@@ -1,5 +1,3 @@
-
-
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, Role, DJ, Business, Notification, UserSettings, Listener, UserProfile, NotificationType } from '../types';
 import * as api from '../services/mockApi';
@@ -47,6 +45,29 @@ type NotificationRow = {
   related_id: string | null;
   created_at: string;
 };
+
+const callCorsProxy = async (accessToken: string) => {
+  try {
+    const resp = await fetch(
+      "https://ivhqfwktgaoktdxqznhx.supabase.co/functions/v1/cors-proxy",
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+    if (!resp.ok) {
+        console.error(`CORS proxy call failed with status ${resp.status}: ${await resp.text()}`);
+    } else {
+        await resp.text(); // Consume the body
+        console.log('Authenticated CORS proxy call successful.');
+    }
+  } catch (error) {
+      console.warn('Authenticated CORS proxy fetch failed', error);
+  }
+};
+
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<FullUser | null>(null);
@@ -137,6 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Run once on mount to get current session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (session) {
+            await callCorsProxy(session.access_token);
             const profile = await fetchUserProfile(session.user);
             setUser(profile);
         }
@@ -149,6 +171,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (event === 'SIGNED_OUT') {
             setUser(null);
         } else if (session && (!user || user.id !== session.user.id)) {
+            await callCorsProxy(session.access_token);
             const profile = await fetchUserProfile(session.user);
             setUser(profile);
         }

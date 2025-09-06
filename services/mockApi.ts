@@ -96,7 +96,14 @@ const createNotification = async (
         related_id: relatedId,
     });
     if (error) {
-        console.error('Error creating notification:', error);
+        if (error.code === '42501') {
+             console.error(
+                `Error creating notification due to a database security policy. This is likely a misconfigured Row Level Security (RLS) policy on the 'app_e255c3cdb5_notifications' table. The policy may be preventing the current user from creating a notification for another user (ID: ${userId}). Please check the RLS policies in your Supabase dashboard.`,
+                error
+            );
+        } else {
+            console.error('Error creating notification:', error);
+        }
     }
 };
 
@@ -1023,7 +1030,7 @@ export const sendMessage = async (senderId: string, recipientId: string, content
 export const findChatByParticipants = async (userId1: string, userId2: string): Promise<Chat | null> => {
   if (isDemoModeEnabled()) return demoApi.findChatByParticipants(userId1, userId2);
   // This is a "virtual" chat find. A real implementation would have a chats table.
-  const { data, error } = await supabase.from('app_e255c3cdb5_messages').select('*').or(`(sender_id.eq.${userId1},recipient_id.eq.${userId2}),(sender_id.eq.${userId2},recipient_id.eq.${userId1})`).limit(1);
+  const { data, error } = await supabase.from('app_e255c3cdb5_messages').select('*').or(`and(sender_id.eq.${userId1},recipient_id.eq.${userId2}),and(sender_id.eq.${userId2},recipient_id.eq.${userId1})`).limit(1);
   if (error || !data || data.length === 0) return null;
   return { id: userId2, participants: [userId1, userId2], messages: [] };
 };
