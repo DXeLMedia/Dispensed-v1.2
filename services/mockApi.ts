@@ -979,16 +979,23 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
     const otherUserIds = [...new Set(messages.map((m) => m.sender_id === userId ? m.recipient_id : m.sender_id))];
     if (otherUserIds.length === 0) return [];
     
-    const { data: profiles, error: profileError } = await supabase.from('app_e255c3cdb5_user_profiles').select('user_id, display_name, avatar_url, user_type').in('user_id', otherUserIds);
+    // FIX: Join with business_profiles to get the venue_name, ensuring name consistency with getUserById.
+    const { data: profiles, error: profileError } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .select('user_id, display_name, avatar_url, user_type, business_profiles:app_e255c3cdb5_business_profiles(venue_name)')
+        .in('user_id', otherUserIds);
+        
     if (profileError || !profiles) return [];
 
     const chatsMap = new Map<string, EnrichedChat>();
     profiles.forEach((p) => {
+        // Use venue_name for businesses if available, otherwise fall back to display_name.
+        const name = (p as any).business_profiles?.venue_name || p.display_name;
         chatsMap.set(p.user_id, {
             id: p.user_id, // Using other user's ID as chat ID
             participants: [userId, p.user_id],
             messages: [],
-            otherParticipant: { id: p.user_id, name: p.display_name, avatarUrl: p.avatar_url, role: p.user_type as Role },
+            otherParticipant: { id: p.user_id, name: name, avatarUrl: p.avatar_url, role: p.user_type as Role },
         });
     });
 
@@ -1257,7 +1264,7 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
 
     // Step 1: Fetch the raw reviews
     const { data: reviewsData, error: reviewsError } = await supabase.from('app_e255c3cdb5_reviews')
-        .select('*')
+        .select('id, reviewer_id, reviewee_id, rating, comment, created_at, gig_id')
         .eq('reviewee_id', revieweeId);
         
     if (reviewsError || !reviewsData || reviewsData.length === 0) {

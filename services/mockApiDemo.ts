@@ -1,5 +1,4 @@
 
-
 import { DJ, Business, Gig, Track, Playlist, Role, UserProfile, Notification, Message, Review, FeedItem, Comment as PostComment, User, EnrichedReview, EnrichedComment, StreamSession, UserSettings, EnrichedChat, Chat, Tier, Listener, NotificationType } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -79,10 +78,12 @@ let GIGS: Gig[] = [
     { id: 'gig-1', title: 'Techno Temple ft. DJ Helix', business_user_id: 'business-1', date: '2024-09-20', time: '22:00', budget: 5000, description: 'Prepare for a night of relentless techno as resident DJ Helix takes over the main room.', genres: ['Techno', 'Minimal'], status: 'Booked', bookedDjId: 'dj-1', interestCount: 1, flyerUrl: 'https://source.unsplash.com/random/400x300/?techno,poster' },
     { id: 'gig-2', title: 'Sunset Sessions', business_user_id: 'business-2', date: '2024-09-22', time: '17:00', budget: 2000, description: 'We need a DJ to spin some deep and soulful house for our Sunday sunset session.', genres: ['Deep House', 'Soulful House'], status: 'Open', interestCount: 1, flyerUrl: 'https://source.unsplash.com/random/400x300/?sunset,cocktail' },
      { id: 'gig-3', title: 'Past Event: Warehouse Rave', business_user_id: 'business-1', date: '2024-07-15', time: '23:00', budget: 4000, description: 'Past gig.', genres: ['Techno'], status: 'Completed', bookedDjId: 'dj-1', interestCount: 10, flyerUrl: 'https://source.unsplash.com/random/400x300/?warehouse,party' },
+     { id: 'gig-4', title: 'Friday Night Grooves', business_user_id: 'business-1', date: '2024-09-27', time: '21:00', budget: 3000, description: 'Looking for a DJ who can spin some energetic deep house and afro tech.', genres: ['Deep House', 'Afro Tech'], status: 'Open', interestCount: 1, flyerUrl: 'https://source.unsplash.com/random/400x300/?dj,party' },
 ];
 
 let GIG_APPLICATIONS: {gig_id: string, dj_user_id: string}[] = [
-    { gig_id: 'gig-2', dj_user_id: 'dj-2' }
+    { gig_id: 'gig-2', dj_user_id: 'dj-2' },
+    { gig_id: 'gig-4', dj_user_id: 'dj-2' },
 ];
 
 let FEED_ITEMS: FeedItem[] = [
@@ -107,6 +108,8 @@ let REVIEWS: EnrichedReview[] = [
 export let NOTIFICATIONS: Notification[] = [
     { id: 'notif-1', userId: 'dj-1', type: NotificationType.NewFollower, title: 'New Follower', message: 'RaveRaccoon started following you.', timestamp: '1 day ago', read: false, relatedId: 'listener-1' },
     { id: 'notif-2', userId: 'dj-2', type: NotificationType.BookingRequest, title: 'New Gig Opportunity', message: 'Sunset Terrace has a new gig available that matches your profile.', timestamp: '2 days ago', read: true, relatedId: 'gig-2' },
+    { id: 'notif-3', userId: 'business-1', type: NotificationType.BookingRequest, title: 'New Gig Interest', message: 'Amelia Air is interested in your gig: "Friday Night Grooves".', timestamp: '4 hours ago', read: false, relatedId: 'gig-4' },
+    { id: 'notif-4', userId: 'business-1', type: NotificationType.NewFollower, title: 'New Follower', message: 'RaveRaccoon started following you.', timestamp: '2 days ago', read: true, relatedId: 'listener-1' },
 ];
 
 // =================================================================
@@ -352,10 +355,24 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
         if (msg.senderId === userId || msg.recipientId === userId) {
             const otherId = msg.senderId === userId ? msg.recipientId : msg.senderId;
             if (!chatsMap.has(otherId)) {
-                const otherParticipant = USERS.find(u => u.id === otherId)!;
-                chatsMap.set(otherId, { id: otherId, participants: [userId, otherId], messages: [], otherParticipant });
+                const otherParticipantProfile = USERS.find(u => u.id === otherId);
+                if (otherParticipantProfile) {
+                    // Create a plain User object to strictly conform to the EnrichedChat type.
+                    const otherParticipantAsUser: User = {
+                        id: otherParticipantProfile.id,
+                        name: otherParticipantProfile.name,
+                        role: otherParticipantProfile.role,
+                        avatarUrl: otherParticipantProfile.avatarUrl,
+                        email: otherParticipantProfile.email,
+                        settings: otherParticipantProfile.settings
+                    };
+                    chatsMap.set(otherId, { id: otherId, participants: [userId, otherId], messages: [], otherParticipant: otherParticipantAsUser });
+                }
             }
-            chatsMap.get(otherId)!.messages.push(msg);
+            const chat = chatsMap.get(otherId);
+            if (chat) {
+                chat.messages.push(msg);
+            }
         }
     });
     return Promise.resolve(Array.from(chatsMap.values()));
