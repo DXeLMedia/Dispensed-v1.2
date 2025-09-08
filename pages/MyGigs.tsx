@@ -9,7 +9,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { RatingModal } from '../components/RatingModal';
 
 interface GigCardProps {
-  gig: Gig;
+  gig: Gig & { bookedDjName?: string };
   venue?: Business;
   isHighlighted?: boolean;
   highlightedRef?: React.RefObject<HTMLDivElement>;
@@ -53,6 +53,18 @@ const GigCard: React.FC<GigCardProps> = ({ gig, venue, isHighlighted, highlighte
                     </div>
                 </div>
 
+                {(gig.status === 'Booked' || gig.status === 'Completed') && (
+                    <div className="-mt-2 mb-3 space-y-1">
+                        <p className="text-sm text-[var(--text-muted)]">
+                           Gig: <span className="font-semibold text-[var(--text-secondary)]">{gig.title}</span>
+                        </p>
+                         <p className="text-sm text-[var(--text-muted)]">
+                           DJ: <span className="font-semibold text-[var(--text-secondary)]">{gig.bookedDjName}</span>
+                        </p>
+                    </div>
+                )}
+
+
                 <div className="flex items-center gap-2 text-[var(--text-secondary)] text-sm mb-4">
                     <IconClock size={16} />
                     <span>{gig.time}</span>
@@ -66,7 +78,7 @@ const GigCard: React.FC<GigCardProps> = ({ gig, venue, isHighlighted, highlighte
                 )}
                 
                 <div className="flex justify-end items-center">
-                     <p className="font-orbitron text-xl font-bold text-[var(--accent)]">R{gig.budget.toLocaleString()}</p>
+                     <p className="font-orbitron text-xl font-bold text-[var(--accent)]">R{gig.budget}</p>
                 </div>
                 {(gig.status === 'Completed' || gig.status === 'Booked') && (
                     <div className="mt-4 pt-4 border-t border-[var(--border)]">
@@ -93,9 +105,9 @@ export const MyGigs = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
     
-    const [bookedGigs, setBookedGigs] = useState<Gig[]>([]);
+    const [bookedGigs, setBookedGigs] = useState<(Gig & { bookedDjName?: string })[]>([]);
     const [interestedGigs, setInterestedGigs] = useState<Gig[]>([]);
-    const [completedGigs, setCompletedGigs] = useState<Gig[]>([]);
+    const [completedGigs, setCompletedGigs] = useState<(Gig & { bookedDjName?: string })[]>([]);
     const [venues, setVenues] = useState<Record<string, Business>>({});
     
     const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
@@ -119,15 +131,22 @@ export const MyGigs = () => {
                 api.getInterestedGigsForDj(user.id),
                 api.getCompletedGigsForDj(user.id),
             ]);
+            
+            // For a DJ's "My Gigs" page, they are always the booked DJ.
+            const enrichWithDjName = (gigs: Gig[]): (Gig & { bookedDjName?: string })[] =>
+                gigs.map(gig => ({ ...gig, bookedDjName: user.name }));
 
-            const confirmedIds = new Set([...booked.map(g => g.id), ...completed.map(g => g.id)]);
+            const enrichedBooked = enrichWithDjName(booked);
+            const enrichedCompleted = enrichWithDjName(completed);
+
+            const confirmedIds = new Set([...enrichedBooked.map(g => g.id), ...enrichedCompleted.map(g => g.id)]);
             const pending = interested.filter(g => !confirmedIds.has(g.id));
             
-            setBookedGigs(booked);
+            setBookedGigs(enrichedBooked);
             setInterestedGigs(pending);
-            setCompletedGigs(completed);
+            setCompletedGigs(enrichedCompleted);
 
-            const allGigs = [...booked, ...pending, ...completed];
+            const allGigs = [...enrichedBooked, ...pending, ...enrichedCompleted];
             if (allGigs.length > 0) {
                 const monthStrings = [...new Set(allGigs.map(g => g.date.substring(0, 7)))].sort();
                 const latestMonth = monthStrings[monthStrings.length - 1];
@@ -175,7 +194,7 @@ export const MyGigs = () => {
         return [...new Set(monthStrings)].sort((a, b) => a.localeCompare(b));
     }, [bookedGigs, interestedGigs, completedGigs]);
 
-    const monthGigs = useMemo((): Gig[] => {
+    const monthGigs = useMemo((): (Gig & { bookedDjName?: string })[] => {
         const currentMonthString = currentMonth.toISOString().substring(0, 7);
         const allGigs = [...interestedGigs, ...bookedGigs, ...completedGigs];
         
@@ -184,7 +203,7 @@ export const MyGigs = () => {
         });
     }, [bookedGigs, interestedGigs, completedGigs, currentMonth]);
     
-    const filteredMonthGigs = useMemo((): Gig[] => {
+    const filteredMonthGigs = useMemo((): (Gig & { bookedDjName?: string })[] => {
         if (filter === 'all') return monthGigs;
         if (filter === 'confirmed') return monthGigs.filter(g => g.status === 'Booked' || g.status === 'Completed');
         if (filter === 'pending') return monthGigs.filter(g => g.status === 'Open');
@@ -233,9 +252,9 @@ export const MyGigs = () => {
         };
     }, [monthGigs, filter]);
 
-    const groupedGigs = useMemo((): Record<string, Gig[]> => {
+    const groupedGigs = useMemo((): Record<string, (Gig & { bookedDjName?: string })[]> => {
         const sorted = [...filteredMonthGigs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        return sorted.reduce<Record<string, Gig[]>>((acc, gig) => {
+        return sorted.reduce<Record<string, (Gig & { bookedDjName?: string })[]>>((acc, gig) => {
             const date = new Date(gig.date).toISOString().split('T')[0];
             if (!acc[date]) {
                 acc[date] = [];
@@ -300,7 +319,7 @@ export const MyGigs = () => {
                         <p className="text-xs text-[var(--text-secondary)]">Pending</p>
                     </div>
                     <div className="md:pl-2 col-span-1">
-                        <p className={`font-orbitron text-2xl font-bold ${stats.earningsColor}`}>R{stats.earnings.toLocaleString()}</p>
+                        <p className={`font-orbitron text-2xl font-bold ${stats.earningsColor}`}>R{stats.earnings}</p>
                         <p className="text-xs text-[var(--text-secondary)]">{stats.earningsLabel}</p>
                     </div>
                 </div>

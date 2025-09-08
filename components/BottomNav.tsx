@@ -38,7 +38,7 @@ const DJNavMobile = () => (
   <>
     <MobileNavItem to="/feed" icon={<IconHome size={22} />} label="Feed" />
     <MobileNavItem to="/gigs" icon={<IconBriefcase size={22} />} label="My Gigs" />
-    <MobileNavItem to="/discover" icon={<IconSearch size={22} />} label="Find DJs" />
+    <MobileNavItem to="/find-gigs" icon={<IconMusic size={22} />} label="Find Gigs" />
     <MobileNavItem to="/messages" icon={<IconMessages size={22} />} label="Inbox" />
     <MobileNavItem to="/profile/me" icon={<IconProfile size={22} />} label="Profile" />
   </>

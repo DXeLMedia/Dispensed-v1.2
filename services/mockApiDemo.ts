@@ -1,4 +1,3 @@
-
 import { DJ, Business, Gig, Track, Playlist, Role, UserProfile, Notification, Message, Review, FeedItem, Comment as PostComment, User, EnrichedReview, EnrichedComment, StreamSession, UserSettings, EnrichedChat, Chat, Tier, Listener, NotificationType } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -6,8 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 // SECTION: In-Memory Demo Database
 // =================================================================
 
-// FIX: Explicitly cast each object to its specific type to help TypeScript
-// correctly handle the UserProfile discriminated union.
 let USERS: UserProfile[] = [
     {
         id: 'dj-1', name: 'DJ Helix', role: Role.DJ, avatarUrl: 'https://source.unsplash.com/random/200x200/?dj,male,techno',
@@ -43,8 +40,6 @@ let USERS: UserProfile[] = [
     {
         id: 'listener-1', name: 'RaveRaccoon', role: Role.Listener, avatarUrl: 'https://source.unsplash.com/random/200x200/?raccoon,party',
         following: ['dj-1', 'dj-2', 'business-1'], followers: 42,
-        // FIX: Added missing properties 'rating' and 'reviewsCount' to conform to the Listener type,
-        // resolving a downstream type error in functions that process the USERS array.
         rating: 0,
         reviewsCount: 0,
     } as Listener
@@ -60,8 +55,6 @@ let PLAYLISTS: Playlist[] = [
     { id: 'pl-1', name: 'Hypnotic Journey', creatorId: 'dj-1', trackIds: ['track-1', 'track-2'], artworkUrl: 'https://source.unsplash.com/random/200x200/?tunnel,light' }
 ];
 
-// FIX: Refactored to use type guards for safer assignment to DJ-specific properties.
-// This resolves a TypeScript error related to assigning properties to a member of a union type array.
 // Assign tracks to DJs
 const djUser1 = USERS.find(u => u.id === 'dj-1');
 if (djUser1?.role === Role.DJ) {
@@ -190,8 +183,6 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     const userIndex = USERS.findIndex(u => u.id === userId);
     if (userIndex > -1) {
         const existingUser = USERS[userIndex];
-        // FIX: Spreading a discriminated union is tricky for TypeScript. This switch statement
-        // helps TypeScript narrow down the type of `existingUser` and safely merge the partial data.
         switch (existingUser.role) {
             case Role.DJ:
                 USERS[userIndex] = { ...existingUser, ...(data as Partial<DJ>) };
@@ -236,9 +227,6 @@ export const unfollowUser = async (currentUserId: string, targetUserId: string):
 }
 
 export const getFollowersForUser = async (userId: string): Promise<UserProfile[]> => {
-    // FIX: An explicit cast is used here because TypeScript can sometimes struggle to correctly
-    // infer the return type of array methods like .filter() when used with complex union types,
-    // leading to incorrect type assignments.
     const followers = USERS.filter(user => user.following.includes(userId));
     return Promise.resolve(followers);
 };
@@ -262,8 +250,23 @@ export const getGigById = async (id: string): Promise<Gig | undefined> => Promis
 export const getGigs = async (): Promise<Gig[]> => Promise.resolve(GIGS);
 export const getGigsForVenue = async (businessUserId: string): Promise<Gig[]> => Promise.resolve(GIGS.filter(g => g.business_user_id === businessUserId));
 export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig | null> => {
-    const newGig: Gig = { ...gigData, id: uuidv4(), status: 'Open' };
+    const newGig: Gig = { ...gigData, id: uuidv4(), status: 'Open', interestCount: 0 };
     GIGS.unshift(newGig);
+    
+    // Post to feed
+    const venue = await getBusinessById(newGig.business_user_id);
+    if (venue) {
+        await addFeedItem({
+            type: 'gig_announcement',
+            userId: newGig.business_user_id,
+            title: newGig.title,
+            description: `Now hiring DJs at ${venue.name}!`,
+            mediaUrl: newGig.flyerUrl,
+            mediaType: 'image',
+            relatedId: newGig.id
+        });
+    }
+    
     return Promise.resolve(newGig);
 }
 export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promise<Gig | null> => {
@@ -357,16 +360,7 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
             if (!chatsMap.has(otherId)) {
                 const otherParticipantProfile = USERS.find(u => u.id === otherId);
                 if (otherParticipantProfile) {
-                    // Create a plain User object to strictly conform to the EnrichedChat type.
-                    const otherParticipantAsUser: User = {
-                        id: otherParticipantProfile.id,
-                        name: otherParticipantProfile.name,
-                        role: otherParticipantProfile.role,
-                        avatarUrl: otherParticipantProfile.avatarUrl,
-                        email: otherParticipantProfile.email,
-                        settings: otherParticipantProfile.settings
-                    };
-                    chatsMap.set(otherId, { id: otherId, participants: [userId, otherId], messages: [], otherParticipant: otherParticipantAsUser });
+                    chatsMap.set(otherId, { id: otherId, participants: [userId, otherId], messages: [], otherParticipant: otherParticipantProfile });
                 }
             }
             const chat = chatsMap.get(otherId);
@@ -404,8 +398,22 @@ export const getTracksByIds = async (ids: string[]): Promise<Track[]> => Promise
 export const addTrack = async (userId: string, title: string, artworkUrl: string, trackUrl: string): Promise<boolean> => {
     const newTrack: Track = { id: uuidv4(), artistId: userId, title, artworkUrl, trackUrl, duration: `${Math.floor(Math.random()*5)+2}:${Math.floor(Math.random()*60).toString().padStart(2, '0')}`};
     TRACKS.push(newTrack);
-    const dj = USERS.find(u => u.id === userId) as DJ;
-    if (dj) dj.tracks.push(newTrack);
+    const djUser = USERS.find(u => u.id === userId);
+    if (djUser && djUser.role === Role.DJ) {
+        const dj = djUser as DJ;
+        dj.tracks.push(newTrack);
+
+        // Post to feed
+        await addFeedItem({
+            type: 'new_track',
+            userId: userId,
+            title: `${dj.name} just dropped a new track!`,
+            description: title,
+            mediaUrl: artworkUrl,
+            mediaType: 'image',
+            relatedId: newTrack.id,
+        });
+    }
     return Promise.resolve(true);
 }
 export const createPlaylist = async (playlistData: Omit<Playlist, 'id'>): Promise<Playlist | null> => {

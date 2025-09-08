@@ -1,5 +1,5 @@
 {
-  "name": "disk_onnctd-dj---cape-town-v1.2",
+  "name": "disk_onnctd-dj---cape-town-v1.2.3",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,7 +14,7 @@
     "@google/genai": "^1.13.0",
     "react-router-dom": "^7.8.0",
     "lucide-react": "^0.537.0",
-    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/supabase-js": "2.45.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

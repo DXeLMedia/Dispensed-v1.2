@@ -1,9 +1,9 @@
+
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, Role, DJ, Business, Notification, UserSettings, Listener, UserProfile, NotificationType } from '../types';
 import * as api from '../services/mockApi';
 import { useMediaPlayer } from './MediaPlayerContext';
 import { supabase } from '../services/supabaseClient';
-import { userAppUpdatesService } from '../services/userAppUpdatesService';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { usePersistence } from '../hooks/usePersistence';
 
@@ -109,16 +109,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const logout = useCallback(async () => {
-    if (!isDemoMode && user) {
-        await userAppUpdatesService.syncActions(user.id);
-    }
     closePlayer(); // Reset media player state
     if (!isDemoMode) {
         await supabase.auth.signOut();
     }
     setUser(null);
     document.documentElement.className = 'theme-dark'; // Reset to default on logout
-  }, [isDemoMode, user, closePlayer]);
+  }, [isDemoMode, closePlayer]);
 
 
   useEffect(() => {
@@ -133,7 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     // Run once on mount to get current session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }: any) => {
         if (session) {
             const profile = await fetchUserProfile(session.user);
             setUser(profile);
@@ -142,7 +139,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: any, session: any) => {
         if (isDemoMode) return; // Ignore auth changes in demo mode
         if (event === 'SIGNED_OUT') {
             setUser(null);
@@ -255,12 +252,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (isDemoMode) {
         throw new Error("Google Sign-In is disabled in Demo Mode.");
     }
+    const options: { redirectTo: string; data?: { [key: string]: any; } } = {
+      redirectTo: window.location.origin,
+    };
+    if (role) {
+      options.data = { user_type: role };
+    }
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: window.location.origin,
-        data: role ? { user_type: role } : undefined,
-      } as any,
+      options: options,
     });
     if (error) {
         throw error;

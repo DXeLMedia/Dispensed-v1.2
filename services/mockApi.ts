@@ -1,4 +1,3 @@
-
 import { supabase } from './supabaseClient';
 import * as demoApi from './mockApiDemo';
 import { 
@@ -29,7 +28,6 @@ import {
 import { v4 as uuidvv4 } from 'uuid';
 import { Database, Json } from './supabase';
 import { persistenceService } from './persistenceService';
-import { userAppUpdatesService } from './userAppUpdatesService';
 
 // =================================================================
 // SECTION: Demo Mode Router
@@ -160,6 +158,7 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
         name: data.display_name,
         avatarUrl: data.avatar_url,
         role,
+        // FIX: The 'settings' property was missing from the Supabase type definitions. It has been added.
         settings: data.settings as unknown as UserSettings,
         // These are placeholders; they will be populated by the functions calling this mapper.
         following: [],
@@ -171,17 +170,23 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
         return {
             ...baseUser,
             role: Role.DJ,
-            genres: djProfile?.genres || [],
-            bio: djProfile?.description || '',
-            location: djProfile?.location || '',
+            // FIX: Cast JSONB array types from the DB to the expected application type.
+            genres: (djProfile?.genres as string[]) || [],
+            // FIX: Corrected property name from 'description' to 'bio' to match the 'dj_profiles' table schema.
+            bio: djProfile?.bio || '',
+            // FIX: 'location' is on the main user_profiles table, not dj_profiles.
+            location: data.location || '',
             rating: djProfile?.rating || 0,
             reviewsCount: djProfile?.reviews_count || 0,
+            // FIX: Corrected property access for 'tier' and cast to the application's enum type.
             tier: (djProfile?.tier as Tier) || Tier.Bronze,
+            // FIX: Corrected property access for 'socials' and cast to the application's type.
             socials: (djProfile?.socials as any) || {},
             tracks: (djProfile?.portfolio_tracks as unknown as Track[]) || [],
             mixes: [], // Populated by getPlaylistsForDj
             experienceYears: djProfile?.experience_years ?? undefined,
-            equipmentOwned: djProfile?.equipment_owned || [],
+            // FIX: Cast JSONB array types from the DB to the expected application type.
+            equipmentOwned: (djProfile?.equipment_owned as string[]) || [],
             hourlyRate: djProfile?.hourly_rate ?? undefined,
             travelRadius: djProfile?.travel_radius ?? undefined,
             availabilitySchedule: (djProfile?.availability_schedule as string) || undefined,
@@ -191,11 +196,14 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
         return {
             ...baseUser,
             role: Role.Business,
-            name: businessProfile?.venue_name || data.display_name,
-            location: businessProfile?.location || '',
+            // FIX: Corrected property name from 'venue_name' to 'name' to match the 'business_profiles' table schema.
+            name: businessProfile?.name || data.display_name,
+            // FIX: 'location' is on the main user_profiles table, not business_profiles.
+            location: data.location || '',
             description: businessProfile?.description || '',
             rating: businessProfile?.rating || 0,
             reviewsCount: businessProfile?.reviews_count || 0,
+            // FIX: Corrected property access for 'socials' and cast to the application's type.
             socials: (businessProfile?.socials as any) || {},
         };
     } else {
@@ -209,21 +217,40 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
 }
 
 /** Maps a post row from Supabase to a FeedItem. */
-const mapPostToFeedItem = (post: PostRow, repostsCount: number = 0): FeedItem => ({
-    id: post.id,
-    userId: post.user_id,
-    title: '', // Title is not a direct column, usually derived contextually
-    description: post.content,
-    mediaUrl: post.media_url || undefined,
-    mediaType: post.media_type || undefined,
-    timestamp: post.created_at,
-    likes: post.likes_count,
-    comments: post.comments_count,
-    reposts: repostsCount,
-    relatedId: undefined, // Needs specific logic per type
-    type: (post.type as FeedItem['type']) || 'user_post',
-    repostOf: post.original_post_id || undefined,
-});
+const mapPostToFeedItem = (post: PostRow, repostsCount: number = 0): FeedItem => {
+    const item: FeedItem = {
+        id: post.id,
+        userId: post.user_id,
+        title: '',
+        description: post.content,
+        mediaUrl: post.media_url || undefined,
+        // FIX: Cast media_type from string to the specific literal types expected by the app.
+        mediaType: (post.media_type as 'image' | 'video') || undefined,
+        timestamp: post.created_at,
+        likes: post.likes_count,
+        comments: post.comments_count,
+        reposts: repostsCount,
+        // FIX: The 'related_id' property was missing from the Supabase type definitions. It has been added.
+        relatedId: post.related_id || undefined,
+        type: (post.type as FeedItem['type']) || 'user_post',
+        repostOf: post.original_post_id || undefined,
+    };
+    
+    if (item.type === 'new_review') {
+        try {
+            const reviewContent = JSON.parse(post.content);
+            item.title = reviewContent.title || '';
+            item.description = reviewContent.comment || '';
+            item.rating = reviewContent.rating || 0;
+        } catch(e) {
+            console.warn("Could not parse review content from post", post);
+            // Fallback for non-JSON content
+            item.description = post.content;
+        }
+    }
+
+    return item;
+};
 
 /** Maps a gig row from Supabase to a Gig. */
 const mapRowToGig = (gig: GigRow): Gig => ({
@@ -234,8 +261,10 @@ const mapRowToGig = (gig: GigRow): Gig => ({
     time: gig.time,
     budget: gig.budget,
     description: gig.description,
-    genres: gig.genres,
-    status: gig.status,
+    // FIX: Cast JSONB array types from the DB to the expected application type.
+    genres: (gig.genres as string[]) || [],
+    // FIX: Cast status from string to the specific literal types expected by the app.
+    status: gig.status as Gig['status'],
     bookedDjId: gig.booked_dj_id || undefined,
     interestCount: gig.interest_count || undefined,
     flyerUrl: gig.flyer_url || undefined,
@@ -400,11 +429,13 @@ export const getTopVenues = async (): Promise<Business[]> => {
 
 export const updateUserProfile = async (userId: string, data: Partial<UserProfile>): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.updateUserProfile(userId, data);
-    userAppUpdatesService.logAction('UPDATE_USER_PROFILE', { userId, data });
 
     const userProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_user_profiles']['Update'] = {};
     if (data.name !== undefined) userProfileUpdate.display_name = data.name;
     if (data.avatarUrl !== undefined) userProfileUpdate.avatar_url = data.avatarUrl;
+    // FIX: Update 'location' on the main user_profiles table, not the role-specific ones.
+    // FIX: Use 'in' operator to safely check for 'location' property, as it doesn't exist on the Listener user type.
+    if ('location' in data && data.location !== undefined) userProfileUpdate.location = data.location;
 
     // Use a PostgrestBuilder array to handle multiple potential updates
     const updatePromises: any[] = [];
@@ -417,9 +448,10 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
         const djData = data as Partial<DJ>;
         const djProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_dj_profiles']['Update'] = {};
         
-        if (djData.bio !== undefined) djProfileUpdate.description = djData.bio;
+        // FIX: Corrected property name from 'description' to 'bio'.
+        if (djData.bio !== undefined) djProfileUpdate.bio = djData.bio;
         if (djData.genres !== undefined) djProfileUpdate.genres = djData.genres;
-        if (djData.location !== undefined) djProfileUpdate.location = djData.location;
+        // FIX: The 'socials' property was missing from the Supabase type definitions. It has been added.
         if (djData.socials !== undefined) djProfileUpdate.socials = djData.socials as Json;
         if (djData.experienceYears !== undefined) djProfileUpdate.experience_years = djData.experienceYears;
         if (djData.hourlyRate !== undefined) djProfileUpdate.hourly_rate = djData.hourlyRate;
@@ -435,9 +467,10 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     if (data.role === Role.Business) {
         const businessData = data as Partial<Business>;
         const businessProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_business_profiles']['Update'] = {};
-        if (businessData.name !== undefined) businessProfileUpdate.venue_name = businessData.name;
+        // FIX: Corrected property name from 'venue_name' to 'name'.
+        if (businessData.name !== undefined) businessProfileUpdate.name = businessData.name;
         if (businessData.description !== undefined) businessProfileUpdate.description = businessData.description;
-        if (businessData.location !== undefined) businessProfileUpdate.location = businessData.location;
+        // FIX: The 'socials' property was missing from the Supabase type definitions. It has been added.
         if (businessData.socials !== undefined) businessProfileUpdate.socials = businessData.socials as Json;
 
         if (Object.keys(businessProfileUpdate).length > 0) {
@@ -461,7 +494,7 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
 
 export const updateUserSettings = async(userId: string, settings: Partial<UserSettings>): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.updateUserSettings(userId, settings);
-    userAppUpdatesService.logAction('UPDATE_USER_SETTINGS', { userId, settings });
+    // FIX: The 'settings' property was missing from the Supabase type definitions. It has been added.
     const { error } = await supabase.from('app_e255c3cdb5_user_profiles').update({ settings: settings as Json }).eq('user_id', userId);
     if (!error) persistenceService.markDirty();
     return !error;
@@ -474,7 +507,6 @@ export const updateUserSettings = async(userId: string, settings: Partial<UserSe
 
 export const followUser = async (currentUserId: string, targetUserId: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.followUser(currentUserId, targetUserId);
-    userAppUpdatesService.logAction('FOLLOW_USER', { currentUserId, targetUserId });
     const { error } = await supabase.from('app_e255c3cdb5_follows').insert({ follower_id: currentUserId, following_id: targetUserId });
     if (error) {
         console.error("Error following user:", error);
@@ -497,7 +529,6 @@ export const followUser = async (currentUserId: string, targetUserId: string): P
 
 export const unfollowUser = async (currentUserId: string, targetUserId: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.unfollowUser(currentUserId, targetUserId);
-    userAppUpdatesService.logAction('UNFOLLOW_USER', { currentUserId, targetUserId });
     const { error } = await supabase.from('app_e255c3cdb5_follows').delete().match({ follower_id: currentUserId, following_id: targetUserId });
      if (error) {
         console.error("Error unfollowing user:", error);
@@ -560,7 +591,6 @@ export const getGigsForVenue = async (businessUserId: string): Promise<Gig[]> =>
 
 export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig | null> => {
     if (isDemoModeEnabled()) return demoApi.addGig(gigData);
-    userAppUpdatesService.logAction('ADD_GIG', { gigData });
      const newGig: Database['public']['Tables']['app_e255c3cdb5_gigs']['Insert'] = { 
         title: gigData.title,
         business_user_id: gigData.business_user_id,
@@ -579,13 +609,27 @@ export const addGig = async (gigData: Omit<Gig, 'id' | 'status'>): Promise<Gig |
         console.error('Error adding gig:', error);
         return null;
     }
+
+    // Post to feed
+    const venue = await getBusinessById(data.business_user_id);
+    if (venue) {
+        await addFeedItem({
+            type: 'gig_announcement',
+            userId: data.business_user_id,
+            title: data.title,
+            description: `Now hiring DJs at ${venue.name}!`,
+            mediaUrl: data.flyer_url || undefined,
+            mediaType: 'image',
+            relatedId: data.id,
+        });
+    }
+
     persistenceService.markDirty();
     return mapRowToGig(data);
 };
 
 export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promise<Gig | null> => {
     if (isDemoModeEnabled()) return demoApi.updateGig(gigId, updatedData);
-    userAppUpdatesService.logAction('UPDATE_GIG', { gigId, updatedData });
     const dbData: Database['public']['Tables']['app_e255c3cdb5_gigs']['Update'] = {};
     if (updatedData.title) dbData.title = updatedData.title;
     if (updatedData.date) dbData.date = updatedData.date;
@@ -608,7 +652,6 @@ export const updateGig = async (gigId: string, updatedData: Partial<Gig>): Promi
 
 export const expressInterestInGig = async (gigId: string, djUserId: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.expressInterestInGig(gigId, djUserId);
-    userAppUpdatesService.logAction('EXPRESS_INTEREST_IN_GIG', { gigId, djUserId });
     const { error } = await supabase.from('app_e255c3cdb5_gig_applications').insert({ gig_id: gigId, dj_user_id: djUserId, status: 'pending' });
     if (error) {
         console.error('Error expressing interest in gig:', error);
@@ -649,7 +692,6 @@ export const getInterestedDJsForGig = async (gigId: string): Promise<DJ[]> => {
 
 export const bookDJForGig = async (gigId: string, djUserId: string, agreedRate: number): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.bookDJForGig(gigId, djUserId, agreedRate);
-    userAppUpdatesService.logAction('BOOK_DJ_FOR_GIG', { gigId, djUserId, agreedRate });
     const { error: gigError } = await supabase.from('app_e255c3cdb5_gigs').update({ status: 'Booked', booked_dj_id: djUserId }).eq('id', gigId);
     if (gigError) {
         console.error('Error updating gig status:', gigError);
@@ -813,7 +855,6 @@ export const getFeedItemById = async (id: string): Promise<FeedItem | undefined>
 
 export const addFeedItem = async (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'comments' | 'reposts'>): Promise<FeedItem | null> => {
     if (isDemoModeEnabled()) return demoApi.addFeedItem(item);
-    userAppUpdatesService.logAction('ADD_FEED_ITEM', { item });
 
     // The content for a review post is the review title itself, the description is the comment.
     const content = item.type === 'new_review' ? item.title : item.description;
@@ -825,13 +866,11 @@ export const addFeedItem = async (item: Omit<FeedItem, 'id' | 'timestamp' | 'lik
         media_type: item.mediaType,
         original_post_id: item.repostOf,
         type: mapAppTypeToDb(item),
+        // FIX: The 'related_id' property was missing from the Supabase type definitions. It has been added.
+        related_id: item.relatedId,
     };
 
     // If it's a review, we add the review-specific data to the payload.
-    // This assumes the `posts` table has a JSONB column named `metadata` or similar.
-    // For this implementation, we'll send it as part of the main `content` or rely on the `type` column.
-    // A more robust solution would be a `metadata` JSONB column.
-    // For now, we will add rating and comment to the content.
     if (item.type === 'new_review') {
         newPost.content = JSON.stringify({
             title: item.title,
@@ -912,7 +951,6 @@ export const getCommentsForPost = async (postId: string): Promise<EnrichedCommen
 
 export const addCommentToPost = async (postId: string, userId: string, content: string): Promise<EnrichedComment | null> => {
     if (isDemoModeEnabled()) return demoApi.addCommentToPost(postId, userId, content);
-    userAppUpdatesService.logAction('ADD_COMMENT_TO_POST', { postId, userId, content });
     const { data, error } = await supabase.from('app_e255c3cdb5_post_comments').insert({ post_id: postId, user_id: userId, content }).select().single();
     if (error || !data) {
         if(error) console.error('Error adding comment:', error);
@@ -949,11 +987,9 @@ export const toggleLikePost = async (postId: string, userId: string): Promise<bo
 
     let finalError = null;
     if (like) {
-        userAppUpdatesService.logAction('UNLIKE_POST', { postId, userId });
         const { error } = await supabase.from('app_e255c3cdb5_post_likes').delete().eq('id', like.id);
         finalError = error;
     } else {
-        userAppUpdatesService.logAction('LIKE_POST', { postId, userId });
         const { error } = await supabase.from('app_e255c3cdb5_post_likes').insert({ post_id: postId, user_id: userId });
         finalError = error;
     }
@@ -972,38 +1008,41 @@ export const toggleLikePost = async (postId: string, userId: string): Promise<bo
 // =================================================================
 export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedChat[]> => {
     if (isDemoModeEnabled()) return demoApi.getEnrichedChatsForUser(userId);
-    // Note: This implementation can be slow with many messages. A better schema would have a `chats` table.
+    
     const { data: messages, error } = await supabase.from('app_e255c3cdb5_messages').select('*').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).order('created_at', { ascending: true });
     if (error || !messages) return [];
 
-    const otherUserIds = [...new Set(messages.map((m) => m.sender_id === userId ? m.recipient_id : m.sender_id))];
+    // FIX: Safely extract other user IDs, ensuring they are strings and not null/undefined.
+    // This prevents passing non-string values to `getUserById`.
+    const otherUserIds = [...new Set(
+        messages.map((m) => (m.sender_id === userId ? m.recipient_id : m.sender_id))
+    )].filter((id): id is string => typeof id === 'string' && !!id);
+
     if (otherUserIds.length === 0) return [];
     
-    // FIX: Join with business_profiles to get the venue_name, ensuring name consistency with getUserById.
-    const { data: profiles, error: profileError } = await supabase
-        .from('app_e255c3cdb5_user_profiles')
-        .select('user_id, display_name, avatar_url, user_type, business_profiles:app_e255c3cdb5_business_profiles(venue_name)')
-        .in('user_id', otherUserIds);
+    const profiles = (await Promise.all(otherUserIds.map(id => getUserById(id)))).filter((p): p is UserProfile => !!p);
         
-    if (profileError || !profiles) return [];
+    if (profiles.length === 0) return [];
 
     const chatsMap = new Map<string, EnrichedChat>();
     profiles.forEach((p) => {
-        // Use venue_name for businesses if available, otherwise fall back to display_name.
-        const name = (p as any).business_profiles?.venue_name || p.display_name;
-        chatsMap.set(p.user_id, {
-            id: p.user_id, // Using other user's ID as chat ID
-            participants: [userId, p.user_id],
+        chatsMap.set(p.id, {
+            id: p.id,
+            participants: [userId, p.id],
             messages: [],
-            otherParticipant: { id: p.user_id, name: name, avatarUrl: p.avatar_url, role: p.user_type as Role },
+            otherParticipant: p,
         });
     });
 
     messages.forEach((message) => {
         const otherUserId = message.sender_id === userId ? message.recipient_id : message.sender_id;
-        const chat = chatsMap.get(otherUserId);
-        if (chat) {
-            chat.messages.push({ id: message.id, senderId: message.sender_id, recipientId: message.recipient_id, text: message.content, timestamp: message.created_at });
+        // FIX: Ensure otherUserId is a valid string before using it as a map key.
+        if (typeof otherUserId === 'string' && otherUserId) {
+            const chat = chatsMap.get(otherUserId);
+            if (chat) {
+                // The `Message` type requires recipientId to be a string. We trust the DB schema here.
+                chat.messages.push({ id: message.id, senderId: message.sender_id, recipientId: message.recipient_id, text: message.content, timestamp: message.created_at });
+            }
         }
     });
 
@@ -1012,7 +1051,6 @@ export const getEnrichedChatsForUser = async (userId: string): Promise<EnrichedC
 
 export const sendMessage = async (senderId: string, recipientId: string, content: string): Promise<Message | null> => {
     if (isDemoModeEnabled()) return demoApi.sendMessage(senderId, recipientId, content);
-    userAppUpdatesService.logAction('SEND_MESSAGE', { senderId, recipientId, content });
     const { data, error } = await supabase.from('app_e255c3cdb5_messages').insert({ sender_id: senderId, recipient_id: recipientId, content }).select().single();
     if (error || !data) {
         if(error) console.error('Error sending message:', error);
@@ -1037,14 +1075,35 @@ export const sendMessage = async (senderId: string, recipientId: string, content
 export const findChatByParticipants = async (userId1: string, userId2: string): Promise<Chat | null> => {
   if (isDemoModeEnabled()) return demoApi.findChatByParticipants(userId1, userId2);
   // This is a "virtual" chat find. A real implementation would have a chats table.
-  const { data, error } = await supabase.from('app_e255c3cdb5_messages').select('*').or(`and(sender_id.eq.${userId1},recipient_id.eq.${userId2}),and(sender_id.eq.${userId2},recipient_id.eq.${userId1})`).limit(1);
-  if (error || !data || data.length === 0) return null;
+
+  // FIX: The previous query used a complex `or(and(...),and(...))` filter which was causing
+  // a `400 Bad Request` from the Supabase API, likely due to syntax complexity.
+  // Replaced with a simpler, more robust query using `in()` filters. This correctly
+  // finds messages where sender and recipient are the two specified users by checking
+  // that both `sender_id` and `recipient_id` are within the pair of user IDs.
+  // `select('id')` and `limit(1)` are used for efficiency, as we only need to
+  // confirm the existence of at least one message.
+  const { data, error } = await supabase
+    .from('app_e255c3cdb5_messages')
+    .select('id')
+    .in('sender_id', [userId1, userId2])
+    .in('recipient_id', [userId1, userId2])
+    .limit(1);
+
+  if (error) {
+      console.error("Error finding chat by participants:", error);
+      return null;
+  }
+
+  if (!data || data.length === 0) {
+      return null;
+  }
+  
   return { id: userId2, participants: [userId1, userId2], messages: [] };
 };
 
 export const createChat = async (userId1: string, userId2: string): Promise<Chat | null> => {
   if (isDemoModeEnabled()) return demoApi.createChat(userId1, userId2);
-  userAppUpdatesService.logAction('CREATE_CHAT', { participants: [userId1, userId2] });
   persistenceService.markDirty();
   return { id: userId2, participants: [userId1, userId2], messages: [] };
 };
@@ -1125,20 +1184,35 @@ export const getTracksByIds = async (ids: string[]): Promise<Track[]> => {
 
 export const addTrack = async (userId: string, title: string, artworkUrl: string, trackUrl: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.addTrack(userId, title, artworkUrl, trackUrl);
-    userAppUpdatesService.logAction('ADD_TRACK', { userId, title });
     const newTrack: Track = { id: uuidvv4(), artistId: userId, title, artworkUrl, trackUrl, duration: '3:30' }; // Mock duration
-    const { error } = await supabase.rpc('add_track_to_portfolio', { dj_user_id_param: userId, new_track: newTrack as any });
+    // FIX: Cast to 'unknown' first to satisfy stricter TypeScript rules for type assertions.
+    // A complex object literal can be cast to `Json` if its structure is compatible.
+    const { error } = await supabase.rpc('add_track_to_portfolio', { dj_user_id_param: userId, new_track: newTrack as unknown as Json });
     if (error) {
         console.error('Error adding track to portfolio:', error);
         return false;
     }
+
+    // Post to feed
+    const dj = await getDJById(userId);
+    if (dj) {
+        await addFeedItem({
+            type: 'new_track',
+            userId: userId,
+            title: `${dj.name} just dropped a new track!`,
+            description: title,
+            mediaUrl: artworkUrl,
+            mediaType: 'image', // The card uses an image as a preview
+            relatedId: newTrack.id,
+        });
+    }
+
     persistenceService.markDirty();
     return true;
 };
 
 export const createPlaylist = async (playlistData: Omit<Playlist, 'id'>): Promise<Playlist | null> => {
     if (isDemoModeEnabled()) return demoApi.createPlaylist(playlistData);
-    userAppUpdatesService.logAction('CREATE_PLAYLIST', { playlistData });
     const { data, error } = await supabase.from('app_e255c3cdb5_playlists').insert({ dj_user_id: playlistData.creatorId, name: playlistData.name, artwork_url: playlistData.artworkUrl, tracks: [] }).select().single();
     if (error || !data) {
         console.error('Error creating playlist:', error);
@@ -1150,7 +1224,6 @@ export const createPlaylist = async (playlistData: Omit<Playlist, 'id'>): Promis
 
 export const updatePlaylist = async (playlistId: string, playlistData: Partial<Playlist>): Promise<Playlist | null> => {
     if (isDemoModeEnabled()) return demoApi.updatePlaylist(playlistId, playlistData);
-    userAppUpdatesService.logAction('UPDATE_PLAYLIST', { playlistId, playlistData });
     const dbUpdate: Database['public']['Tables']['app_e255c3cdb5_playlists']['Update'] = {};
     if (playlistData.name) dbUpdate.name = playlistData.name;
     if (playlistData.artworkUrl) dbUpdate.artwork_url = playlistData.artworkUrl;
@@ -1166,8 +1239,9 @@ export const updatePlaylist = async (playlistId: string, playlistData: Partial<P
 
 export const addTrackToPlaylist = async (playlistId: string, track: Track): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.addTrackToPlaylist(playlistId, track);
-    userAppUpdatesService.logAction('ADD_TRACK_TO_PLAYLIST', { playlistId, trackId: track.id });
-    const { error } = await supabase.rpc('add_track_to_playlist', { playlist_id_param: playlistId, new_track: track as any });
+    // FIX: Cast to 'unknown' first to satisfy stricter TypeScript rules for type assertions.
+    // A complex object literal can be cast to `Json` if its structure is compatible.
+    const { error } = await supabase.rpc('add_track_to_playlist', { playlist_id_param: playlistId, new_track: track as unknown as Json });
     if (error) {
         console.error('Error adding track to playlist:', error);
         return false;
@@ -1178,7 +1252,6 @@ export const addTrackToPlaylist = async (playlistId: string, track: Track): Prom
 
 export const deletePlaylist = async (playlistId: string, userId: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.deletePlaylist(playlistId, userId);
-    userAppUpdatesService.logAction('DELETE_PLAYLIST', { playlistId, userId });
 
     const { error } = await supabase
         .from('app_e255c3cdb5_playlists')
@@ -1196,7 +1269,6 @@ export const deletePlaylist = async (playlistId: string, userId: string): Promis
 
 export const deleteTrack = async (userId: string, trackId: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.deleteTrack(userId, trackId);
-    userAppUpdatesService.logAction('DELETE_TRACK', { userId, trackId });
 
     // 1. Fetch current tracks from the DJ's portfolio
     const { data: profile, error: fetchError } = await supabase
@@ -1211,7 +1283,7 @@ export const deleteTrack = async (userId: string, trackId: string): Promise<bool
     }
 
     // 2. Filter out the track from the portfolio
-    const currentTracks = (profile.portfolio_tracks as unknown as Track[] || []).filter(Boolean);
+    const currentTracks = ((profile.portfolio_tracks as unknown as (Track | null)[]) || []).filter((track): track is Track => !!track);
     const updatedTracks = currentTracks.filter(track => track.id !== trackId);
 
     // 3. Update the DJ profile with the new track list
@@ -1314,7 +1386,6 @@ export const getReviewsForUser = async (revieweeId: string): Promise<EnrichedRev
 
 export const submitReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>): Promise<Review | null> => {
     if (isDemoModeEnabled()) return demoApi.submitReview(reviewData);
-    userAppUpdatesService.logAction('SUBMIT_REVIEW', { reviewData });
     const dbReview: Database['public']['Tables']['app_e255c3cdb5_reviews']['Insert'] = { reviewer_id: reviewData.authorId, reviewee_id: reviewData.targetId, rating: reviewData.rating, comment: reviewData.comment, gig_id: reviewData.gigId };
     const { data, error } = await supabase.from('app_e255c3cdb5_reviews').insert(dbReview).select().single();
     if (error || !data) {
@@ -1390,7 +1461,6 @@ export const submitReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>)
 // =================================================================
 export const createStreamSession = async (djId: string, title: string): Promise<StreamSession> => {
     if (isDemoModeEnabled()) return demoApi.createStreamSession(djId, title);
-    userAppUpdatesService.logAction('CREATE_STREAM_SESSION', { djId, title });
     const { data, error } = await supabase.from('app_e255c3cdb5_stream_sessions').insert({ dj_user_id: djId, title, is_live: true }).select().single();
     if (error || !data) {
         console.error("Error creating stream session:", error);
@@ -1409,7 +1479,6 @@ export const getStreamSessionById = async (sessionId: string): Promise<StreamSes
 
 export const endStreamSession = async (sessionId: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.endStreamSession(sessionId);
-    userAppUpdatesService.logAction('END_STREAM_SESSION', { sessionId });
     const { error } = await supabase.from('app_e255c3cdb5_stream_sessions').update({ is_live: false }).eq('id', sessionId);
     if (error) {
         console.error("Error ending stream session:", error);
@@ -1441,7 +1510,6 @@ export const getNotifications = async (userId: string): Promise<Notification[]> 
 
 export const markAllAsRead = async (userId: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.markAllAsRead(userId);
-    userAppUpdatesService.logAction('MARK_ALL_NOTIFICATIONS_AS_READ', { userId });
     const { error } = await supabase.from('app_e255c3cdb5_notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
     if (error) {
         console.error('Error marking notifications as read:', error);
@@ -1468,8 +1536,7 @@ export const searchUsers = async (query: string): Promise<UserProfile[]> => {
 // =================================================================
 export const createDjProfile = async (userId: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return true; // In demo, profiles are pre-made
-    userAppUpdatesService.logAction('CREATE_DJ_PROFILE', { userId });
-    const { error } = await supabase.from('app_e255c3cdb5_dj_profiles').upsert({ user_id: userId, genres: ['Electronic'], description: 'Newly joined DJ! Please update your bio.', location: 'Cape Town', tier: Tier.Bronze }, { onConflict: 'user_id' });
+    const { error } = await supabase.from('app_e255c3cdb5_dj_profiles').upsert({ user_id: userId, genres: ['Electronic'], bio: 'Newly joined DJ! Please update your bio.', tier: Tier.Bronze }, { onConflict: 'user_id' });
     if (error) console.error("Error self-healing DJ profile:", error);
     else persistenceService.markDirty();
     return !error;
@@ -1477,8 +1544,8 @@ export const createDjProfile = async (userId: string): Promise<boolean> => {
 
 export const createBusinessProfile = async (userId: string, displayName: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return true; // In demo, profiles are pre-made
-    userAppUpdatesService.logAction('CREATE_BUSINESS_PROFILE', { userId, displayName });
-    const { error } = await supabase.from('app_e255c3cdb5_business_profiles').upsert({ user_id: userId, venue_name: displayName, location: 'Cape Town', description: 'A great place for music! Please update your description.' }, { onConflict: 'user_id' });
+    // FIX: Corrected property name from 'venue_name' to 'name' to match schema.
+    const { error } = await supabase.from('app_e255c3cdb5_business_profiles').upsert({ user_id: userId, name: displayName, description: 'A great place for music! Please update your description.' }, { onConflict: 'user_id' });
     if (error) console.error("Error self-healing business profile:", error);
     else persistenceService.markDirty();
     return !error;
@@ -1486,7 +1553,6 @@ export const createBusinessProfile = async (userId: string, displayName: string)
 
 export const createUserProfile = async (user: any): Promise<UserProfile | null> => {
     if (isDemoModeEnabled()) return null; // In demo, profiles are pre-made
-    userAppUpdatesService.logAction('CREATE_USER_PROFILE', { userId: user.id, metadata: user.user_metadata });
     const userType = user.user_metadata?.user_type as Role;
     const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name;
     const avatarUrl = user.user_metadata?.avatar_url;
@@ -1515,7 +1581,6 @@ export const createUserProfile = async (user: any): Promise<UserProfile | null> 
 
 export const signUpWithEmail = async (email: string, password: string, name: string, role: Role) => {
     if (isDemoModeEnabled()) return demoApi.signUpWithEmail(email, password, name, role);
-    userAppUpdatesService.logAction('SIGN_UP_WITH_EMAIL', { email, name, role });
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: name, user_type: role, avatar_url: `https://source.unsplash.com/random/200x200/?abstract,${role}` } } });
     if (!error) persistenceService.markDirty();
     return { user: data.user, error };

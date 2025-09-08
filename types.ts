@@ -126,7 +126,7 @@ export interface Chat {
 
 // Enriched chat for displaying in inbox list
 export interface EnrichedChat extends Chat {
-    otherParticipant: User;
+    otherParticipant: UserProfile;
 }
 
 

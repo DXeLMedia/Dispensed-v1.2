@@ -9,10 +9,6 @@ import { IconArrowLeft, IconSend, IconPaperclip, IconSmile } from '../constants'
 import { Avatar } from '../components/Avatar';
 import { supabase } from '../services/supabaseClient';
 
-interface EnrichedChatWithParticipant extends Chat {
-    otherParticipant: User;
-}
-
 // Define the shape of the message row from the database
 type MessageRow = {
   id: string;
@@ -47,7 +43,7 @@ export const ChatRoom = () => {
     const { chatId } = useParams<{ chatId: string }>();
     const navigate = useNavigate();
     const { user: currentUser } = useAuth();
-    const [chat, setChat] = useState<EnrichedChatWithParticipant | null>(null);
+    const [chat, setChat] = useState<EnrichedChat | null>(null);
     const [loading, setLoading] = useState(true);
     const [newMessage, setNewMessage] = useState('');
     const [sending, setSending] = useState(false);
@@ -68,18 +64,11 @@ export const ChatRoom = () => {
             if (!currentChat) {
                 const otherParticipant = await api.getUserById(chatId);
                 if (otherParticipant) {
-                    // The User type is a subset of UserProfile, so this is safe.
-                    const otherParticipantAsUser: User = {
-                        id: otherParticipant.id,
-                        name: otherParticipant.name,
-                        avatarUrl: otherParticipant.avatarUrl,
-                        role: otherParticipant.role,
-                    };
                     currentChat = {
                         id: otherParticipant.id,
                         participants: [currentUser.id, otherParticipant.id],
                         messages: [],
-                        otherParticipant: otherParticipantAsUser,
+                        otherParticipant: otherParticipant,
                     };
                 }
             }
