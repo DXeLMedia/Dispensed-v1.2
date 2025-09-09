@@ -1,3 +1,6 @@
+
+
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { DJ, Role } from '../types';
 
@@ -37,7 +40,6 @@ export const generateGigDescription = async (
         thinkingConfig: { thinkingBudget: 0 }
       }
     });
-    // FIX: Access the generated text directly from the .text property of the response.
     return response.text;
   } catch (error) {
     console.error("Error generating gig description with Gemini:", error);
@@ -101,8 +103,7 @@ export const findDJsWithAI = async (query: string, allDjs: DJ[]): Promise<string
                 responseSchema: schema,
             },
         });
-        
-        // FIX: Access the generated text directly from the .text property of the response.
+
         const resultText = response.text.trim();
         if (!resultText) {
           return [];
@@ -160,7 +161,6 @@ export const generateDjBio = async (
         thinkingConfig: { thinkingBudget: 0 }
       }
     });
-    // FIX: Access the generated text directly from the .text property of the response.
     return response.text.trim();
   } catch (error) {
     console.error("Error generating DJ bio with Gemini:", error);
@@ -201,7 +201,6 @@ export const generatePostContent = async (
         thinkingConfig: { thinkingBudget: 0 }
       }
     });
-    // FIX: Access the generated text directly from the .text property of the response.
     return response.text.trim();
   } catch (error) {
     console.error("Error generating post content with Gemini:", error);
@@ -232,7 +231,6 @@ export const generateGigFlyer = async (
 
   try {
     const response = await ai.models.generateImages({
-      // FIX: Use the correct model for image generation.
       model: 'imagen-4.0-generate-001',
       prompt: prompt,
       config: {

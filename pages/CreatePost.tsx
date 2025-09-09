@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -246,7 +245,7 @@ export const CreatePost = () => {
                 {mediaPreview && (
                     <div className="relative">
                         {mediaType === 'image' && <img src={mediaPreview} alt="Post preview" className="rounded-lg w-full" />}
-                        {mediaType === 'video' && <video src={mediaPreview} controls muted loop className="rounded-lg w-full bg-black" />}
+                        {mediaType === 'video' && <video src={mediaPreview} controls className="rounded-lg w-full bg-black" />}
                         <button 
                             onClick={handleRemoveMedia} 
                             className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white hover:bg-black/80"

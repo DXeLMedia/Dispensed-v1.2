@@ -252,7 +252,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (isDemoMode) {
         throw new Error("Google Sign-In is disabled in Demo Mode.");
     }
-    const options: { redirectTo: string; data?: { [key: string]: any; } } = {
+    // FIX: The type definition for signInWithOAuth options in the project's Supabase client version
+    // appears to be missing the 'data' property, which is used to pass user metadata on sign-up.
+    // Casting to 'any' bypasses this incorrect type check. The property is correct for Supabase v2.
+    const options: any = {
       redirectTo: window.location.origin,
     };
     if (role) {

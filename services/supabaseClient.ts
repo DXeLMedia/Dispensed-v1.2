@@ -5,7 +5,6 @@ import { Database } from './supabase';
 // module-based environment where process.env is not available.
 // These values are based on the user's provided credentials.
 export const supabaseUrl = 'https://ivhqfwktgaoktdxqznhx.supabase.co';
-// FIX: Replaced the Supabase `service_role` key with the correct `anon` key. The `service_role` key is a secret and must never be used in client-side code. Exposing it is a major security vulnerability that bypasses all Row Level Security policies. Its misuse was also the likely cause of the "TypeError: Failed to fetch" errors, as browsers and Supabase servers may block such requests for security reasons.
 export const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml2aHFmd2t0Z2Fva3RkeHF6bmh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNzUxNjEsImV4cCI6MjA2ODg1MTE2MX0.6Bbrbtg-sfKYKwfM1WhKVwxIlYKrIamAUfWO4PlpNDk';
 
 

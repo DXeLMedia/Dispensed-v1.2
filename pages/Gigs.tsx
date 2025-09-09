@@ -108,50 +108,25 @@ export const Gigs = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    // If there's no user, clear gigs and stop loading.
-    // The ProtectedRoute should handle the redirection away from this page.
-    if (!user?.id) {
-      setGigs([]);
-      setLoading(false);
-      return;
-    }
+    setLoading(true);
+    if (user?.id) {
+        Promise.all([
+            api.getGigs(),
+            api.getInterestedGigsForDj(user.id),
+            api.getBookedGigsForDj(user.id),
+        ]).then(([allGigs, interestedGigs, bookedGigs]) => {
+            const openGigs = allGigs.filter(g => g.status === 'Open');
+            const interestedIds = new Set(interestedGigs.map(g => g.id));
+            const bookedIds = new Set(bookedGigs.map(g => g.id));
 
-    let isMounted = true;
-    const fetchGigs = async () => {
-      setLoading(true);
-      try {
-        const [allGigs, interestedGigs, bookedGigs] = await Promise.all([
-          api.getGigs(),
-          api.getInterestedGigsForDj(user.id),
-          api.getBookedGigsForDj(user.id),
-        ]);
-
-        if (!isMounted) return;
-
-        const openGigs = allGigs.filter((g) => g.status === 'Open');
-        const interestedIds = new Set(interestedGigs.map((g) => g.id));
-        const bookedIds = new Set(bookedGigs.map((g) => g.id));
-
-        setInterestedGigIds(interestedIds);
-
-        // Show all open gigs that the user is not already booked for.
-        const gigsToShow = openGigs.filter((g) => !bookedIds.has(g.id));
-        setGigs(gigsToShow);
-      } catch (error) {
-        console.error('Failed to fetch gigs:', error);
-        setGigs([]); // Clear gigs on error to show the 'no gigs' message
-      } finally {
-        if (isMounted) {
+            setInterestedGigIds(interestedIds);
+            
+            // Show all open gigs that the user is not already booked for.
+            const gigsToShow = openGigs.filter(g => !bookedIds.has(g.id));
+            setGigs(gigsToShow);
             setLoading(false);
-        }
-      }
-    };
-
-    fetchGigs();
-
-    return () => {
-        isMounted = false;
-    };
+        });
+    }
   }, [user]);
 
   const handleInterestSent = (gigIdToAdd: string) => {

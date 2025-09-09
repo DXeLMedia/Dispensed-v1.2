@@ -54,12 +54,15 @@ const PostContentView = ({ item, user }: { item: FeedItem, user: User }) => {
                     </div>
                 )
             case 'user_post':
+                 return item.mediaUrl ? (
+                    item.mediaType === 'video' ? (
+                        <video src={item.mediaUrl} controls muted loop className="w-full h-auto object-cover bg-black" />
+                    ) : (
+                        <img src={item.mediaUrl} alt={item.title || 'User post'} className="w-full h-auto object-cover" />
+                    )
+                ) : null;
             default:
-                 if (!item.mediaUrl) return null;
-                 if (item.mediaType === 'video') {
-                    return <video src={item.mediaUrl} controls muted loop className="w-full h-auto object-cover bg-black" />;
-                 }
-                 return <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" />;
+                return item.mediaUrl ? <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" /> : null;
         }
     }
 

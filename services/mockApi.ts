@@ -1,3 +1,4 @@
+
 import { supabase } from './supabaseClient';
 import * as demoApi from './mockApiDemo';
 import { 
@@ -158,7 +159,6 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
         name: data.display_name,
         avatarUrl: data.avatar_url,
         role,
-        // FIX: The 'settings' property was missing from the Supabase type definitions. It has been added.
         settings: data.settings as unknown as UserSettings,
         // These are placeholders; they will be populated by the functions calling this mapper.
         following: [],
@@ -170,23 +170,17 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
         return {
             ...baseUser,
             role: Role.DJ,
-            // FIX: Cast JSONB array types from the DB to the expected application type.
-            genres: (djProfile?.genres as string[]) || [],
-            // FIX: Corrected property name from 'description' to 'bio' to match the 'dj_profiles' table schema.
-            bio: djProfile?.bio || '',
-            // FIX: 'location' is on the main user_profiles table, not dj_profiles.
-            location: data.location || '',
+            genres: djProfile?.genres || [],
+            bio: djProfile?.description || '',
+            location: djProfile?.location || '',
             rating: djProfile?.rating || 0,
             reviewsCount: djProfile?.reviews_count || 0,
-            // FIX: Corrected property access for 'tier' and cast to the application's enum type.
             tier: (djProfile?.tier as Tier) || Tier.Bronze,
-            // FIX: Corrected property access for 'socials' and cast to the application's type.
             socials: (djProfile?.socials as any) || {},
             tracks: (djProfile?.portfolio_tracks as unknown as Track[]) || [],
             mixes: [], // Populated by getPlaylistsForDj
             experienceYears: djProfile?.experience_years ?? undefined,
-            // FIX: Cast JSONB array types from the DB to the expected application type.
-            equipmentOwned: (djProfile?.equipment_owned as string[]) || [],
+            equipmentOwned: djProfile?.equipment_owned || [],
             hourlyRate: djProfile?.hourly_rate ?? undefined,
             travelRadius: djProfile?.travel_radius ?? undefined,
             availabilitySchedule: (djProfile?.availability_schedule as string) || undefined,
@@ -196,14 +190,11 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
         return {
             ...baseUser,
             role: Role.Business,
-            // FIX: Corrected property name from 'venue_name' to 'name' to match the 'business_profiles' table schema.
-            name: businessProfile?.name || data.display_name,
-            // FIX: 'location' is on the main user_profiles table, not business_profiles.
-            location: data.location || '',
+            name: businessProfile?.venue_name || data.display_name,
+            location: businessProfile?.location || '',
             description: businessProfile?.description || '',
             rating: businessProfile?.rating || 0,
             reviewsCount: businessProfile?.reviews_count || 0,
-            // FIX: Corrected property access for 'socials' and cast to the application's type.
             socials: (businessProfile?.socials as any) || {},
         };
     } else {
@@ -224,13 +215,11 @@ const mapPostToFeedItem = (post: PostRow, repostsCount: number = 0): FeedItem =>
         title: '',
         description: post.content,
         mediaUrl: post.media_url || undefined,
-        // FIX: Cast media_type from string to the specific literal types expected by the app.
-        mediaType: (post.media_type as 'image' | 'video') || undefined,
+        mediaType: post.media_type || undefined,
         timestamp: post.created_at,
         likes: post.likes_count,
         comments: post.comments_count,
         reposts: repostsCount,
-        // FIX: The 'related_id' property was missing from the Supabase type definitions. It has been added.
         relatedId: post.related_id || undefined,
         type: (post.type as FeedItem['type']) || 'user_post',
         repostOf: post.original_post_id || undefined,
@@ -261,10 +250,8 @@ const mapRowToGig = (gig: GigRow): Gig => ({
     time: gig.time,
     budget: gig.budget,
     description: gig.description,
-    // FIX: Cast JSONB array types from the DB to the expected application type.
-    genres: (gig.genres as string[]) || [],
-    // FIX: Cast status from string to the specific literal types expected by the app.
-    status: gig.status as Gig['status'],
+    genres: gig.genres,
+    status: gig.status,
     bookedDjId: gig.booked_dj_id || undefined,
     interestCount: gig.interest_count || undefined,
     flyerUrl: gig.flyer_url || undefined,
@@ -433,9 +420,6 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     const userProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_user_profiles']['Update'] = {};
     if (data.name !== undefined) userProfileUpdate.display_name = data.name;
     if (data.avatarUrl !== undefined) userProfileUpdate.avatar_url = data.avatarUrl;
-    // FIX: Update 'location' on the main user_profiles table, not the role-specific ones.
-    // FIX: Use 'in' operator to safely check for 'location' property, as it doesn't exist on the Listener user type.
-    if ('location' in data && data.location !== undefined) userProfileUpdate.location = data.location;
 
     // Use a PostgrestBuilder array to handle multiple potential updates
     const updatePromises: any[] = [];
@@ -448,10 +432,9 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
         const djData = data as Partial<DJ>;
         const djProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_dj_profiles']['Update'] = {};
         
-        // FIX: Corrected property name from 'description' to 'bio'.
-        if (djData.bio !== undefined) djProfileUpdate.bio = djData.bio;
+        if (djData.bio !== undefined) djProfileUpdate.description = djData.bio;
         if (djData.genres !== undefined) djProfileUpdate.genres = djData.genres;
-        // FIX: The 'socials' property was missing from the Supabase type definitions. It has been added.
+        if (djData.location !== undefined) djProfileUpdate.location = djData.location;
         if (djData.socials !== undefined) djProfileUpdate.socials = djData.socials as Json;
         if (djData.experienceYears !== undefined) djProfileUpdate.experience_years = djData.experienceYears;
         if (djData.hourlyRate !== undefined) djProfileUpdate.hourly_rate = djData.hourlyRate;
@@ -467,10 +450,9 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
     if (data.role === Role.Business) {
         const businessData = data as Partial<Business>;
         const businessProfileUpdate: Database['public']['Tables']['app_e255c3cdb5_business_profiles']['Update'] = {};
-        // FIX: Corrected property name from 'venue_name' to 'name'.
-        if (businessData.name !== undefined) businessProfileUpdate.name = businessData.name;
+        if (businessData.name !== undefined) businessProfileUpdate.venue_name = businessData.name;
         if (businessData.description !== undefined) businessProfileUpdate.description = businessData.description;
-        // FIX: The 'socials' property was missing from the Supabase type definitions. It has been added.
+        if (businessData.location !== undefined) businessProfileUpdate.location = businessData.location;
         if (businessData.socials !== undefined) businessProfileUpdate.socials = businessData.socials as Json;
 
         if (Object.keys(businessProfileUpdate).length > 0) {
@@ -494,7 +476,6 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
 
 export const updateUserSettings = async(userId: string, settings: Partial<UserSettings>): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.updateUserSettings(userId, settings);
-    // FIX: The 'settings' property was missing from the Supabase type definitions. It has been added.
     const { error } = await supabase.from('app_e255c3cdb5_user_profiles').update({ settings: settings as Json }).eq('user_id', userId);
     if (!error) persistenceService.markDirty();
     return !error;
@@ -866,7 +847,6 @@ export const addFeedItem = async (item: Omit<FeedItem, 'id' | 'timestamp' | 'lik
         media_type: item.mediaType,
         original_post_id: item.repostOf,
         type: mapAppTypeToDb(item),
-        // FIX: The 'related_id' property was missing from the Supabase type definitions. It has been added.
         related_id: item.relatedId,
     };
 
@@ -1075,30 +1055,8 @@ export const sendMessage = async (senderId: string, recipientId: string, content
 export const findChatByParticipants = async (userId1: string, userId2: string): Promise<Chat | null> => {
   if (isDemoModeEnabled()) return demoApi.findChatByParticipants(userId1, userId2);
   // This is a "virtual" chat find. A real implementation would have a chats table.
-
-  // FIX: The previous query used a complex `or(and(...),and(...))` filter which was causing
-  // a `400 Bad Request` from the Supabase API, likely due to syntax complexity.
-  // Replaced with a simpler, more robust query using `in()` filters. This correctly
-  // finds messages where sender and recipient are the two specified users by checking
-  // that both `sender_id` and `recipient_id` are within the pair of user IDs.
-  // `select('id')` and `limit(1)` are used for efficiency, as we only need to
-  // confirm the existence of at least one message.
-  const { data, error } = await supabase
-    .from('app_e255c3cdb5_messages')
-    .select('id')
-    .in('sender_id', [userId1, userId2])
-    .in('recipient_id', [userId1, userId2])
-    .limit(1);
-
-  if (error) {
-      console.error("Error finding chat by participants:", error);
-      return null;
-  }
-
-  if (!data || data.length === 0) {
-      return null;
-  }
-  
+  const { data, error } = await supabase.from('app_e255c3cdb5_messages').select('*').or(`and(sender_id.eq.${userId1},recipient_id.eq.${userId2}),and(sender_id.eq.${userId2},recipient_id.eq.${userId1})`).limit(1);
+  if (error || !data || data.length === 0) return null;
   return { id: userId2, participants: [userId1, userId2], messages: [] };
 };
 
@@ -1536,7 +1494,7 @@ export const searchUsers = async (query: string): Promise<UserProfile[]> => {
 // =================================================================
 export const createDjProfile = async (userId: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return true; // In demo, profiles are pre-made
-    const { error } = await supabase.from('app_e255c3cdb5_dj_profiles').upsert({ user_id: userId, genres: ['Electronic'], bio: 'Newly joined DJ! Please update your bio.', tier: Tier.Bronze }, { onConflict: 'user_id' });
+    const { error } = await supabase.from('app_e255c3cdb5_dj_profiles').upsert({ user_id: userId, genres: ['Electronic'], description: 'Newly joined DJ! Please update your bio.', location: 'Cape Town', tier: Tier.Bronze }, { onConflict: 'user_id' });
     if (error) console.error("Error self-healing DJ profile:", error);
     else persistenceService.markDirty();
     return !error;
@@ -1544,8 +1502,7 @@ export const createDjProfile = async (userId: string): Promise<boolean> => {
 
 export const createBusinessProfile = async (userId: string, displayName: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return true; // In demo, profiles are pre-made
-    // FIX: Corrected property name from 'venue_name' to 'name' to match schema.
-    const { error } = await supabase.from('app_e255c3cdb5_business_profiles').upsert({ user_id: userId, name: displayName, description: 'A great place for music! Please update your description.' }, { onConflict: 'user_id' });
+    const { error } = await supabase.from('app_e255c3cdb5_business_profiles').upsert({ user_id: userId, venue_name: displayName, location: 'Cape Town', description: 'A great place for music! Please update your description.' }, { onConflict: 'user_id' });
     if (error) console.error("Error self-healing business profile:", error);
     else persistenceService.markDirty();
     return !error;

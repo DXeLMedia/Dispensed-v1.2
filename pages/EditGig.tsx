@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -210,7 +212,7 @@ export const EditGig = () => {
                         <label className="block text-sm font-medium text-zinc-300">Description</label>
                         <button type="button" onClick={handleGenerateDescription} disabled={isGenerating} className="flex items-center gap-1 text-sm text-lime-400 hover:text-lime-300 disabled:text-zinc-500">
                             {isGenerating ? <Spinner /> : <IconSparkles size={16} />}
-                            {isGenerating ? 'Generating...' : 'Regenerate with AI'}
+                            {isGenerating ? 'Generating...' : 'Generate with AI'}
                         </button>
                     </div>
                     <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400" required></textarea>
