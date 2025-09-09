@@ -1,4 +1,5 @@
-import { DJ, Business, Gig, Track, Playlist, Role, UserProfile, Notification, Message, Review, FeedItem, Comment as PostComment, User, EnrichedReview, EnrichedComment, StreamSession, UserSettings, EnrichedChat, Chat, Tier, Listener, NotificationType } from '../types';
+
+import { DJ, Business, Gig, Track, Playlist, Role, UserProfile, Notification, Message, Review, FeedItem, Comment as PostComment, User, EnrichedReview, EnrichedComment, StreamSession, UserSettings, EnrichedChat, Chat, Tier, Listener, NotificationType, Admin } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 // =================================================================
@@ -42,7 +43,11 @@ let USERS: UserProfile[] = [
         following: ['dj-1', 'dj-2', 'business-1'], followers: 42,
         rating: 0,
         reviewsCount: 0,
-    } as Listener
+    } as Listener,
+    {
+        id: 'admin-1', name: 'Admin User', role: Role.Admin, avatarUrl: 'https://source.unsplash.com/random/200x200/?abstract,tech',
+        following: [], followers: 0,
+    } as Admin,
 ];
 
 let TRACKS: Track[] = [
@@ -523,3 +528,49 @@ export const signUpWithEmail = async (email: string, password: string, name: str
 
 // Dev
 export const seedDatabase = async (): Promise<any> => Promise.resolve({djs: [], businesses: [], gigs: [], tracks: [], playlists: []});
+
+// Admin
+export const deleteUser = async (userId: string): Promise<boolean> => {
+    const user = USERS.find(u => u.id === userId);
+    if (!user) return false;
+
+    // Remove user
+    USERS = USERS.filter(u => u.id !== userId);
+    // Remove gigs by user (if business)
+    if (user.role === Role.Business) {
+        GIGS = GIGS.filter(g => g.business_user_id !== userId);
+    }
+    // Remove posts by user
+    FEED_ITEMS = FEED_ITEMS.filter(f => f.userId !== userId);
+    // Remove comments by user
+    COMMENTS = COMMENTS.filter(c => c.authorId !== userId);
+    // Remove reviews by user or of user
+    REVIEWS = REVIEWS.filter(r => r.authorId !== userId && r.targetId !== userId);
+    // Remove from following lists
+    USERS.forEach(u => {
+        if ('following' in u) {
+            u.following = u.following.filter(id => id !== userId);
+        }
+    });
+    // Remove applications by user (if DJ)
+    if (user.role === Role.DJ) {
+        GIG_APPLICATIONS = GIG_APPLICATIONS.filter(app => app.dj_user_id !== userId);
+    }
+    // Unbook from gigs
+    GIGS.forEach(g => {
+        if (g.bookedDjId === userId) {
+            g.bookedDjId = undefined;
+            g.status = 'Open';
+        }
+    });
+
+    return true;
+}
+
+export const deleteGig = async (gigId: string): Promise<boolean> => {
+    const initialLength = GIGS.length;
+    GIGS = GIGS.filter(g => g.id !== gigId);
+    // Also remove applications for this gig
+    GIG_APPLICATIONS = GIG_APPLICATIONS.filter(app => app.gig_id !== gigId);
+    return GIGS.length < initialLength;
+}

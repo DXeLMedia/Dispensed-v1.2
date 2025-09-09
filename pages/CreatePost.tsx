@@ -8,10 +8,12 @@ import { IconArrowLeft, IconPaperclip, IconX, IconSparkles } from '../constants'
 import { Spinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
 import { User } from '../types';
+import { usePersistence } from '../hooks/usePersistence';
 
 export const CreatePost = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { showToast } = usePersistence();
     const [description, setDescription] = useState('');
     const [mediaFile, setMediaFile] = useState<File | null>(null);
     const [mediaPreview, setMediaPreview] = useState<string | null>(null);
@@ -111,7 +113,7 @@ export const CreatePost = () => {
             } else if (file.type.startsWith('video/')) {
                 setMediaType('video');
             } else {
-                alert('Please select a valid image or video file.');
+                showToast('Please select a valid image or video file.', 'error');
                 return;
             }
 
@@ -135,7 +137,7 @@ export const CreatePost = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!description.trim() && !mediaFile) {
-            alert("Please write something or add a photo/video.");
+            showToast("Please write something or add a photo/video.", 'error');
             return;
         }
 
@@ -160,7 +162,7 @@ export const CreatePost = () => {
             if (err instanceof Error && err.message.includes('security policy')) {
                 message = 'Post creation failed due to a media upload permission issue. Please contact support.';
             }
-            alert(message);
+            showToast(message, 'error');
             console.error(err);
         } finally {
             setIsLoading(false);
@@ -174,9 +176,9 @@ export const CreatePost = () => {
         try {
             const draft = await gemini.generatePostContent(aiTopic, user.name, user.role);
             setDescription(draft);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            alert("Failed to generate post content. Please try again.");
+            showToast(err.message || "Failed to generate post content.", 'error');
         } finally {
             setIsGenerating(false);
         }

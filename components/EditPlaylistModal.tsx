@@ -1,11 +1,11 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
 import { IconX, IconPhoto } from '../constants';
 import { Spinner } from './Spinner';
 import { Playlist } from '../types';
+import { usePersistence } from '../hooks/usePersistence';
 
 interface EditPlaylistModalProps {
     isOpen: boolean;
@@ -16,6 +16,7 @@ interface EditPlaylistModalProps {
 
 export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({ isOpen, onClose, onPlaylistUpdated, playlist }) => {
     const { user } = useAuth();
+    const { showToast } = usePersistence();
     const [name, setName] = useState('');
     const [artworkFile, setArtworkFile] = useState<File | null>(null);
     const [artworkPreview, setArtworkPreview] = useState<string | null>(null);
@@ -62,10 +63,13 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({ isOpen, on
             console.error(error);
             // FIX: Provide more specific user feedback for common RLS errors.
             let message = "Failed to update playlist.";
-            if (error instanceof Error && error.message.includes('security policy')) {
-                message = 'Playlist update failed due to an artwork upload permission issue. Please contact support.';
+            if (error instanceof Error) {
+                message = error.message;
+                if (error.message.includes('security policy')) {
+                    message = 'Playlist update failed due to an artwork upload permission issue. Please contact support.';
+                }
             }
-            alert(message);
+            showToast(message, 'error');
         } finally {
             setIsSubmitting(false);
         }

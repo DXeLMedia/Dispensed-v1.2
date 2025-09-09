@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
@@ -8,6 +7,7 @@ import { DJ, Business, Role, UserProfile } from '../types';
 import { IconX, IconInstagram, IconMusic, IconWebsite, IconPencil, IconSparkles } from '../constants';
 import { Spinner } from './Spinner';
 import { Avatar } from './Avatar';
+import { usePersistence } from '../hooks/usePersistence';
 
 interface EditProfileModalProps {
     isOpen: boolean;
@@ -20,6 +20,7 @@ const availableGenres = ['Deep House', 'Techno', 'Afro House', 'Soulful House', 
 
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, onProfileUpdated, profileData }) => {
+    const { showToast } = usePersistence();
     const [name, setName] = useState('');
     const [bio, setBio] = useState('');
     const [location, setLocation] = useState('');
@@ -96,16 +97,22 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     const handleGenerateBio = async () => {
         if (!profileData || profileData.role !== Role.DJ) return;
         setIsGeneratingBio(true);
-        const generatedBio = await gemini.generateDjBio(
-            name,
-            selectedGenres,
-            location,
-            Number(experienceYears) || undefined,
-            equipmentOwnedStr.split(',').map(s => s.trim()).filter(Boolean),
-            keywordsForBio
-        );
-        setBio(generatedBio);
-        setIsGeneratingBio(false);
+        try {
+            const generatedBio = await gemini.generateDjBio(
+                name,
+                selectedGenres,
+                location,
+                Number(experienceYears) || undefined,
+                equipmentOwnedStr.split(',').map(s => s.trim()).filter(Boolean),
+                keywordsForBio
+            );
+            setBio(generatedBio);
+        } catch (err: any) {
+            console.error(err);
+            showToast(err.message || 'Failed to generate bio.', 'error');
+        } finally {
+            setIsGeneratingBio(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -163,10 +170,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
             console.error(error);
             // FIX: Provide more specific user feedback for common RLS errors.
             let message = "Failed to update profile.";
-            if (error instanceof Error && error.message.includes('security policy')) {
-                message = "Profile update failed due to a permission issue. Please contact support about storage policies.";
+            if (error instanceof Error) {
+                message = error.message;
+                if (error.message.includes('security policy')) {
+                    message = "Profile update failed due to a permission issue. Please contact support about storage policies.";
+                }
             }
-            alert(message);
+            showToast(message, 'error');
         } finally {
             setIsSubmitting(false);
         }

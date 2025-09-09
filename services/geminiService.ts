@@ -1,6 +1,4 @@
 
-
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { DJ, Role } from '../types';
 
@@ -43,13 +41,7 @@ export const generateGigDescription = async (
     return response.text;
   } catch (error) {
     console.error("Error generating gig description with Gemini:", error);
-    // Fallback to a template if the API fails
-    let fallback = `Get ready for ${title} at ${venueName}! Featuring the best of ${genres.join(', ')}.`;
-    if (keywords) {
-      fallback += ` Get ready for a night of ${keywords} vibes.`;
-    }
-    fallback += ` It's going to be an epic night!`;
-    return fallback;
+    throw new Error("AI description generation failed. The model may be busy or the request was blocked.");
   }
 };
 
@@ -117,8 +109,7 @@ export const findDJsWithAI = async (query: string, allDjs: DJ[]): Promise<string
         return [];
     } catch (error) {
         console.error("Error finding DJs with Gemini:", error);
-        // Handle potential parsing errors or API failures
-        return [];
+        throw new Error("AI DJ Scout failed. Please refine your query or try again later.");
     }
 };
 
@@ -164,7 +155,7 @@ export const generateDjBio = async (
     return response.text.trim();
   } catch (error) {
     console.error("Error generating DJ bio with Gemini:", error);
-    return `Passionate DJ from ${location} spinning the best of ${genres.join(', ')}. With ${experience || 'years'} of experience behind the decks, I'm ready to bring the energy.`;
+    throw new Error("AI bio generation failed. The model may be busy or the request was blocked.");
   }
 };
 
@@ -204,7 +195,7 @@ export const generatePostContent = async (
     return response.text.trim();
   } catch (error) {
     console.error("Error generating post content with Gemini:", error);
-    return `Excited to announce: ${topic}! #capetownmusic #${userRole === Role.DJ ? 'djlife' : 'livemusic'}`;
+    throw new Error("AI post generation failed. The model may be busy or the request was blocked.");
   }
 };
 
@@ -246,6 +237,6 @@ export const generateGigFlyer = async (
     return null;
   } catch (error) {
     console.error("Error generating gig flyer with Gemini:", error);
-    return null;
+    throw new Error("AI flyer generation failed. The model may be busy or the request was blocked.");
   }
 };

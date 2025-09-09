@@ -7,6 +7,7 @@ import { PageSpinner } from '../components/Spinner';
 import { IconMoreVertical, IconChevronLeft, IconChevronRight, IconCalendar, IconClock, IconStickyNote, IconSearch, IconStar } from '../constants';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { RatingModal } from '../components/RatingModal';
+import { usePersistence } from '../hooks/usePersistence';
 
 interface GigCardProps {
   gig: Gig & { bookedDjName?: string };
@@ -100,6 +101,7 @@ export const MyGigs = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const { showToast } = usePersistence();
     const highlightedRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -140,7 +142,10 @@ export const MyGigs = () => {
             const enrichedCompleted = enrichWithDjName(completed);
 
             const confirmedIds = new Set([...enrichedBooked.map(g => g.id), ...enrichedCompleted.map(g => g.id)]);
-            const pending = interested.filter(g => !confirmedIds.has(g.id));
+            // First, filter out interested gigs that this user was actually confirmed for.
+            const interestedOnly = interested.filter(g => !confirmedIds.has(g.id));
+            // Then, from that list, only keep the ones that are still open. Gigs booked by others are no longer "pending" for this user.
+            const pending = interestedOnly.filter(g => g.status === 'Open');
             
             setBookedGigs(enrichedBooked);
             setInterestedGigs(pending);
@@ -176,15 +181,20 @@ export const MyGigs = () => {
     const handleSubmitReview = async (rating: number, comment: string) => {
         if (!gigToRate || !gigToRate.business_user_id || !user) return;
         
-        await api.submitReview({
-            authorId: user.id,
-            targetId: gigToRate.business_user_id,
-            rating,
-            comment,
-            gigId: gigToRate.id
-        });
-        
-        alert('Review submitted, thank you!');
+        try {
+            await api.submitReview({
+                authorId: user.id,
+                targetId: gigToRate.business_user_id,
+                rating,
+                comment,
+                gigId: gigToRate.id
+            });
+            showToast('Review submitted, thank you!', 'success');
+            setIsRatingModalOpen(false);
+            setGigToRate(null);
+        } catch (err: any) {
+            showToast(err.message || 'Failed to submit review.', 'error');
+        }
     };
 
     const activeMonths = useMemo((): string[] => {

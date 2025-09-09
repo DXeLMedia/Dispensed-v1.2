@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
@@ -96,6 +97,9 @@ export const Login = () => {
                 </button>
                  <button onClick={() => handleDemoLogin(Role.Listener)} disabled={loading} className="w-full flex justify-center py-3 px-4 rounded-md shadow-sm text-sm font-bold bg-[var(--surface-2)] text-[var(--text-primary)] hover:bg-[var(--border)] disabled:opacity-50">
                      {loading ? 'Logging in...' : 'Enter as Demo Listener'}
+                </button>
+                <button onClick={() => handleDemoLogin(Role.Admin)} disabled={loading} className="w-full flex justify-center py-3 px-4 rounded-md shadow-sm text-sm font-bold bg-[var(--surface-2)] text-[var(--text-primary)] hover:bg-[var(--border)] disabled:opacity-50">
+                     {loading ? 'Logging in...' : 'Enter as Demo Admin'}
                 </button>
             </div>
         ) : (

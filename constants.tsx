@@ -57,6 +57,7 @@ import {
   Building,
   Banknote,
   Trash2,
+  LayoutDashboard,
 } from 'lucide-react';
 import React from 'react';
 
@@ -116,3 +117,4 @@ export const IconDownload = (props: React.ComponentProps<typeof Download>) => <D
 export const IconBuilding = (props: React.ComponentProps<typeof Building>) => <Building {...props} />;
 export const IconMoney = (props: React.ComponentProps<typeof Banknote>) => <Banknote {...props} />;
 export const IconTrash = (props: React.ComponentProps<typeof Trash2>) => <Trash2 {...props} />;
+export const IconDashboard = (props: React.ComponentProps<typeof LayoutDashboard>) => <LayoutDashboard {...props} />;

@@ -1,8 +1,4 @@
 
-
-
-
-
 import React, { useState, useEffect } from 'react';
 import { Gig, DJ, Role, Business } from '../types';
 import * as api from '../services/mockApi';
@@ -11,6 +7,7 @@ import { Spinner } from '../components/Spinner';
 import { IconArrowLeft, IconConnections, IconCalendar, IconCheckCircle2, IconStar, IconPlus, IconPencil } from '../constants';
 import { useNavigate, Link } from 'react-router-dom';
 import { RatingModal } from '../components/RatingModal';
+import { usePersistence } from '../hooks/usePersistence';
 
 const Header = () => {
     const navigate = useNavigate();
@@ -119,6 +116,7 @@ export const VenueGigs = () => {
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { showToast } = usePersistence();
     const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
     const [gigToRate, setGigToRate] = useState<(Gig & { bookedDjName?: string }) | null>(null);
 
@@ -162,15 +160,21 @@ export const VenueGigs = () => {
 
     const handleSubmitReview = async (rating: number, comment: string) => {
         if (!gigToRate || !gigToRate.bookedDjId || !user) return;
-        await api.submitReview({
-            authorId: user.id,
-            targetId: gigToRate.bookedDjId,
-            rating,
-            comment,
-            gigId: gigToRate.id,
-        });
-        alert("Review submitted!");
-        // Optionally refetch gigs or update state to hide the button
+        try {
+            await api.submitReview({
+                authorId: user.id,
+                targetId: gigToRate.bookedDjId,
+                rating,
+                comment,
+                gigId: gigToRate.id,
+            });
+            showToast("Review submitted!", 'success');
+            setIsRatingModalOpen(false);
+            setGigToRate(null);
+            // Optionally refetch gigs or update state to hide the button
+        } catch(err: any) {
+            showToast(err.message || "Failed to submit review.", 'error');
+        }
     };
 
     const filteredGigs = allGigs.filter(gig => gig.status.toLowerCase() === activeTab);

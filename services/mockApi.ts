@@ -136,7 +136,7 @@ export const uploadFile = async (folder: string, file: File): Promise<string> =>
         if (uploadError.message && (uploadError.message.includes('permission denied') || uploadError.message.includes('security policy'))) {
             throw new Error('Upload failed due to security policy. Please check storage permissions.');
         }
-        throw uploadError;
+        throw new Error('File upload failed. Please try again or check the file format.');
     }
 };
 
@@ -154,7 +154,7 @@ export const uploadFile = async (folder: string, file: File): Promise<string> =>
 function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProfileRow | DjProfileRow[] | null, business_profiles: BusinessProfileRow | BusinessProfileRow[] | null }): UserProfile {
     const role = data.user_type as Role;
 
-    const baseUser = {
+    const baseUser: any = {
         id: data.user_id,
         name: data.display_name,
         avatarUrl: data.avatar_url,
@@ -197,13 +197,18 @@ function mapJoinedDataToUserProfile(data: UserProfileRow & { dj_profiles: DjProf
             reviewsCount: businessProfile?.reviews_count || 0,
             socials: (businessProfile?.socials as any) || {},
         };
-    } else {
+    } else if (role === Role.Listener) {
         return {
             ...baseUser,
             role: Role.Listener,
             rating: 0,
             reviewsCount: 0,
         };
+    } else { // Admin or any other role
+        return {
+            ...baseUser,
+            role: role,
+        }
     }
 }
 
@@ -467,7 +472,7 @@ export const updateUserProfile = async (userId: string, data: Partial<UserProfil
         results.forEach((result, index) => {
             if (result.error) console.error(`Error in update operation #${index}:`, result.error);
         });
-        return false;
+        throw new Error('Failed to update profile. Some information could not be saved.');
     }
 
     persistenceService.markDirty();
@@ -1148,7 +1153,7 @@ export const addTrack = async (userId: string, title: string, artworkUrl: string
     const { error } = await supabase.rpc('add_track_to_portfolio', { dj_user_id_param: userId, new_track: newTrack as unknown as Json });
     if (error) {
         console.error('Error adding track to portfolio:', error);
-        return false;
+        throw new Error('Failed to save the new track.');
     }
 
     // Post to feed
@@ -1174,7 +1179,7 @@ export const createPlaylist = async (playlistData: Omit<Playlist, 'id'>): Promis
     const { data, error } = await supabase.from('app_e255c3cdb5_playlists').insert({ dj_user_id: playlistData.creatorId, name: playlistData.name, artwork_url: playlistData.artworkUrl, tracks: [] }).select().single();
     if (error || !data) {
         console.error('Error creating playlist:', error);
-        return null;
+        throw new Error('Could not create the playlist.');
     }
     persistenceService.markDirty();
     return getPlaylistById(data.id);
@@ -1189,7 +1194,7 @@ export const updatePlaylist = async (playlistId: string, playlistData: Partial<P
     const { data, error } = await supabase.from('app_e255c3cdb5_playlists').update(dbUpdate).eq('id', playlistId).select().single();
     if (error || !data) {
         console.error('Error updating playlist:', error);
-        return null;
+        throw new Error('Could not update the playlist.');
     }
     persistenceService.markDirty();
     return getPlaylistById(data.id);
@@ -1348,7 +1353,7 @@ export const submitReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>)
     const { data, error } = await supabase.from('app_e255c3cdb5_reviews').insert(dbReview).select().single();
     if (error || !data) {
         console.error('Error submitting review:', error);
-        return null;
+        throw new Error('Could not submit your review. Please try again.');
     }
     
     // Re-fetch all reviews for the target user to ensure accurate recalculation.
@@ -1556,3 +1561,46 @@ export const seedDatabase = async (): Promise<any> => {
     // Return empty data as the component expects something to download.
     return { djs: [], businesses: [], gigs: [], tracks: [], playlists: [] };
 };
+
+// =================================================================
+// SECTION: Admin Actions
+// =================================================================
+
+export const deleteUser = async (userId: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.deleteUser(userId);
+    // DANGER: This is a complex operation. In a real Supabase app, this should be
+    // handled by a database function (RPC) with elevated privileges to ensure
+    // all related data is properly cascaded and deleted.
+    // Client-side cascade is not recommended due to RLS and atomicity issues.
+    // The following is a simplified example and may fail due to RLS.
+    console.warn("deleteUser is not fully implemented for production Supabase due to RLS complexity. Relying on database cascades is recommended.");
+
+    // This will likely fail unless RLS is configured for admins.
+    const { error } = await supabase.from('app_e255c3cdb5_user_profiles').delete().eq('user_id', userId);
+    if (error) {
+        console.error("Error deleting user:", error);
+        return false;
+    }
+    persistenceService.markDirty();
+    return true;
+}
+
+export const deleteGig = async (gigId: string): Promise<boolean> => {
+    if (isDemoModeEnabled()) return demoApi.deleteGig(gigId);
+     // In a real app, ensure RLS allows admins to delete any gig.
+    // First, delete dependent applications.
+    const { error: appError } = await supabase.from('app_e255c3cdb5_gig_applications').delete().eq('gig_id', gigId);
+    if (appError) {
+        console.error("Error deleting gig applications:", appError);
+        return false;
+    }
+    // Then delete the gig itself.
+    const { error: gigError } = await supabase.from('app_e255c3cdb5_gigs').delete().eq('id', gigId);
+    if (gigError) {
+        console.error("Error deleting gig:", gigError);
+        return false;
+    }
+
+    persistenceService.markDirty();
+    return true;
+}

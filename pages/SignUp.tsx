@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
@@ -85,6 +86,7 @@ export const SignUp = () => {
                   <option value={Role.DJ}>DJ</option>
                   <option value={Role.Business}>Venue / Event Brand</option>
                   <option value={Role.Listener}>Listener</option>
+                  <option value={Role.Admin}>Admin</option>
                 </select>
               </div>
               {error && <p className="text-red-500 text-sm text-center">{error}</p>}

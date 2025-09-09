@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, Role, DJ, Business, Notification, UserSettings, Listener, UserProfile, NotificationType } from '../types';
 import * as api from '../services/mockApi';
@@ -118,9 +117,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [isDemoMode, closePlayer]);
 
 
+  // Original effect had a race condition and an infinite loop on `user` state changes.
+  // This was because `getSession()` was called on every render, and `fetchUserProfile`
+  // returned a new user object reference, triggering `setUser` and another render.
+  // The fix is to ensure `getSession()` is only called during the initial loading state.
+  // The `onAuthStateChange` listener is sufficient for handling subsequent auth events.
   useEffect(() => {
     if (isDemoMode) {
-      // If we switch to demo mode while logged in, log out.
       if (user) {
         logout();
       }
@@ -129,14 +132,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
-    // Run once on mount to get current session
-    supabase.auth.getSession().then(async ({ data: { session } }: any) => {
-        if (session) {
-            const profile = await fetchUserProfile(session.user);
-            setUser(profile);
-        }
-        setIsLoading(false);
-    });
+    // Only fetch the session on initial load.
+    if (!user && isLoading) {
+        supabase.auth.getSession().then(async ({ data: { session } }: any) => {
+            if (session) {
+                const profile = await fetchUserProfile(session.user);
+                setUser(profile);
+            }
+            setIsLoading(false);
+        });
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: any, session: any) => {
@@ -144,14 +149,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (event === 'SIGNED_OUT') {
             setUser(null);
         } else if (session && (!user || user.id !== session.user.id)) {
+            // This condition correctly handles SIGNED_IN and subsequent user changes.
             const profile = await fetchUserProfile(session.user);
-            setUser(profile);
+            if (profile) {
+              setUser(profile);
+            } else {
+              showToast('Could not load user profile. You have been logged out.', 'error');
+              // fetchUserProfile has already called signOut, so the state will update correctly.
+            }
         }
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [isDemoMode, fetchUserProfile, user, logout]);
+  // Added isLoading to the dependency array to correctly handle the initial session check.
+  }, [isDemoMode, fetchUserProfile, user, logout, showToast, isLoading]);
+
 
   // Real-time notification listener
   useEffect(() => {

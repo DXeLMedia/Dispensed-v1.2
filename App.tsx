@@ -1,8 +1,5 @@
 
 
-
-
-
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
@@ -38,6 +35,7 @@ import { MediaPlayer } from './components/MediaPlayer';
 import { EditGig } from './pages/EditGig';
 import { usePersistence } from './hooks/usePersistence';
 import { NotificationToast } from './components/NotificationToast';
+import { AdminDashboard } from './pages/AdminDashboard';
 
 
 const AppContainer = ({ children }: React.PropsWithChildren<{}>) => {
@@ -135,6 +133,7 @@ const AppRoutes = () => {
             case Role.DJ: return '/feed';
             case Role.Business: return '/feed';
             case Role.Listener: return '/feed';
+            case Role.Admin: return '/admin/dashboard';
             default: return '/login';
         }
     }
@@ -145,19 +144,20 @@ const AppRoutes = () => {
             <Route path="/signup" element={<SignUp />} />
             
             {/* Role Specific Routes */}
-            <Route path="/feed" element={<ProtectedRoute roles={[Role.DJ, Role.Listener, Role.Business]}><Feed /></ProtectedRoute>} />
+            <Route path="/feed" element={<ProtectedRoute roles={[Role.DJ, Role.Listener, Role.Business, Role.Admin]}><Feed /></ProtectedRoute>} />
             <Route path="/gigs" element={<ProtectedRoute roles={[Role.DJ]}><MyGigs /></ProtectedRoute>} />
             <Route path="/find-gigs" element={<ProtectedRoute roles={[Role.DJ]}><Gigs /></ProtectedRoute>} />
-            <Route path="/discover" element={<ProtectedRoute roles={[Role.DJ, Role.Business, Role.Listener]}><DiscoverRouter /></ProtectedRoute>} />
+            <Route path="/discover" element={<ProtectedRoute roles={[Role.DJ, Role.Business, Role.Listener, Role.Admin]}><DiscoverRouter /></ProtectedRoute>} />
             <Route path="/create-gig" element={<ProtectedRoute roles={[Role.Business]}><CreateGig /></ProtectedRoute>} />
             <Route path="/edit-gig/:gigId" element={<ProtectedRoute roles={[Role.Business]}><EditGig /></ProtectedRoute>} />
             <Route path="/create-post" element={<ProtectedRoute roles={[Role.Business, Role.DJ]}><CreatePost /></ProtectedRoute>} />
-            <Route path="/messages" element={<ProtectedRoute roles={[Role.DJ, Role.Business, Role.Listener]}><Messages /></ProtectedRoute>} />
-            <Route path="/messages/:chatId" element={<ProtectedRoute roles={[Role.DJ, Role.Business, Role.Listener]}><ChatRoom /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute roles={[Role.DJ, Role.Business, Role.Listener, Role.Admin]}><Messages /></ProtectedRoute>} />
+            <Route path="/messages/:chatId" element={<ProtectedRoute roles={[Role.DJ, Role.Business, Role.Listener, Role.Admin]}><ChatRoom /></ProtectedRoute>} />
             <Route path="/venue/gigs" element={<ProtectedRoute roles={[Role.Business]}><VenueGigs /></ProtectedRoute>} />
             <Route path="/venue/gigs/:gigId/applicants" element={<ProtectedRoute roles={[Role.Business]}><GigApplicants /></ProtectedRoute>} />
             <Route path="/stream-setup" element={<ProtectedRoute roles={[Role.DJ]}><StreamSetup /></ProtectedRoute>} />
             <Route path="/media-manager" element={<ProtectedRoute roles={[Role.DJ]}><MediaManager /></ProtectedRoute>} />
+            <Route path="/admin/dashboard" element={<ProtectedRoute roles={[Role.Admin]}><AdminDashboard /></ProtectedRoute>} />
 
             {/* Common Authenticated Routes */}
             <Route path="/leaderboard" element={<AuthenticatedRoute><Leaderboard /></AuthenticatedRoute>} />

@@ -1,16 +1,13 @@
 
 
-
-
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
-import { DJ, Business, Role, Track, Gig, Listener, Playlist, EnrichedReview } from '../types';
+import { DJ, Business, Role, Track, Gig, Listener, Playlist, EnrichedReview, Admin } from '../types';
 import * as api from '../services/mockApi';
 import { useAuth } from '../hooks/useAuth';
 import { PageSpinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
-import { IconSettings, IconStar, IconMusic, IconPlay, IconShare, IconArrowLeft, IconBriefcase, IconRadio, IconPlusCircle, IconList, IconPencil, IconInstagram, IconWebsite, IconTrophy, IconMoney, IconMapPin, IconCalendar } from '../constants';
+import { IconSettings, IconStar, IconMusic, IconPlay, IconShare, IconArrowLeft, IconBriefcase, IconRadio, IconPlusCircle, IconList, IconPencil, IconInstagram, IconWebsite, IconTrophy, IconMoney, IconMapPin, IconCalendar, IconDashboard } from '../constants';
 import { RatingModal } from '../components/RatingModal';
 import { ReviewCard } from '../components/ReviewCard';
 import { useMediaPlayer } from '../contexts/MediaPlayerContext';
@@ -458,7 +455,7 @@ const BusinessProfile: React.FC<BusinessProfileProps> = ({ business, isOwnProfil
                                 <h2 className="font-orbitron text-lg font-bold mb-2 text-[var(--text-primary)]">Connect</h2>
                                 <div className="flex flex-wrap gap-2">
                                     {business.socials?.instagram && <a href={`https://instagram.com/${business.socials.instagram}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 bg-[var(--surface-2)] rounded-lg hover:bg-[var(--border)]"><IconInstagram size={20} /></a>}
-                                    {business.socials?.website && <a href={`https://${business.socials.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 bg-[var(--surface-2)] rounded-lg hover:bg-[var(--border)]"><IconWebsite size={20} /></a>}
+                                    {business.socials?.website && <a href={`https://instagram.com/${business.socials.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 bg-[var(--surface-2)] rounded-lg hover:bg-[var(--border)]"><IconWebsite size={20} /></a>}
                                 </div>
                             </div>
                         )}
@@ -589,12 +586,45 @@ const ListenerProfile: React.FC<ListenerProfileProps> = ({ listener, isOwnProfil
     )
 };
 
+interface AdminProfileProps {
+    admin: Admin;
+    isOwnProfile: boolean;
+}
+
+const AdminProfile: React.FC<AdminProfileProps> = ({ admin, isOwnProfile }) => {
+    return (
+        <>
+            <div className="p-4 flex flex-col items-center text-center">
+                <Avatar src={admin.avatarUrl} alt={admin.name} size="xl" className="mb-4 border-4 border-[var(--surface-2)]" />
+                <h1 className="font-orbitron text-2xl font-bold text-[var(--text-primary)]">{admin.name}</h1>
+                <p className="text-[var(--text-secondary)] mt-1 capitalize">{admin.role}</p>
+            </div>
+
+            <div className="flex justify-around p-4 bg-[var(--surface-1)]/50">
+                <Stat value={admin.followers.toLocaleString()} label="Followers" to={`/profile/${admin.id}/connections?tab=followers`} />
+                <Stat value={admin.following.length.toLocaleString()} label="Following" to={`/profile/${admin.id}/connections?tab=following`} />
+            </div>
+
+            {isOwnProfile && (
+                <div className="p-4">
+                     <Link to="/admin/dashboard" className="flex items-center justify-center gap-2 w-full bg-[var(--accent)] text-[var(--accent-text)] font-bold py-3 rounded-lg hover:bg-[var(--accent-hover)] transition-colors">
+                        <IconDashboard size={20} /> Go to Dashboard
+                    </Link>
+                </div>
+            )}
+             <div className="text-center text-[var(--text-muted)] py-8 px-4">
+                <p>Administrative User Profile</p>
+            </div>
+        </>
+    )
+};
+
 export const Profile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { user: currentUser, updateUser } = useAuth();
-  const [profileData, setProfileData] = useState<DJ | Business | Listener | null>(null);
+  const [profileData, setProfileData] = useState<DJ | Business | Listener | Admin | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
@@ -609,7 +639,7 @@ export const Profile = () => {
         setProfileData(await api.getDJById(profileId) || null);
     } else if (user?.role === Role.Business) {
         setProfileData(await api.getBusinessById(profileId) || null);
-    } else if (user?.role === Role.Listener) {
+    } else if (user?.role === Role.Listener || user?.role === Role.Admin) {
         setProfileData(user || null);
     } else {
        setProfileData(null); 
@@ -690,8 +720,9 @@ export const Profile = () => {
       {profileData.role === Role.DJ && <DJProfile dj={profileData as DJ} isOwnProfile={isOwnProfile} onEditClick={() => setIsEditModalOpen(true)} onLeaveReviewClick={() => setIsRatingModalOpen(true)} />}
       {profileData.role === Role.Business && <BusinessProfile business={profileData as Business} isOwnProfile={isOwnProfile} onEditClick={() => setIsEditModalOpen(true)} onLeaveReviewClick={() => setIsRatingModalOpen(true)} />}
       {profileData.role === Role.Listener && <ListenerProfile listener={profileData as Listener} isOwnProfile={isOwnProfile} onLeaveReviewClick={() => setIsRatingModalOpen(true)} />}
+      {profileData.role === Role.Admin && <AdminProfile admin={profileData as Admin} isOwnProfile={isOwnProfile} />}
     
-      {isOwnProfile && profileData.role !== Role.Listener && (
+      {isOwnProfile && profileData.role !== Role.Listener && profileData.role !== Role.Admin && (
         <EditProfileModal 
             isOpen={isEditModalOpen}
             onClose={handleCloseEditModal}

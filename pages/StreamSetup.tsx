@@ -7,10 +7,12 @@ import { IconArrowLeft, IconRadio } from '../constants';
 import { Spinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
 import { Role } from '../types';
+import { usePersistence } from '../hooks/usePersistence';
 
 export const StreamSetup = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { showToast } = usePersistence();
     const [title, setTitle] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -38,7 +40,7 @@ export const StreamSetup = () => {
 
         } catch (error) {
             console.error("Failed to go live:", error);
-            alert("Could not start the stream. Please try again.");
+            showToast("Could not start the stream. Please try again.", 'error');
             setIsLoading(false);
         }
     };

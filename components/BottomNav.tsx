@@ -13,7 +13,8 @@ import {
   IconTrophy,
   IconMusic,
   IconLogOut,
-  IconList
+  IconList,
+  IconDashboard,
 } from '../constants';
 import { Avatar } from './Avatar';
 
@@ -64,6 +65,17 @@ const ListenerNavMobile = () => (
     </>
 )
 
+const AdminNavMobile = () => (
+  <>
+    <MobileNavItem to="/admin/dashboard" icon={<IconDashboard size={22} />} label="Dashboard" />
+    <MobileNavItem to="/feed" icon={<IconHome size={22} />} label="Feed" />
+    <MobileNavItem to="/discover" icon={<IconSearch size={22} />} label="Discover" />
+    <MobileNavItem to="/messages" icon={<IconMessages size={22} />} label="Inbox" />
+    <MobileNavItem to="/profile/me" icon={<IconProfile size={22} />} label="Profile" />
+  </>
+);
+
+
 export const BottomNav = () => {
   const { role } = useAuth();
 
@@ -72,6 +84,7 @@ export const BottomNav = () => {
           case Role.DJ: return <DJNavMobile />;
           case Role.Business: return <BusinessNavMobile />;
           case Role.Listener: return <ListenerNavMobile />;
+          case Role.Admin: return <AdminNavMobile />;
           default: return null;
       }
   }
@@ -132,6 +145,16 @@ const ListenerNavDesktop = () => (
     </>
 );
 
+const AdminNavDesktop = () => (
+    <>
+        <DesktopNavItem to="/admin/dashboard" icon={<IconDashboard size={22} />} label="Dashboard" />
+        <DesktopNavItem to="/feed" icon={<IconHome size={22} />} label="Feed" />
+        <DesktopNavItem to="/discover" icon={<IconSearch size={22} />} label="Discover" />
+        <DesktopNavItem to="/messages" icon={<IconMessages size={22} />} label="Inbox" />
+        <DesktopNavItem to="/leaderboard" icon={<IconTrophy size={22} />} label="Leaderboard" />
+    </>
+);
+
 
 export const SideNav = () => {
   const { role, user, logout } = useAuth();
@@ -147,6 +170,7 @@ export const SideNav = () => {
           case Role.DJ: return <DJNavDesktop />;
           case Role.Business: return <BusinessNavDesktop />;
           case Role.Listener: return <ListenerNavDesktop />;
+          case Role.Admin: return <AdminNavDesktop />;
           default: return null;
       }
   }

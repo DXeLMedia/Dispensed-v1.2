@@ -7,6 +7,7 @@ import { PageSpinner } from '../components/Spinner';
 import { Avatar } from '../components/Avatar';
 import { IconArrowLeft, IconConnections, IconHeart, IconShare } from '../constants';
 import { useAuth } from '../hooks/useAuth';
+import { usePersistence } from '../hooks/usePersistence';
 
 interface EmojiReaction {
   id: number;
@@ -18,6 +19,7 @@ export const LiveStream = () => {
     const { sessionId } = useParams<{ sessionId: string }>();
     const navigate = useNavigate();
     const { user: currentUser } = useAuth();
+    const { showToast } = usePersistence();
     const [session, setSession] = useState<StreamSession | null>(null);
     const [dj, setDj] = useState<DJ | null>(null);
     const [loading, setLoading] = useState(true);
@@ -77,9 +79,14 @@ export const LiveStream = () => {
     const handleEndStream = async () => {
         if (!sessionId) return;
         setIsEnding(true);
-        await api.endStreamSession(sessionId);
-        alert("Stream has ended.");
-        navigate('/feed');
+        try {
+            await api.endStreamSession(sessionId);
+            showToast("Stream has ended.", 'success');
+            navigate('/feed');
+        } catch (err: any) {
+            showToast("Could not end stream. Please try again.", 'error');
+            setIsEnding(false);
+        }
     };
 
 

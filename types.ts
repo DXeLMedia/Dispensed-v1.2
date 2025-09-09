@@ -1,12 +1,9 @@
 
-
-
-
-
 export enum Role {
   DJ = 'dj',
   Business = 'business',
   Listener = 'listener',
+  Admin = 'admin',
 }
 
 export enum Tier {
@@ -74,6 +71,10 @@ export interface Listener extends User, Followable {
     role: Role.Listener;
     rating: number;
     reviewsCount: number;
+}
+
+export interface Admin extends User, Followable {
+    role: Role.Admin;
 }
 
 
@@ -207,7 +208,7 @@ export interface EnrichedComment extends Comment {
 }
 
 // Type Aliases for compatibility
-export type UserProfile = DJ | Business | Listener;
+export type UserProfile = DJ | Business | Listener | Admin;
 export type Post = FeedItem;
 export type PostComment = Comment;
 
@@ -242,3 +243,5 @@ export interface BusinessProfile {
         website?: string;
     };
 }
+
+export interface AdminProfile {}

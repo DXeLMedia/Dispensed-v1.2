@@ -1,10 +1,10 @@
 
-
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
 import { IconX, IconPhoto } from '../constants';
 import { Spinner } from './Spinner';
+import { usePersistence } from '../hooks/usePersistence';
 
 interface AddPlaylistModalProps {
     isOpen: boolean;
@@ -14,6 +14,7 @@ interface AddPlaylistModalProps {
 
 export const AddPlaylistModal: React.FC<AddPlaylistModalProps> = ({ isOpen, onClose, onPlaylistAdded }) => {
     const { user } = useAuth();
+    const { showToast } = usePersistence();
     const [name, setName] = useState('');
     const [artworkFile, setArtworkFile] = useState<File | null>(null);
     const [artworkPreview, setArtworkPreview] = useState<string | null>(null);
@@ -54,10 +55,13 @@ export const AddPlaylistModal: React.FC<AddPlaylistModalProps> = ({ isOpen, onCl
             console.error(error);
             // FIX: Provide more specific user feedback for common RLS errors.
             let message = "Failed to create playlist.";
-            if (error instanceof Error && error.message.includes('security policy')) {
-                message = 'Playlist creation failed due to an artwork upload permission issue. Please contact support.';
+            if (error instanceof Error) {
+                message = error.message;
+                if (error.message.includes('security policy')) {
+                    message = 'Playlist creation failed due to an artwork upload permission issue. Please contact support.';
+                }
             }
-            alert(message);
+            showToast(message, 'error');
         } finally {
             setIsSubmitting(false);
         }

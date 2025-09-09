@@ -1,11 +1,10 @@
 
-
-
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/mockApi';
 import { IconX, IconPhoto, IconFileMusic } from '../constants';
 import { Spinner } from './Spinner';
+import { usePersistence } from '../hooks/usePersistence';
 
 interface AddTrackModalProps {
     isOpen: boolean;
@@ -15,6 +14,7 @@ interface AddTrackModalProps {
 
 export const AddTrackModal: React.FC<AddTrackModalProps> = ({ isOpen, onClose, onTrackAdded }) => {
     const { user } = useAuth();
+    const { showToast } = usePersistence();
     const [title, setTitle] = useState('');
     const [artworkPreview, setArtworkPreview] = useState<string | null>(null);
     const [artworkFile, setArtworkFile] = useState<File | null>(null);
@@ -47,7 +47,7 @@ export const AddTrackModal: React.FC<AddTrackModalProps> = ({ isOpen, onClose, o
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!title || !artworkFile || !trackFile || !user) {
-            alert("Please provide a title and upload both artwork and a track file.");
+            showToast("Please provide a title, artwork, and track file.", 'error');
             return;
         }
         setIsSubmitting(true);
@@ -71,7 +71,7 @@ export const AddTrackModal: React.FC<AddTrackModalProps> = ({ isOpen, onClose, o
             if (error instanceof Error && error.message.includes('security policy')) {
                 message = 'Track upload failed due to a storage permission issue. Please contact support.';
             }
-            alert(message);
+            showToast(message, 'error');
         } finally {
             setIsSubmitting(false);
         }

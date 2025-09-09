@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { DJ } from '../types';
 import * as gemini from '../services/geminiService';
@@ -81,9 +80,9 @@ export const AIDJScout: React.FC<AIDJScoutProps> = ({ isOpen, onClose, allDJs })
             } else {
                 setResults([]);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            setError('An error occurred while scouting. Please try again.');
+            setError(err.message || 'An error occurred while scouting. Please try again.');
         } finally {
             setIsLoading(false);
         }
