@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { DJ } from '../types';
 import * as gemini from '../services/geminiService';
@@ -103,7 +104,7 @@ export const AIDJScout: React.FC<AIDJScoutProps> = ({ isOpen, onClose, allDJs })
 
     return (
         <div className="fixed inset-0 bg-black z-50 flex flex-col animate-fade-in">
-            <header className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm p-4 flex items-center border-b border-zinc-800">
+            <header className="sticky top-0 z-20 bg-black p-4 flex items-center border-b border-zinc-800">
                 <button onClick={onClose} className="mr-4"><IconArrowLeft size={22} /></button>
                 <h1 className="font-orbitron text-xl font-bold text-white flex items-center gap-2">
                     <IconSparkles className="text-lime-400"/>

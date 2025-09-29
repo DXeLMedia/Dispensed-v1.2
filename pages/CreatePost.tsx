@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -189,7 +190,7 @@ export const CreatePost = () => {
 
     return (
         <div className="text-white min-h-full flex flex-col">
-            <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm p-4 flex justify-between items-center border-b border-zinc-800">
+            <div className="sticky top-0 z-20 bg-black p-4 flex justify-between items-center border-b border-zinc-800">
                 <button onClick={() => navigate(-1)}><IconArrowLeft size={22} /></button>
                 <h1 className="font-orbitron text-xl font-bold text-white">New Post</h1>
                 <button 

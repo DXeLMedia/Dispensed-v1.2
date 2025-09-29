@@ -162,7 +162,7 @@ export const PostDetail = () => {
 
     return (
         <div className="text-white h-full flex flex-col">
-            <header className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm p-4 flex items-center border-b border-zinc-800">
+            <header className="sticky top-0 z-20 bg-black p-4 flex items-center border-b border-zinc-800">
                 <button onClick={() => navigate(-1)} className="mr-4"><IconArrowLeft size={22} /></button>
                 <h1 className="font-orbitron text-xl font-bold text-white">Post</h1>
             </header>

@@ -16,7 +16,7 @@ const Header = () => {
         alert("Functionality to start a new chat is coming soon!");
     }
     return (
-        <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm p-4 flex justify-between items-center border-b border-zinc-800">
+        <div className="sticky top-0 z-20 bg-black p-4 flex justify-between items-center border-b border-zinc-800">
             <button onClick={() => navigate(-1)}><IconArrowLeft size={22} /></button>
             <h1 className="font-orbitron text-xl font-bold text-white">Inbox</h1>
             <button onClick={handleNewMessage}><IconPlus size={24} /></button>

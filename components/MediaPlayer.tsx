@@ -47,7 +47,7 @@ export const MediaPlayer: React.FC = () => {
   const VolumeIcon = volume === 0 ? IconVolumeX : IconVolume2;
 
   return (
-    <div className="w-full h-20 bg-[var(--surface-1)] border-t border-[var(--border)] flex items-center px-4 flex-shrink-0 animate-pop-in">
+    <div className="fixed bottom-16 md:bottom-0 left-0 right-0 h-20 bg-[var(--surface-1)] border-t border-[var(--border)] flex items-center px-4 z-40 animate-pop-in">
         <div className="flex items-center gap-3 w-1/4 md:w-1/3 min-w-0">
             <img src={currentTrack.artworkUrl} alt={currentTrack.title} className="w-12 h-12 rounded-md object-cover flex-shrink-0" />
             <div className="overflow-hidden">
@@ -102,7 +102,7 @@ export const MediaPlayer: React.FC = () => {
                     step="0.01"
                     value={volume}
                     onChange={handleVolumeChange}
-                    className="w-20 h-1 bg-[var(--surface-2)] rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-[var(--accent)] [&::-webkit-slider-thumb]:rounded-full hidden lg:block"
+                    className="w-20 h-1 bg-[var(--surface-2)] rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-[var(--accent)] [&::-webkit-slider-thumb]:rounded-full hidden md:block"
                     aria-label="Volume"
                 />
             </div>

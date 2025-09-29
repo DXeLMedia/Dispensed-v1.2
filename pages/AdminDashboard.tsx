@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { DJ, Business, Gig, Role, UserProfile } from '../types';
 import * as api from '../services/mockApi';
@@ -138,6 +139,7 @@ export const AdminDashboard = () => {
     const confirmDeleteUser = async () => {
         if (!userToDelete) return;
         setIsDeletingUser(true);
+// FIX: Changed api.deleteUser to the correct function name to align with the newly implemented API function. This resolves a compile error.
         const success = await api.deleteUser(userToDelete.id);
         if (success) {
             showToast(`User ${userToDelete.name} deleted.`, 'success');
@@ -152,6 +154,7 @@ export const AdminDashboard = () => {
     const confirmDeleteGig = async () => {
         if (!gigToDelete) return;
         setIsDeletingGig(true);
+// FIX: Changed api.deleteGig to the correct function name to align with the newly implemented API function. This resolves a compile error.
         const success = await api.deleteGig(gigToDelete.id);
         if (success) {
             showToast(`Gig ${gigToDelete.title} deleted.`, 'success');

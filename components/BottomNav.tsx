@@ -90,7 +90,7 @@ export const BottomNav = () => {
   }
 
   return (
-    <nav className="grid grid-cols-5 h-16 bg-[var(--surface-1)]/80 backdrop-blur-sm border-t border-[var(--border)] z-30 md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 grid grid-cols-5 h-16 bg-[var(--surface-1)] border-t border-[var(--border)] z-50 md:hidden">
       {renderNav()}
     </nav>
   );

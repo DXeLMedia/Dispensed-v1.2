@@ -1,6 +1,6 @@
 
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { Role } from './types';
@@ -60,6 +60,18 @@ const AppContainer = ({ children }: React.PropsWithChildren<{}>) => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
       };
     }, [isDirty]);
+    
+    const paddingBottomClass = useMemo(() => {
+        // On mobile (where showNav can be true)
+        const mobilePadding = showNav 
+            ? (currentTrack ? 'pb-36' : 'pb-16') // Nav (64px) + Player (80px) = 144px || just Nav (64px)
+            : (currentTrack ? 'pb-20' : 'pb-0');   // Just Player (80px) OR nothing
+
+        // On desktop, nav is never at bottom.
+        const desktopPadding = currentTrack ? 'md:pb-20' : 'md:pb-0'; // Just Player
+        
+        return `${mobilePadding} ${desktopPadding}`;
+    }, [showNav, currentTrack]);
 
 
     return (
@@ -69,12 +81,13 @@ const AppContainer = ({ children }: React.PropsWithChildren<{}>) => {
             <div className="w-full h-full md:max-w-6xl md:h-[95vh] md:max-h-[1000px] md:rounded-3xl bg-[var(--background)] overflow-hidden shadow-2xl shadow-lime-500/10 flex flex-col md:flex-row relative md:border-4 md:border-[var(--surface-2)]">
                 {showNav && <SideNav />}
                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                    <main className="flex-1 overflow-y-auto relative">
+                    <main className={`flex-1 overflow-y-auto ${paddingBottomClass}`}>
                         {children}
                     </main>
-                    {currentTrack && <MediaPlayer />}
-                    {showNav && <BottomNav />}
                 </div>
+                {/* These components are now positioned absolutely to the container */}
+                {currentTrack && <MediaPlayer />}
+                {showNav && <BottomNav />}
             </div>
         </div>
     )

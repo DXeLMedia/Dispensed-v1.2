@@ -18,7 +18,7 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 const Header = () => {
     const navigate = useNavigate();
     return (
-        <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm p-4 flex items-center border-b border-zinc-800">
+        <div className="sticky top-0 z-20 bg-black p-4 flex items-center border-b border-zinc-800">
             <button onClick={() => navigate(-1)} className="mr-4"><IconArrowLeft size={22} /></button>
             <h1 className="font-orbitron text-xl font-bold text-white">Media Manager</h1>
         </div>

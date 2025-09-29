@@ -14,7 +14,7 @@ import { TrackCard } from '../components/TrackCard';
 
 
 const FeedHeader = ({ unreadCount, role }: { unreadCount: number; role: Role | null }) => (
-  <div className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-sm">
+  <div className="sticky top-0 z-20 bg-[var(--background)]">
       <div className="flex justify-between items-center p-4 border-b border-[var(--border)]">
         <h1 className="font-orbitron text-xl font-bold text-[var(--text-primary)]">Feed</h1>
         <div className="flex items-center gap-4">
@@ -135,98 +135,88 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, onRepostSuccess }) => {
     const renderCardActions = (postToGetRepostCountFrom: FeedItemType) => (
         <div className="flex justify-around items-center p-2 text-[var(--text-secondary)] border-t border-[var(--border)]">
             <button onClick={handleLike} className={`flex items-center gap-2 p-2 rounded-md transition-colors ${isLiked ? 'text-[var(--accent)]' : 'hover:text-[var(--accent)]'}`}>
-              <IconHeart size={20} fill={isLiked ? 'currentColor' : 'none'} /> 
-              <span className="text-sm">{likeCount}</span>
+                <IconHeart size={20} fill={isLiked ? 'currentColor' : 'none'} />
+                <span className="text-sm">{likeCount}</span>
             </button>
             <Link to={`/post/${item.id}`} className="flex items-center gap-2 hover:text-[var(--accent)] p-2 rounded-md transition-colors">
-              <IconComment size={20} /> <span className="text-sm">{item.comments}</span>
+                <IconComment size={20} />
+                <span className="text-sm">{item.comments}</span>
             </Link>
-            <button onClick={handleRepost} disabled={isReposting} className="flex items-center gap-2 hover:text-[var(--accent)] p-2 rounded-md transition-colors disabled:opacity-50">
-              <IconRepeat size={20} /> <span className="text-sm">{postToGetRepostCountFrom.reposts}</span>
+             <button onClick={handleRepost} disabled={isReposting} className="flex items-center gap-2 hover:text-[var(--accent)] p-2 rounded-md transition-colors disabled:opacity-50">
+                <IconRepeat size={20} />
+                <span className="text-sm">{postToGetRepostCountFrom.reposts}</span>
             </button>
         </div>
     );
 
-    if (item.repostOf) {
-        if (!originalPost) return <div className="bg-[var(--surface-1)] rounded-lg p-4 h-96 animate-pulse" />;
-        
-        return (
-            <div className="bg-[var(--surface-1)] rounded-lg overflow-hidden border border-[var(--border)] animate-pop-in">
-                <div className="p-4 text-sm text-[var(--text-muted)]">
-                    <IconRepeat size={14} className="inline-block mr-2" />
+    const CardContent = () => {
+        const postToRender = originalPost || item;
+        switch (postToRender.type) {
+            case 'new_mix':
+                return postToRender.relatedId ? <TrackPreview playlistId={postToRender.relatedId} /> : (postToRender.mediaUrl ? <img src={postToRender.mediaUrl} alt={postToRender.title} className="w-full h-auto object-cover" /> : null);
+            case 'new_track':
+                return postToRender.relatedId ? <TrackCard trackId={postToRender.relatedId} /> : (postToRender.mediaUrl ? <img src={postToRender.mediaUrl} alt={postToRender.title} className="w-full h-auto object-cover" /> : null);
+            case 'new_review':
+                return (
+                     <div className="p-4 bg-[var(--surface-2)]">
+                        <Link to={`/post/${postToRender.id}`} className="block">
+                            <div className="flex gap-1 text-yellow-400 mb-2">
+                                {[...Array(5)].map((_, i) => <IconStar key={i} size={18} fill={i < (postToRender.rating || 0) ? 'currentColor' : 'none'} />)}
+                            </div>
+                             <p className="font-bold text-[var(--text-primary)]">{postToRender.title}</p>
+                            {postToRender.description && <p className="text-[var(--text-secondary)] font-semibold italic mt-1">"{postToRender.description}"</p>}
+                        </Link>
+                    </div>
+                )
+             case 'user_post':
+                 return postToRender.mediaUrl ? (
+                    <Link to={`/post/${postToRender.id}`}>
+                        {postToRender.mediaType === 'video' ? (
+                            <video src={postToRender.mediaUrl} muted loop playsInline className="w-full h-auto object-cover bg-black" />
+                        ) : (
+                            <img src={postToRender.mediaUrl} alt={postToRender.title || 'User post'} className="w-full h-auto object-cover" />
+                        )}
+                    </Link>
+                ) : null;
+            default:
+                return postToRender.mediaUrl ? <Link to={`/post/${postToRender.id}`}><img src={postToRender.mediaUrl} alt={postToRender.title} className="w-full h-auto object-cover" /></Link> : null;
+        }
+    }
+    
+    const postToRenderDetailsFor = originalPost || item;
+
+    return (
+        <div className="bg-[var(--surface-1)] rounded-lg border border-[var(--border)] animate-pop-in">
+            {item.repostOf && (
+                <div className="px-4 pt-3 flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                    <IconRepeat size={16} />
                     <Link to={`/profile/${author.id}`} className="font-bold hover:underline">{author.name}</Link> reposted
                 </div>
-                <div className="mx-4 mb-4">
-                    <OriginalPostCard item={originalPost} />
-                </div>
-                 {renderCardActions(originalPost)}
-            </div>
-        )
-    }
+            )}
 
-    const CardContent = () => {
-        switch (item.type) {
-            case 'live_now': return <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" />;
-            case 'new_mix': return item.relatedId ? <TrackPreview playlistId={item.relatedId} /> : <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" />;
-            case 'new_track': return item.relatedId ? <TrackCard trackId={item.relatedId} /> : (item.mediaUrl ? <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" /> : null);
-            case 'new_review': return (
-                <div className="p-4 bg-[var(--surface-2)]/50">
-                    <div className="flex gap-1 text-yellow-400 mb-2">
-                        {[...Array(5)].map((_, i) => <IconStar key={i} size={18} fill={i < (item.rating || 0) ? 'currentColor' : 'none'} />)}
-                    </div>
-                    <p className="text-[var(--text-secondary)] font-semibold italic">"{item.description}"</p>
-                </div>
-            )
-            case 'gig_announcement': return (
-                 <div className="relative">
-                    <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" />
-                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-4">
-                        <h3 className="font-orbitron text-lg font-bold text-white">{item.title}</h3>
-                        <p className="text-sm text-zinc-300">{item.description}</p>
-                    </div>
-                </div>
-            );
-            case 'user_post': return item.mediaUrl ? (
-                item.mediaType === 'video' ? (
-                    <video src={item.mediaUrl} controls muted loop className="w-full h-auto object-cover bg-black" />
-                ) : (
-                    <img src={item.mediaUrl} alt={item.title || 'User post'} className="w-full h-auto object-cover" />
-                )
-            ) : null;
-            default:
-                 if (!item.mediaUrl) return null;
-                 if (item.mediaType === 'video') {
-                    return <video src={item.mediaUrl} controls muted loop className="w-full h-auto object-cover bg-black" />;
-                 }
-                 return <img src={item.mediaUrl} alt={item.title} className="w-full h-auto object-cover" />;
-        }
-    };
-    
-    return (
-        <div className="bg-[var(--surface-1)] rounded-lg overflow-hidden border border-[var(--border)] animate-pop-in">
-            <div className="p-4 flex items-center gap-3">
-                <Link to={`/profile/${author.id}`}>
+            {!originalPost && (
+                <Link to={`/profile/${author.id}`} className="flex items-center gap-3 p-4">
                     <Avatar src={author.avatarUrl} alt={author.name} size="md" />
+                    <div>
+                        <p className="font-bold text-[var(--text-primary)] hover:underline">{author.name}</p>
+                        <p className="text-xs text-[var(--text-secondary)]">{item.timestamp}</p>
+                    </div>
                 </Link>
-                <div>
-                    {(item.type === 'new_review' || item.type === 'new_connection' || item.type === 'live_now') ? (
-                        <p className="text-[var(--text-primary)] leading-tight">{item.title}</p>
-                    ) : (
-                        <Link to={`/profile/${author.id}`} className="font-bold text-[var(--text-primary)] hover:underline">{author.name}</Link>
-                    )}
-                    <p className="text-xs text-[var(--text-secondary)]">{item.timestamp}</p>
-                </div>
-            </div>
-            
-            {(item.description) && (item.type !== 'new_review' && item.type !== 'gig_announcement') &&
-                <div className="px-4 pb-4">
-                    <p className={`text-[var(--text-secondary)] ${item.type === 'user_post' ? 'whitespace-pre-line' : ''}`}>{item.description}</p>
-                </div>
-            }
-            
-            <Link to={`/post/${item.id}`}><CardContent /></Link>
+            )}
 
-            {renderCardActions(item)}
+            {postToRenderDetailsFor.description && (
+                <div className="px-4 pb-4">
+                    <Link to={`/post/${postToRenderDetailsFor.id}`} className="block">
+                        <p className="text-[var(--text-secondary)] whitespace-pre-line">{postToRenderDetailsFor.description}</p>
+                    </Link>
+                </div>
+            )}
+            
+            {originalPost && <OriginalPostCard item={originalPost} />}
+
+            {!originalPost && <CardContent />}
+            
+            {renderCardActions(postToRenderDetailsFor)}
         </div>
     );
 };
@@ -236,36 +226,17 @@ export const Feed = () => {
     const [feedItems, setFeedItems] = useState<FeedItemType[]>([]);
     const [loading, setLoading] = useState(true);
     const { unreadCount, role } = useAuth();
-    const canPost = role === Role.DJ || role === Role.Business;
-
-    const fetchFeed = () => {
+    
+    useEffect(() => {
         setLoading(true);
-        api.getFeedItems().then(items => {
-            setFeedItems(items);
+        api.getFeedItems().then(data => {
+            setFeedItems(data);
             setLoading(false);
         });
-    }
-
-    useEffect(() => {
-        fetchFeed();
-        // Add event listener to refetch data when the window gains focus
-        window.addEventListener('focus', fetchFeed);
-        return () => {
-            window.removeEventListener('focus', fetchFeed);
-        };
     }, []);
-
-    const handleNewRepost = (newPost: FeedItemType) => {
-        setFeedItems(prevItems => {
-            const originalPostId = newPost.repostOf!;
-            const updatedItems = prevItems.map(item => {
-                if (item.id === originalPostId) {
-                    return { ...item, reposts: item.reposts + 1 };
-                }
-                return item;
-            });
-            return [newPost, ...updatedItems];
-        });
+    
+    const handleRepostSuccess = (newPost: FeedItemType) => {
+        setFeedItems(prev => [newPost, ...prev]);
     };
 
     return (
@@ -276,16 +247,12 @@ export const Feed = () => {
                     <Spinner />
                 </div>
             ) : (
-                <div className="p-2 md:p-4 space-y-4 pb-20 max-w-xl mx-auto">
-                    {feedItems.map(item => (
-                        <FeedCard key={item.id} item={item} onRepostSuccess={handleNewRepost} />
-                    ))}
+                <div className="p-2 grid grid-cols-1 md:grid-cols-1 gap-3 pb-24">
+                    <Link to="/create-post" className="block p-4 bg-[var(--surface-1)] border border-[var(--border)] rounded-lg text-[var(--text-secondary)] hover:border-[var(--accent)] transition-colors text-center">
+                        Create a new post...
+                    </Link>
+                    {feedItems.map(item => <FeedCard key={item.id} item={item} onRepostSuccess={handleRepostSuccess} />)}
                 </div>
-            )}
-            {canPost && (
-                <Link to="/create-post" title="Create a post" className="fixed bottom-20 md:bottom-10 right-4 bg-[var(--accent)] text-[var(--accent-text)] p-4 rounded-full shadow-lg shadow-lime-500/30 z-30 hover:bg-[var(--accent-hover)] transition-all transform hover:scale-110">
-                    <IconPlus size={28} />
-                </Link>
             )}
         </div>
     );

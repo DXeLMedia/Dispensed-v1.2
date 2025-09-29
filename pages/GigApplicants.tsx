@@ -12,7 +12,7 @@ import { Avatar } from '../components/Avatar';
 const Header = ({ title }: { title: string }) => {
     const navigate = useNavigate();
     return (
-        <div className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-sm p-4 flex items-center border-b border-[var(--border)]">
+        <div className="sticky top-0 z-20 bg-[var(--background)] p-4 flex items-center border-b border-[var(--border)]">
             <button onClick={() => navigate(-1)} className="mr-4"><IconArrowLeft size={22} /></button>
             <div className='overflow-hidden'>
                 <p className="text-xs text-[var(--text-secondary)]">Applicants for</p>

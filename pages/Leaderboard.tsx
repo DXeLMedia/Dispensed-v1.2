@@ -10,7 +10,7 @@ import { IconStar, IconTrophy } from '../constants';
 import { Link } from 'react-router-dom';
 
 const LeaderboardHeader = () => (
-  <div className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-sm p-4 border-b border-[var(--border)]">
+  <div className="sticky top-0 z-20 bg-[var(--background)] p-4 border-b border-[var(--border)]">
     <h1 className="font-orbitron text-xl font-bold text-[var(--text-primary)] text-center">Leaderboard</h1>
   </div>
 );

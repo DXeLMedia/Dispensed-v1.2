@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as api from '../services/mockApi';
@@ -19,7 +18,7 @@ type MessageRow = {
 };
 
 const Header = ({ user, onBack }: { user: User, onBack: () => void }) => (
-    <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm p-4 flex items-center border-b border-zinc-800">
+    <div className="sticky top-0 z-20 bg-black p-4 flex items-center border-b border-zinc-800">
         <button onClick={onBack} className="mr-4"><IconArrowLeft size={22} /></button>
         <Avatar src={user.avatarUrl} alt={user.name} size="sm" />
         <h1 className="font-orbitron text-lg font-bold text-white ml-3 truncate">{user.name}</h1>

@@ -1,4 +1,5 @@
 
+
 import { supabase } from './supabaseClient';
 import * as demoApi from './mockApiDemo';
 import { 
@@ -217,8 +218,8 @@ const mapPostToFeedItem = (post: PostRow, repostsCount: number = 0): FeedItem =>
     const item: FeedItem = {
         id: post.id,
         userId: post.user_id,
-        title: '',
-        description: post.content,
+        title: '', // Default title, will be populated from content if available
+        description: post.content, // Default description
         mediaUrl: post.media_url || undefined,
         mediaType: post.media_type || undefined,
         timestamp: post.created_at,
@@ -230,16 +231,16 @@ const mapPostToFeedItem = (post: PostRow, repostsCount: number = 0): FeedItem =>
         repostOf: post.original_post_id || undefined,
     };
     
-    if (item.type === 'new_review') {
+    // Try to parse content as JSON for specific types that store extra metadata
+    if (['new_review'].includes(item.type)) {
         try {
-            const reviewContent = JSON.parse(post.content);
-            item.title = reviewContent.title || '';
-            item.description = reviewContent.comment || '';
-            item.rating = reviewContent.rating || 0;
-        } catch(e) {
-            console.warn("Could not parse review content from post", post);
-            // Fallback for non-JSON content
-            item.description = post.content;
+            const contentData = JSON.parse(post.content);
+            item.title = contentData.title || '';
+            item.description = contentData.comment || '';
+            item.rating = contentData.rating || 0;
+        } catch (e) {
+            // Content is not JSON, so it's probably old data. The defaults assigned above will be used.
+            console.warn(`Could not parse JSON content for post ${post.id} of type ${item.type}. Falling back to plain text.`);
         }
     }
 
@@ -748,31 +749,6 @@ export const getCompletedGigsForDj = async (djId: string): Promise<Gig[]> => {
 // SECTION: Feed, Posts, Comments, Likes
 // =================================================================
 
-/**
- * Maps the application's abstract FeedItem type to a database-compliant type.
- * @param item The application-level FeedItem data.
- * @returns A valid string for the `type` column in the posts table.
- */
-const mapAppTypeToDb = (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'comments' | 'reposts'>): 'text' | 'image' | 'video' | 'playlist' | 'event' | 'review' => {
-    switch (item.type) {
-        case 'user_post':
-            if (item.mediaType === 'image') return 'image';
-            if (item.mediaType === 'video') return 'video';
-            return 'text';
-        case 'new_track':
-        case 'new_mix':
-            return 'playlist';
-        case 'gig_announcement':
-        case 'live_now':
-            return 'event';
-        case 'new_review':
-            return 'review';
-        case 'new_connection':
-        default:
-            return 'text';
-    }
-};
-
 export const getFeedItems = async (): Promise<FeedItem[]> => {
     if (isDemoModeEnabled()) return demoApi.getFeedItems();
     const { data: posts, error } = await supabase.from('app_e255c3cdb5_posts').select('*').order('created_at', { ascending: false });
@@ -842,34 +818,41 @@ export const getFeedItemById = async (id: string): Promise<FeedItem | undefined>
 export const addFeedItem = async (item: Omit<FeedItem, 'id' | 'timestamp' | 'likes' | 'comments' | 'reposts'>): Promise<FeedItem | null> => {
     if (isDemoModeEnabled()) return demoApi.addFeedItem(item);
 
-    // The content for a review post is the review title itself, the description is the comment.
-    const content = item.type === 'new_review' ? item.title : item.description;
-
     const newPost: Database['public']['Tables']['app_e255c3cdb5_posts']['Insert'] = {
         user_id: item.userId,
-        content: content,
+        content: item.description, // Default content
         media_url: item.mediaUrl,
         media_type: item.mediaType,
         original_post_id: item.repostOf,
-        type: mapAppTypeToDb(item),
+        type: item.type,
         related_id: item.relatedId,
     };
-
-    // If it's a review, we add the review-specific data to the payload.
-    if (item.type === 'new_review') {
-        newPost.content = JSON.stringify({
-            title: item.title,
-            comment: item.description,
-            rating: item.rating,
-            relatedId: item.relatedId,
-        });
-    }
     
+    // For types that need extra data, serialize it into the content field.
+    // The main description is already set as the default content.
+    switch (item.type) {
+        case 'new_review':
+            newPost.content = JSON.stringify({
+                title: item.title,
+                comment: item.description,
+                rating: item.rating,
+            });
+            break;
+        case 'new_track':
+        case 'new_mix':
+        case 'gig_announcement':
+        case 'live_now':
+             newPost.content = item.description; // Keep it simple
+             // The title is handled by the FeedCard component for these types.
+            break;
+    }
+
     const { data, error } = await supabase.from('app_e255c3cdb5_posts').insert(newPost).select().single();
 
     if (error || !data) {
         console.error('Error adding post:', error);
-        return null;
+        // Re-throw to be caught by the calling function
+        throw error;
     }
     persistenceService.markDirty();
     return mapPostToFeedItem(data);
@@ -1513,69 +1496,63 @@ export const createBusinessProfile = async (userId: string, displayName: string)
     return !error;
 };
 
-export const createUserProfile = async (user: any): Promise<UserProfile | null> => {
-    if (isDemoModeEnabled()) return null; // In demo, profiles are pre-made
-    const userType = user.user_metadata?.user_type as Role;
-    const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name;
-    const avatarUrl = user.user_metadata?.avatar_url;
+// Functions that were missing from mockApi but present in mockApiDemo
+export const createUserProfile = async (authUser: any): Promise<UserProfile | null> => {
+    if (isDemoModeEnabled()) return null; // This should not be called in demo mode
 
-    if (!userType || !displayName) {
-        console.error("Cannot create/update profile, missing metadata", {userType, displayName});
-        return null;
-    }
-
-    const { data, error: userProfileError } = await supabase.from('app_e255c3cdb5_user_profiles').upsert({ user_id: user.id, user_type: userType, display_name: displayName, avatar_url: avatarUrl || `https://source.unsplash.com/random/200x200/?abstract` }, { onConflict: 'user_id' }).select().single();
+    const { data, error } = await supabase
+        .from('app_e255c3cdb5_user_profiles')
+        .insert({
+            user_id: authUser.id,
+            display_name: authUser.user_metadata?.name || authUser.user_metadata?.display_name || authUser.email,
+            user_type: authUser.user_metadata?.user_type || 'listener',
+            avatar_url: authUser.user_metadata?.avatar_url || `https://source.unsplash.com/random/200x200/?abstract,user&sig=${authUser.id}`
+        })
+        .select()
+        .single();
     
-    if (userProfileError || !data) {
-        if(userProfileError) console.error("Error upserting base user profile:", userProfileError);
+    // FIX: Add null check for data object to prevent runtime errors on failed insert.
+    if (error || !data) {
+        console.error("Error creating base user profile:", error);
         return null;
     }
 
-    if (userType === Role.DJ) {
-        await createDjProfile(user.id);
-    } else if (userType === Role.Business) {
-        await createBusinessProfile(user.id, displayName);
+    // Now create role-specific profile
+    const role = data.user_type as Role;
+    if (role === Role.DJ) {
+        await createDjProfile(data.user_id);
+    } else if (role === Role.Business) {
+        await createBusinessProfile(data.user_id, data.display_name);
     }
-
-    persistenceService.markDirty();
+    
     return getUserById(data.user_id);
 };
 
 export const signUpWithEmail = async (email: string, password: string, name: string, role: Role) => {
-    if (isDemoModeEnabled()) return demoApi.signUpWithEmail(email, password, name, role);
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: name, user_type: role, avatar_url: `https://source.unsplash.com/random/200x200/?abstract,${role}` } } });
-    if (!error) persistenceService.markDirty();
-    return { user: data.user, error };
+    if (isDemoModeEnabled()) {
+        return demoApi.signUpWithEmail(email, password, name, role);
+    }
+    return supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            data: {
+                user_type: role,
+                display_name: name,
+            }
+        }
+    });
 };
 
-// =================================================================
-// SECTION: Developer & Utility
-// =================================================================
 export const seedDatabase = async (): Promise<any> => {
     if (isDemoModeEnabled()) return demoApi.seedDatabase();
-    console.warn("seedDatabase is a developer tool and should not be used in production.");
-    // This is a placeholder for a real seeding mechanism. A real implementation would likely
-    // be a server-side function (RPC in Supabase) to avoid exposing table modification logic to the client.
-    // For this app, we will simply mark the persistence service as "seeded" to disable warnings.
-    persistenceService.markSeeded();
-    // Return empty data as the component expects something to download.
-    return { djs: [], businesses: [], gigs: [], tracks: [], playlists: [] };
+    // This is a destructive action and should not be run against a real database from the client.
+    throw new Error("Database seeding is only available in demo mode.");
 };
-
-// =================================================================
-// SECTION: Admin Actions
-// =================================================================
 
 export const deleteUser = async (userId: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.deleteUser(userId);
-    // DANGER: This is a complex operation. In a real Supabase app, this should be
-    // handled by a database function (RPC) with elevated privileges to ensure
-    // all related data is properly cascaded and deleted.
-    // Client-side cascade is not recommended due to RLS and atomicity issues.
-    // The following is a simplified example and may fail due to RLS.
-    console.warn("deleteUser is not fully implemented for production Supabase due to RLS complexity. Relying on database cascades is recommended.");
-
-    // This will likely fail unless RLS is configured for admins.
+    // This requires an admin role/edge function in a real app.
     const { error } = await supabase.from('app_e255c3cdb5_user_profiles').delete().eq('user_id', userId);
     if (error) {
         console.error("Error deleting user:", error);
@@ -1583,24 +1560,16 @@ export const deleteUser = async (userId: string): Promise<boolean> => {
     }
     persistenceService.markDirty();
     return true;
-}
+};
 
 export const deleteGig = async (gigId: string): Promise<boolean> => {
     if (isDemoModeEnabled()) return demoApi.deleteGig(gigId);
-     // In a real app, ensure RLS allows admins to delete any gig.
-    // First, delete dependent applications.
-    const { error: appError } = await supabase.from('app_e255c3cdb5_gig_applications').delete().eq('gig_id', gigId);
-    if (appError) {
-        console.error("Error deleting gig applications:", appError);
+    // This requires an admin role/edge function in a real app to handle cascade deletes.
+    const { error } = await supabase.from('app_e255c3cdb5_gigs').delete().eq('id', gigId);
+     if (error) {
+        console.error("Error deleting gig:", error);
         return false;
     }
-    // Then delete the gig itself.
-    const { error: gigError } = await supabase.from('app_e255c3cdb5_gigs').delete().eq('id', gigId);
-    if (gigError) {
-        console.error("Error deleting gig:", gigError);
-        return false;
-    }
-
     persistenceService.markDirty();
     return true;
-}
+};

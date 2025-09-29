@@ -14,27 +14,27 @@ export type Database = {
       app_e255c3cdb5_user_profiles: {
         Row: {
           user_id: string;
-          user_type: 'dj' | 'business' | 'listener';
+          user_type: 'dj' | 'business' | 'listener' | 'admin';
           display_name: string;
           avatar_url: string;
           settings: Json | null;
         };
         Insert: {
           user_id: string;
-          user_type: 'dj' | 'business' | 'listener';
+          user_type: 'dj' | 'business' | 'listener' | 'admin';
           display_name: string;
           avatar_url: string;
           settings?: Json | null;
         };
         Update: {
           user_id?: string;
-          user_type?: 'dj' | 'business' | 'listener';
+          user_type?: 'dj' | 'business' | 'listener' | 'admin';
           display_name?: string;
           avatar_url?: string;
           settings?: Json | null;
         };
         Relationships: [];
-      },
+      };
       app_e255c3cdb5_dj_profiles: {
         Row: {
           user_id: string;
@@ -91,9 +91,9 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "app_e255c3cdb5_user_profiles"
             referencedColumns: ["user_id"]
-          },
-        ]
-      },
+          }
+        ];
+      };
       app_e255c3cdb5_business_profiles: {
         Row: {
           user_id: string;
@@ -129,9 +129,9 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "app_e255c3cdb5_user_profiles"
             referencedColumns: ["user_id"]
-          },
-        ]
-      },
+          }
+        ];
+      };
       app_e255c3cdb5_gigs: {
         Row: {
           id: string;
@@ -180,21 +180,21 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_gigs_booked_dj_id_fkey",
-            columns: ["booked_dj_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
+            foreignKeyName: "app_e255c3cdb5_gigs_booked_dj_id_fkey"
+            columns: ["booked_dj_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "app_e255c3cdb5_gigs_business_user_id_fkey",
-            columns: ["business_user_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
-          },
-        ]
-      },
+            foreignKeyName: "app_e255c3cdb5_gigs_business_user_id_fkey"
+            columns: ["business_user_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
+          }
+        ];
+      };
       app_e255c3cdb5_gig_applications: {
         Row: {
             id: string;
@@ -202,38 +202,38 @@ export type Database = {
             dj_user_id: string;
             status: string;
             created_at: string;
-        },
+        };
         Insert: {
             id?: string;
             gig_id: string;
             dj_user_id: string;
             status: string;
             created_at?: string;
-        },
+        };
         Update: {
             id?: string;
             gig_id?: string;
             dj_user_id?: string;
             status?: string;
             created_at?: string;
-        },
+        };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_gig_applications_dj_user_id_fkey",
-            columns: ["dj_user_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
+            foreignKeyName: "app_e255c3cdb5_gig_applications_dj_user_id_fkey"
+            columns: ["dj_user_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "app_e255c3cdb5_gig_applications_gig_id_fkey",
-            columns: ["gig_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_gigs",
-            referencedColumns: ["id"],
-          },
-        ]
-      },
+            foreignKeyName: "app_e255c3cdb5_gig_applications_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_gigs"
+            referencedColumns: ["id"]
+          }
+        ];
+      };
       app_e255c3cdb5_bookings: {
         Row: {
             id: string;
@@ -261,28 +261,28 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_bookings_business_user_id_fkey",
-            columns: ["business_user_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
+            foreignKeyName: "app_e255c3cdb5_bookings_business_user_id_fkey"
+            columns: ["business_user_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "app_e255c3cdb5_bookings_dj_user_id_fkey",
-            columns: ["dj_user_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
+            foreignKeyName: "app_e255c3cdb5_bookings_dj_user_id_fkey"
+            columns: ["dj_user_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "app_e255c3cdb5_bookings_gig_id_fkey",
-            columns: ["gig_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_gigs",
-            referencedColumns: ["id"],
-          },
-        ]
-      },
+            foreignKeyName: "app_e255c3cdb5_bookings_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_gigs"
+            referencedColumns: ["id"]
+          }
+        ];
+      };
       app_e255c3cdb5_reviews: {
         Row: {
           id: string;
@@ -313,28 +313,28 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_reviews_gig_id_fkey",
-            columns: ["gig_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_gigs",
-            referencedColumns: ["id"],
+            foreignKeyName: "app_e255c3cdb5_reviews_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_gigs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "app_e255c3cdb5_reviews_reviewee_id_fkey",
-            columns: ["reviewee_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
+            foreignKeyName: "app_e255c3cdb5_reviews_reviewee_id_fkey"
+            columns: ["reviewee_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "app_e255c3cdb5_reviews_reviewer_id_fkey",
-            columns: ["reviewer_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
-          },
-        ]
-      },
+            foreignKeyName: "app_e255c3cdb5_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
+          }
+        ];
+      };
       app_e255c3cdb5_posts: {
         Row: {
           id: string;
@@ -377,21 +377,21 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_posts_original_post_id_fkey",
-            columns: ["original_post_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_posts",
-            referencedColumns: ["id"],
+            foreignKeyName: "app_e255c3cdb5_posts_original_post_id_fkey"
+            columns: ["original_post_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_posts"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "app_e255c3cdb5_posts_user_id_fkey",
-            columns: ["user_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
-          },
-        ]
-      },
+            foreignKeyName: "app_e255c3cdb5_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
+          }
+        ];
+      };
       app_e255c3cdb5_post_likes: {
         Row: {
           id: string;
@@ -413,21 +413,21 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_post_likes_post_id_fkey",
-            columns: ["post_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_posts",
-            referencedColumns: ["id"],
+            foreignKeyName: "app_e255c3cdb5_post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_posts"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "app_e255c3cdb5_post_likes_user_id_fkey",
-            columns: ["user_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
-          },
-        ]
-      },
+            foreignKeyName: "app_e255c3cdb5_post_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
+          }
+        ];
+      };
       app_e255c3cdb5_post_comments: {
         Row: {
           id: string;
@@ -452,21 +452,21 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_post_comments_post_id_fkey",
-            columns: ["post_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_posts",
-            referencedColumns: ["id"],
+            foreignKeyName: "app_e255c3cdb5_post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_posts"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "app_e255c3cdb5_post_comments_user_id_fkey",
-            columns: ["user_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
-          },
-        ]
-      },
+            foreignKeyName: "app_e255c3cdb5_post_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
+          }
+        ];
+      };
       app_e255c3cdb5_follows: {
         Row: {
           follower_id: string;
@@ -485,21 +485,21 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_follows_follower_id_fkey",
-            columns: ["follower_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
+            foreignKeyName: "app_e255c3cdb5_follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "app_e255c3cdb5_follows_following_id_fkey",
-            columns: ["following_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
-          },
-        ]
-      },
+            foreignKeyName: "app_e255c3cdb5_follows_following_id_fkey"
+            columns: ["following_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
+          }
+        ];
+      };
       app_e255c3cdb5_playlists: {
         Row: {
           id: string;
@@ -527,14 +527,14 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_playlists_dj_user_id_fkey",
-            columns: ["dj_user_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
-          },
-        ]
-      },
+            foreignKeyName: "app_e255c3cdb5_playlists_dj_user_id_fkey"
+            columns: ["dj_user_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
+          }
+        ];
+      };
       app_e255c3cdb5_stream_sessions: {
         Row: {
           id: string;
@@ -562,14 +562,14 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_stream_sessions_dj_user_id_fkey",
-            columns: ["dj_user_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
-          },
-        ]
-      },
+            foreignKeyName: "app_e255c3cdb5_stream_sessions_dj_user_id_fkey"
+            columns: ["dj_user_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
+          }
+        ];
+      };
       app_e255c3cdb5_notifications: {
         Row: {
           id: string;
@@ -603,14 +603,14 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_notifications_user_id_fkey",
-            columns: ["user_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
-          },
-        ]
-      },
+            foreignKeyName: "app_e255c3cdb5_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
+          }
+        ];
+      };
       app_e255c3cdb5_messages: {
         Row: {
           id: string;
@@ -635,21 +635,21 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_messages_recipient_id_fkey",
-            columns: ["recipient_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
+            foreignKeyName: "app_e255c3cdb5_messages_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "app_e255c3cdb5_messages_sender_id_fkey",
-            columns: ["sender_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
-          },
-        ]
-      },
+            foreignKeyName: "app_e255c3cdb5_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
+          }
+        ];
+      };
       app_e255c3cdb5_user_actions_log: {
         Row: {
           id: string;
@@ -677,15 +677,15 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "app_e255c3cdb5_user_actions_log_user_id_fkey",
-            columns: ["user_id"],
-            isOneToOne: false,
-            referencedRelation: "app_e255c3cdb5_user_profiles",
-            referencedColumns: ["user_id"],
-          },
-        ]
-      }
-    },
+            foreignKeyName: "app_e255c3cdb5_user_actions_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_e255c3cdb5_user_profiles"
+            referencedColumns: ["user_id"]
+          }
+        ];
+      };
+    };
     Functions: {
       add_track_to_portfolio: {
         Args: { dj_user_id_param: string; new_track: Json };
@@ -695,12 +695,12 @@ export type Database = {
         Args: { playlist_id_param: string; new_track: Json };
         Returns: void;
       };
-    },
+    };
     Enums: {
-      user_type: 'dj' | 'business' | 'listener';
+      user_type: 'dj' | 'business' | 'listener' | 'admin';
       tier: 'Bronze' | 'Silver' | 'Gold Groove' | 'Neon Legend';
       gig_status: 'Open' | 'Booked' | 'Completed' | 'Cancelled';
       media_type: 'image' | 'video';
-    }
-  }
+    };
+  };
 };

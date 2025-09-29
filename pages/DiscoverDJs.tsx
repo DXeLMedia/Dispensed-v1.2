@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { DJ } from '../types';
 import * as api from '../services/mockApi';
@@ -52,7 +53,7 @@ const AIScoutTrigger = ({ onClick }: { onClick: () => void }) => (
 
 
 const DiscoverHeader = ({ unreadCount }: { unreadCount: number }) => (
-    <div className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-sm">
+    <div className="sticky top-0 z-20 bg-[var(--background)]">
         <div className="flex justify-between items-center p-4 border-b border-[var(--border)]">
             <h1 className="font-orbitron text-xl font-bold text-[var(--text-primary)]">Find DJs</h1>
             <div className="flex items-center gap-4">

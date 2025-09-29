@@ -1,4 +1,5 @@
 
+
 import React, { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Notification as NotificationType, NotificationType as ENotificationType } from '../types';
@@ -71,7 +72,7 @@ export const Notifications = () => {
 
     return (
         <div className="text-white min-h-full">
-            <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm p-4 flex items-center border-b border-zinc-800">
+            <div className="sticky top-0 z-20 bg-black p-4 flex items-center border-b border-zinc-800">
                 <button onClick={() => navigate(-1)} className="mr-4"><IconArrowLeft size={22} /></button>
                 <h1 className="font-orbitron text-xl font-bold text-white">Notifications</h1>
             </div>

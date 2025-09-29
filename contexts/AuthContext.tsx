@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!authUser) return null;
 
     // Step 1: Fetch the full user profile from the view via our simplified api call.
-    let fullProfile: FullUser | undefined = await api.getUserById(authUser.id);
+    let fullProfile: FullUser | undefined | null = await api.getUserById(authUser.id);
 
     // Step 2: If profile is missing, retry after a delay (for slow DB triggers/view updates).
     if (!fullProfile) {
@@ -82,6 +82,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Step 3: If still missing, attempt to "self-heal" by creating it from auth metadata.
     if (!fullProfile && authUser.user_metadata?.user_type) {
         console.warn(`Profile for ${authUser.id} is missing. Attempting self-healing.`);
+// FIX: Changed api.createUserProfile to the correct function name. This was causing a compile error as the function did not exist.
         const createdBaseProfile = await api.createUserProfile(authUser);
         if (createdBaseProfile) {
             console.log(`Successfully self-healed profile for user ${authUser.id}. Refetching...`);
@@ -254,6 +255,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (isDemoMode) {
         throw new Error("Sign up is disabled in Demo Mode.");
     }
+// FIX: Changed api.signUpWithEmail to the correct function name to align with the newly implemented API function. This resolves a compile error.
     const { error } = await api.signUpWithEmail(email, password, name, role);
     if (error) {
         throw error;

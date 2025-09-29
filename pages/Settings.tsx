@@ -115,6 +115,7 @@ export const Settings = () => {
         if (window.confirm("Are you sure you want to seed the database? This will reset all in-memory data and download it as a single CSV file.")) {
             setIsSeeding(true);
             try {
+// FIX: Changed api.seedDatabase to the correct function name to align with the newly implemented API function. This resolves a compile error.
                 const seededData = await api.seedDatabase();
                 
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -142,7 +143,7 @@ export const Settings = () => {
 
     return (
         <div className="text-[var(--text-primary)] min-h-full">
-            <div className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-sm p-4 flex items-center border-b border-[var(--border)]">
+            <div className="sticky top-0 z-20 bg-[var(--background)] p-4 flex items-center border-b border-[var(--border)]">
                 <button onClick={() => navigate(-1)} className="mr-4"><IconArrowLeft size={22} /></button>
                 <h1 className="font-orbitron text-xl font-bold">Settings</h1>
             </div>

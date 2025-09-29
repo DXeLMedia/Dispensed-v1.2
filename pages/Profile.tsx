@@ -711,7 +711,7 @@ export const Profile = () => {
 
   return (
     <div className="text-[var(--text-primary)] min-h-full pb-20">
-      <div className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-sm p-4 flex justify-between items-center border-b border-[var(--border)]">
+      <div className="sticky top-0 z-20 bg-[var(--background)] p-4 flex justify-between items-center border-b border-[var(--border)]">
         <button onClick={() => navigate(-1)}><IconArrowLeft size={22} /></button>
         <span className="font-semibold">{profileData.role.charAt(0).toUpperCase() + profileData.role.slice(1)} Profile</span>
         { isOwnProfile && <Link to="/settings"><IconSettings size={22} /></Link> }
